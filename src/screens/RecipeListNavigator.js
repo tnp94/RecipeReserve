@@ -8,32 +8,19 @@ import RecipeDetailsScreen from "./RecipeDetailsScreen";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeList from "../components/RecipeList";
 import RecipeCards from "../components/RecipeCards";
-import SearchFilter from "../components/SearchFilter";
+import RecipeListScreen from "./RecipeListScreen";
 import NewRecipeScreen from "./NewRecipeScreen";
-import NewRecipeButton from "../components/NewRecipeButton";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-const RecipeListScreen = ({ navigation }) => {
+const RecipeListNavigator = ({ navigation }) => {
   return (
-    <View
-    style={{
-        flex:1
-    }}>
-        <View 
-        style={{
-            flexDirection: "row",
-            padding: 5,
-            gap: 5,
-            alignItems: "stretch"
-        }}
-        >
-            <SearchFilter placeholder={"Search for a recipe"}/>
-            <NewRecipeButton navigation={navigation}/>
-        </View>
-      <RecipeCards navigation={navigation} />
-    </View>
+    <Stack.Navigator>
+        <Stack.Screen name="My Recipes" component={RecipeListScreen} />
+        <Stack.Screen name="Recipe Details" component={RecipeDetailsScreen} />
+        <Stack.Screen name="New Recipe" component={NewRecipeScreen} />
+    </Stack.Navigator>
   )
 }
 
-export default RecipeListScreen;
+export default RecipeListNavigator;

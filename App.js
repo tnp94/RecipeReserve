@@ -6,16 +6,20 @@ import RecipeListScreen from "./src/screens/RecipeListScreen";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeDetailsScreen from "./src/screens/RecipeDetailsScreen";
 import RecipeList from "./src/components/RecipeList";
+import RecipeListNavigator from "./src/screens/RecipeListNavigator";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 export default function App() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator>
-        <Tab.Screen name="Welcome" component={WelcomeScreen} />
-        <Tab.Screen name="RecipeList" component={RecipeListScreen} />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <SafeAreaView style={{flex: 1}}>
+      <NavigationContainer>
+        <Tab.Navigator>
+          <Tab.Screen name="Welcome" component={WelcomeScreen} />
+          <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </SafeAreaView>
   )
 }
