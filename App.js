@@ -8,6 +8,7 @@ import RecipeDetailsScreen from "./src/screens/RecipeDetailsScreen";
 import RecipeList from "./src/components/RecipeList";
 import RecipeListNavigator from "./src/screens/RecipeListNavigator";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ShoppingListScreen from "./src/screens/ShoppingListScreen";
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -18,6 +19,7 @@ export default function App() {
         <Tab.Navigator>
           <Tab.Screen name="Welcome" component={WelcomeScreen} />
           <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
+          <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
         </Tab.Navigator>
       </NavigationContainer>
     </SafeAreaView>
