@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
 import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity } from "react-native";
 import { CheckBox, Separator } from "react-native-btr";
@@ -37,7 +38,15 @@ const ShoppingListScreen = ({ navigation }) => {
         checked={item.checked} 
         onPress={(newValue) => {
           let item = data[index]
-          console.log(item)
+          AsyncStorage.getAllKeys((err, keys) => {
+            console.log('All Keys:');
+            AsyncStorage.multiGet(keys, (error, stores) => {
+              stores.map((result, i, store) => {
+                console.log({ [store[i][0]]: store[i][1] });
+                return true;
+              });
+            });
+          });
           item.checked = !item.checked; 
           setData([...data]);
         }}

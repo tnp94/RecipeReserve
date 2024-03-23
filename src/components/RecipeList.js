@@ -1,13 +1,32 @@
 import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native";
-import { recipeList } from "../Recipes";
+// import { recipeList } from "../Recipes";
 import RecipeDetailsScreen from "../screens/RecipeDetailsScreen";
 import { createStackNavigator } from "@react-navigation/stack";
+import storage from "../Storage";
+import { useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 
 Stack = createStackNavigator()
-const RecipeList = ( { navigation } ) => {
+const navigation = useNavigation()
+const RecipeList = ( ) => {
+
+  useEffect(() => {
+    const focusHandler = navigation.addListener('focus', () => {
+        console.log('Refreshed');
+        fetchRecipes()
+    });
+    return focusHandler;
+  }, [navigation]);
+  
+  fetchRecipes = () => {
+    this.recipeList = storage.load({
+      key: "recipeList"
+    })
+  }
+  
   return (
     <View style={{}}>
-      {recipeList.map(( item ) => (
+      {this.recipeList.map(( item ) => (
         <TouchableOpacity 
         onPress={() => navigation.navigate("Recipe Details",  { item } )}
         key={item.id}

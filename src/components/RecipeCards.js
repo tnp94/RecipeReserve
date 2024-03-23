@@ -1,16 +1,41 @@
 import { StyleSheet, View, Text, Image, TouchableOpacity, SafeAreaView } from "react-native";
-import { recipeList } from "../Recipes";
+// import { recipeList } from "../Recipes";
 import RecipeDetailsScreen from "../screens/RecipeDetailsScreen";
 import { createStackNavigator } from "@react-navigation/stack";
 import { FlatList } from "react-native-gesture-handler";
+import storage from "../Storage";
+import { useEffect, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 
 Stack = createStackNavigator()
-const RecipeCards = ( { navigation } ) => {
+const RecipeCards = ( ) => {
+  const navigation = useNavigation()
+  const [data, setData] = useState(recipeList)
+  var recipeList = []
+
+  
+  useEffect(() => {
+    const focusHandler = navigation.addListener('focus', () => {
+        console.log('Refreshed');
+        fetchRecipes()
+    });
+    return focusHandler;
+  }, [navigation]);
+  
+  fetchRecipes = () => {
+    storage.load({
+      key: "recipeList"
+    }).then(ret => {
+      setData(ret)
+    })
+  }
+
+
   return (
     <View style={{flex: 1}}>
       <FlatList
       // {recipeList.map(( item ) => (
-        data={recipeList}
+        data={data}
         numColumns={2}
         renderItem={ ({ item }) => (
         <TouchableOpacity 

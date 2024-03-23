@@ -1,7 +1,9 @@
+import { useNavigation } from "@react-navigation/native";
 import { StyleSheet, View, Text, Image } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 
-const NewRecipeButton = ( { navigation }) => {
+const NewRecipeButton = ( ) => {
+  const navigation = useNavigation()
   return (
       <TouchableOpacity
       style={{

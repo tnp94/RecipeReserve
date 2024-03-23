@@ -29,9 +29,9 @@ const RecipeListScreen = ({ navigation }) => {
         }}
         >
             <SearchFilter placeholder={"Search for a recipe"}/>
-            <NewRecipeButton navigation={navigation}/>
+            <NewRecipeButton />
         </View>
-      <RecipeCards navigation={navigation} />
+      <RecipeCards />
     </View>
   )
 }
