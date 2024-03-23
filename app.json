@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "RecipeReserve",
-    "slug": "RecipeReserve",
+    "slug": "recipereserve",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,6 +25,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "60d3d1d1-a98e-4bdb-97a1-2e3b0f3d5706"
+      }
+    },
+    "owner": "thomaspollard_projects"
   }
 }
