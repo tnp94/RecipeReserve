@@ -1,18 +1,67 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button } from "react-native";
 import storage from "../Storage";
-import { recipeList } from "../Recipes";
-import { useState } from "react";
+// import { recipeList } from "../Recipes";
+import { useEffect, useState } from "react";
 import Ingredient from "../Models/Ingredient";
+import { useNavigation } from "@react-navigation/native";
 
-const NewRecipeScreen = () => {
-  // console.log(JSON.stringify(recipeList));
-  storage.save({
-    key: "recipeList",
-    data: recipeList,
-    expires: null
-  })
+const NewRecipeScreen = ( saveRecipeButton ) => {
+  const navigation = useNavigation()
+  useEffect(() => {
+      navigation.setOptions({
+      headerRight: () => (
+        <Button
+          onPress={() => {
+            alert('This is a button!')
+            SaveNewRecipe({
+              id: 3,
+              name: "Basic Template",
+              image: "",
+              count: 0,
+              ingredients: [
+                {
+                  name: "Ingredient 1",
+                  unit: "Cup",
+                  quantityUnit: "1",
+                },
+                {
+                  name: "Ingredient 2",
+                  unit: "Tbsp",
+                  quantityUnit: "1",
+                },
+              ],
+              time: {
+                prep: 20,
+                active: 40
+              },
+              difficulty: "Easy",
+              calories: 370,
+              favorite: false,
+              dishesAmount: "Small (1-4)",
+              yield: 0,
+              directions: [
+                "",
+                ""
+              ]
+            })
+          }}
+          title="Save"
+        />
+      ),
+      })
+    }, []);
+
   function SaveNewRecipe( newRecipe ){
+    storage.load({key: "recipeList"}).then((recipeList) => {
+      console.log(recipeList)
+      recipeList.push(newRecipe)
+      storage.save({
+        key: "recipeList",
+        data: recipeList,
+        expires: null
+      })
+
+    })
     
   }
   var newRecipeDirections = []
