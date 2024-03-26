@@ -6,7 +6,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { recipeList } from "../Recipes";
 import RecipeDetailsScreen from "./RecipeDetailsScreen";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import RecipeList from "../components/RecipeList";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
 import NewRecipeScreen from "./NewRecipeScreen";

@@ -5,11 +5,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import RecipeListScreen from "./src/screens/RecipeListScreen";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeDetailsScreen from "./src/screens/RecipeDetailsScreen";
-import RecipeList from "./src/components/RecipeList";
 import RecipeListNavigator from "./src/screens/RecipeListNavigator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ShoppingListScreen from "./src/screens/ShoppingListScreen";
-
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 export default function App() {

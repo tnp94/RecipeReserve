@@ -6,7 +6,7 @@ import { TouchableOpacity } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import storage from "../Storage";
 
-const RecipeCard = ({ item, index }) => {
+const RecipeCard = ({ item, index , deleteRecipe}) => {
   const navigation = useNavigation()
   
   function recipeLongPress(index) {
@@ -19,17 +19,6 @@ const RecipeCard = ({ item, index }) => {
     {text: 'OK', onPress: () => console.log('OK Pressed')},
     {text: 'Delete', onPress: () => deleteRecipe(index)},
     ]);
-  }
-
-  function deleteRecipe(index) {
-    storage.load({key: "recipeList"}).then((recipeList) => {
-      recipeList.splice(index, 1)
-      storage.save({
-        key: "recipeList",
-        data: recipeList,
-        expires: null
-      })
-    })
   }
 
   return (

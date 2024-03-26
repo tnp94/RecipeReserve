@@ -14,6 +14,17 @@ const RecipeCards = ( ) => {
   const [data, setData] = useState(recipeList)
   var recipeList = []
 
+
+  function deleteRecipe(index) {
+    var newList = [...data]
+    newList.splice(index, 1)
+    setData(newList)
+    storage.save({
+      key: "recipeList",
+      data: newList,
+      expires: null
+    })
+  }
   
   useEffect(() => {
     const focusHandler = navigation.addListener('focus', () => {
@@ -44,7 +55,7 @@ const RecipeCards = ( ) => {
             flex: 0.5,
             alignContent: "center"
           }}>
-            <RecipeCard item={item} index={index}/>
+            <RecipeCard item={item} index={index} deleteRecipe={deleteRecipe}/>
           </View>
         )}
       />
