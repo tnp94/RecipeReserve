@@ -1,25 +1,28 @@
 import { NavigationContainer } from "@react-navigation/native";
-import { View } from "react-native";
 import WelcomeScreen from "./src/screens/WelcomeScreen"
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import RecipeListScreen from "./src/screens/RecipeListScreen";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeDetailsScreen from "./src/screens/RecipeDetailsScreen";
 import RecipeListNavigator from "./src/screens/RecipeListNavigator";
-import { SafeAreaView } from "react-native-safe-area-context";
 import ShoppingListScreen from "./src/screens/ShoppingListScreen";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Provider } from "react-redux";
+import { store } from "./src/store/store";
+
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 export default function App() {
   return (
-    <SafeAreaView style={{flex: 1}}>
-      <NavigationContainer>
-        <Tab.Navigator>
-          <Tab.Screen name="Welcome" component={WelcomeScreen} />
-          <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
-          <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
-    </SafeAreaView>
+    <Provider store={store}>
+      <SafeAreaView style={{flex: 1}}>
+        <NavigationContainer>
+          <Tab.Navigator>
+            <Tab.Screen name="Welcome" component={WelcomeScreen} />
+            <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
+            <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
+          </Tab.Navigator>
+        </NavigationContainer>
+      </SafeAreaView>
+    </Provider>
   )
 }

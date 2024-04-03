@@ -2,9 +2,12 @@ import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button }
 import storage from "../Storage";
 // import { recipeList } from "../Recipes";
 import { useEffect, useState } from "react";
-import Ingredient from "../Models/Ingredient";
+import { ingredientTemplate } from "../Models/Ingredient";
+import { useDispatch } from "react-redux";
+import { addRecipe } from "../store/recipeListSlice";
 
 const NewRecipeScreen = ( { navigation } ) => {
+  const dispatch = useDispatch()
 
   const state = {
     id: 0,
@@ -51,13 +54,14 @@ const NewRecipeScreen = ( { navigation } ) => {
   const SaveNewRecipe = ( newRecipe ) => {
     storage.load({key: "recipeList"}).then((recipeList) => {
       recipeList.push(newRecipe)
-      storage.save({
-        key: "recipeList",
-        data: recipeList,
-        expires: null
-      })
+      // storage.save({
+      //   key: "recipeList",
+      //   data: recipeList,
+      //   expires: null
+      // })
+      dispatch(addRecipe(newRecipe))
       alert("Saved");
-      navigation.navigate("My Recipes")
+      // navigation.navigate("My Recipes")
     })
   }
 
@@ -161,7 +165,7 @@ const NewRecipeScreen = ( { navigation } ) => {
               justifyContent: "center"
             }}
             onPress={() => {
-              setData({...data, ingredients: [...data.ingredients, new Ingredient()]})
+              setData({...data, ingredients: [...data.ingredients, ingredientTemplate()]})
             }}>
               <Text>New Ingredient</Text>
             </TouchableOpacity>

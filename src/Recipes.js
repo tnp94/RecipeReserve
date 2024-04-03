@@ -201,7 +201,7 @@ Lay pork lengthwise...",
       "Adjust oven rack to lower-middle position and heat oven to 325 degrees. \
 Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 tablesspoons oil in Duth oven over medium-high heat until just smoking. Add half of meat and cook, stirring occasionally, until well browned, 7 to 10 minutes, reducing heat if pot begins to scorch; transfer to bowl. Repeat with remaining 1 tablespoon oil and remaining beef.",
       "Melt butter in now-empty pot over medium-low heat. Add onions and 1/2 teaspoon salt and cook, stirring often, until softened, 5 to 7 minutes. Stir in garlic and cook until fragrant, about 30 seconds. Stir in flour and tomato paste and cook, stirring constantly, until golden, about 1 minute. Slowly whisk in wine, scraping up any browned bits. Gradually whisk in broth until smooth and bring to simmer.",
-      "Stir in browed meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
+      "Stir in browned meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
     ]
   },
@@ -407,7 +407,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //       "Adjust oven rack to lower-middle position and heat oven to 325 degrees. \
 // Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 tablesspoons oil in Duth oven over medium-high heat until just smoking. Add half of meat and cook, stirring occasionally, until well browned, 7 to 10 minutes, reducing heat if pot begins to scorch; transfer to bowl. Repeat with remaining 1 tablespoon oil and remaining beef.",
 //       "Melt butter in now-empty pot over medium-low heat. Add onions and 1/2 teaspoon salt and cook, stirring often, until softened, 5 to 7 minutes. Stir in garlic and cook until fragrant, about 30 seconds. Stir in flour and tomato paste and cook, stirring constantly, until golden, about 1 minute. Slowly whisk in wine, scraping up any browned bits. Gradually whisk in broth until smooth and bring to simmer.",
-//       "Stir in browed meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
+//       "Stir in browned meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
 //       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
 //     ]
 //   },
@@ -613,7 +613,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //       "Adjust oven rack to lower-middle position and heat oven to 325 degrees. \
 // Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 tablesspoons oil in Duth oven over medium-high heat until just smoking. Add half of meat and cook, stirring occasionally, until well browned, 7 to 10 minutes, reducing heat if pot begins to scorch; transfer to bowl. Repeat with remaining 1 tablespoon oil and remaining beef.",
 //       "Melt butter in now-empty pot over medium-low heat. Add onions and 1/2 teaspoon salt and cook, stirring often, until softened, 5 to 7 minutes. Stir in garlic and cook until fragrant, about 30 seconds. Stir in flour and tomato paste and cook, stirring constantly, until golden, about 1 minute. Slowly whisk in wine, scraping up any browned bits. Gradually whisk in broth until smooth and bring to simmer.",
-//       "Stir in browed meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
+//       "Stir in browned meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
 //       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
 //     ]
 //   },
@@ -819,7 +819,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //       "Adjust oven rack to lower-middle position and heat oven to 325 degrees. \
 // Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 tablesspoons oil in Duth oven over medium-high heat until just smoking. Add half of meat and cook, stirring occasionally, until well browned, 7 to 10 minutes, reducing heat if pot begins to scorch; transfer to bowl. Repeat with remaining 1 tablespoon oil and remaining beef.",
 //       "Melt butter in now-empty pot over medium-low heat. Add onions and 1/2 teaspoon salt and cook, stirring often, until softened, 5 to 7 minutes. Stir in garlic and cook until fragrant, about 30 seconds. Stir in flour and tomato paste and cook, stirring constantly, until golden, about 1 minute. Slowly whisk in wine, scraping up any browned bits. Gradually whisk in broth until smooth and bring to simmer.",
-//       "Stir in browed meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
+//       "Stir in browned meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
 //       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
 //     ]
 //   },
@@ -1025,7 +1025,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //       "Adjust oven rack to lower-middle position and heat oven to 325 degrees. \
 // Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 tablesspoons oil in Duth oven over medium-high heat until just smoking. Add half of meat and cook, stirring occasionally, until well browned, 7 to 10 minutes, reducing heat if pot begins to scorch; transfer to bowl. Repeat with remaining 1 tablespoon oil and remaining beef.",
 //       "Melt butter in now-empty pot over medium-low heat. Add onions and 1/2 teaspoon salt and cook, stirring often, until softened, 5 to 7 minutes. Stir in garlic and cook until fragrant, about 30 seconds. Stir in flour and tomato paste and cook, stirring constantly, until golden, about 1 minute. Slowly whisk in wine, scraping up any browned bits. Gradually whisk in broth until smooth and bring to simmer.",
-//       "Stir in browed meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
+//       "Stir in browned meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
 //       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
 //     ]
 //   },
@@ -1231,7 +1231,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //       "Adjust oven rack to lower-middle position and heat oven to 325 degrees. \
 // Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 tablesspoons oil in Duth oven over medium-high heat until just smoking. Add half of meat and cook, stirring occasionally, until well browned, 7 to 10 minutes, reducing heat if pot begins to scorch; transfer to bowl. Repeat with remaining 1 tablespoon oil and remaining beef.",
 //       "Melt butter in now-empty pot over medium-low heat. Add onions and 1/2 teaspoon salt and cook, stirring often, until softened, 5 to 7 minutes. Stir in garlic and cook until fragrant, about 30 seconds. Stir in flour and tomato paste and cook, stirring constantly, until golden, about 1 minute. Slowly whisk in wine, scraping up any browned bits. Gradually whisk in broth until smooth and bring to simmer.",
-//       "Stir in browed meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
+//       "Stir in browned meat, carrots bay leaves and thyme and bring to simmer. Cover, place pot in oven, and cook for 1 hour. Stir in potatoes and continue to cook in oven, covered, until meat is tender, 1.5 to 2 hours longer. Remove pot from oven and discard bay leaves.",
 //       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
 //     ]
 //   },
