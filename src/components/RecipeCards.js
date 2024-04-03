@@ -14,37 +14,7 @@ const RecipeCards = ( ) => {
   const navigation = useNavigation()
   const [data, setData] = useState(recipeList)
 
-
-  function deleteRecipe(index) {
-    var newList = [...data]
-    newList.splice(index, 1)
-    setData(newList)
-    storage.save({
-      key: "recipeList",
-      data: newList,
-      expires: null
-    })
-  }
-  // const [data, setData] = useState(recipeList)
   const recipeList = useSelector((state) =>  state.recipeList)
-  // console.log(recipeList);
-  
-  // useEffect(() => {
-  //   const focusHandler = navigation.addListener('focus', () => {
-  //       console.log('Refreshed');
-  //       fetchRecipes()
-  //   });
-  //   return focusHandler;
-  // }, [navigation]);
-  
-  // fetchRecipes = () => {
-  //   storage.load({
-  //     key: "recipeList"
-  //   }).then(ret => {
-  //     setData(ret)
-  //   })
-  // }
-
 
   return (
     <View style={{
@@ -58,7 +28,7 @@ const RecipeCards = ( ) => {
             flex: 0.5,
             alignContent: "center"
           }}>
-            <RecipeCard item={item} index={index} deleteRecipe={deleteRecipe}/>
+            <RecipeCard item={item} index={index}/>
           </View>
         )}
       />

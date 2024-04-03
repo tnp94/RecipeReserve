@@ -1,19 +1,34 @@
-import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
-import RecipeCard from "../components/RecipeCard";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { recipeList } from "../Recipes";
-import RecipeDetailsScreen from "./RecipeDetailsScreen";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
-import NewRecipeScreen from "./NewRecipeScreen";
 import NewRecipeButton from "../components/NewRecipeButton";
+import { loadRecipeList } from "../store/recipeListSlice";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const RecipeListScreen = ({ navigation }) => {
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    navigation.setOptions(
+      {
+        headerRight: () => (
+          <Button
+            onPress={() => {
+              alert("Pressed load button")
+              dispatch(loadRecipeList())
+            }}
+            title="Reset recipes"
+          />
+        ),
+      }
+    )
+  }, [ ]);
+
   return (
     <View
     style={{

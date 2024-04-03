@@ -7,22 +7,25 @@ import RecipeListNavigator from "./src/screens/RecipeListNavigator";
 import ShoppingListScreen from "./src/screens/ShoppingListScreen";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
-import { store } from "./src/store/store";
+import { persistor, store } from "./src/store/store";
+import { PersistGate } from "redux-persist/integration/react";
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 export default function App() {
   return (
     <Provider store={store}>
-      <SafeAreaView style={{flex: 1}}>
-        <NavigationContainer>
-          <Tab.Navigator>
-            <Tab.Screen name="Welcome" component={WelcomeScreen} />
-            <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
-            <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
-          </Tab.Navigator>
-        </NavigationContainer>
-      </SafeAreaView>
+      <PersistGate persistor={persistor}>
+        <SafeAreaView style={{flex: 1}}>
+          <NavigationContainer>
+            <Tab.Navigator>
+              <Tab.Screen name="Welcome" component={WelcomeScreen} />
+              <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
+              <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
+            </Tab.Navigator>
+          </NavigationContainer>
+        </SafeAreaView>
+      </PersistGate>
     </Provider>
   )
 }

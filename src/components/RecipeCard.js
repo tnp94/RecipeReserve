@@ -4,10 +4,12 @@ import { createStackNavigator } from "@react-navigation/stack";
 import RecipeDetailsScreen from "../screens/RecipeDetailsScreen";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
-import storage from "../Storage";
+import { useDispatch } from "react-redux";
+import { deleteRecipe } from "../store/recipeListSlice";
 
-const RecipeCard = ({ item, index , deleteRecipe}) => {
+const RecipeCard = ({ item, index }) => {
   const navigation = useNavigation()
+  const dispatch = useDispatch()
   
   function recipeLongPress(index) {
     Alert.alert('Recipe actions', 'My Alert Msg', [
@@ -17,7 +19,7 @@ const RecipeCard = ({ item, index , deleteRecipe}) => {
       style: 'cancel',
     },
     {text: 'OK', onPress: () => console.log('OK Pressed')},
-    {text: 'Delete', onPress: () => deleteRecipe(index)},
+    {text: 'Delete', onPress: () => dispatch(deleteRecipe(index))},
     ]);
   }
 
