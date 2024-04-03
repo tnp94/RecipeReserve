@@ -3,83 +3,92 @@ import storage from "../Storage";
 // import { recipeList } from "../Recipes";
 import { useEffect, useState } from "react";
 import Ingredient from "../Models/Ingredient";
-import { useNavigation } from "@react-navigation/native";
 
-const NewRecipeScreen = ( saveRecipeButton ) => {
-  const navigation = useNavigation()
+const NewRecipeScreen = ( { navigation } ) => {
+
+  const state = {
+    id: 0,
+    name: "Basic Template",
+    image: "",
+    count: 0,
+    ingredients: [
+    ],
+    time: {
+      prep: 0,
+      active: 0
+    },
+    difficulty: "",
+    calories: 0,
+    favorite: false,
+    dishesAmount: "",
+    yield: 0,
+    directions: [
+    ]
+  }
+  const [data, setData] = useState(state)
+  
   useEffect(() => {
-      navigation.setOptions({
-      headerRight: () => (
-        <Button
-          onPress={() => {
-            alert('This is a button!')
-            SaveNewRecipe({
-              id: 3,
-              name: "Basic Template",
-              image: "",
-              count: 0,
-              ingredients: [
-                {
-                  name: "Ingredient 1",
-                  unit: "Cup",
-                  quantityUnit: "1",
-                },
-                {
-                  name: "Ingredient 2",
-                  unit: "Tbsp",
-                  quantityUnit: "1",
-                },
-              ],
-              time: {
-                prep: 20,
-                active: 40
-              },
-              difficulty: "Easy",
-              calories: 370,
-              favorite: false,
-              dishesAmount: "Small (1-4)",
-              yield: 0,
-              directions: [
-                "",
-                ""
-              ]
-            })
-          }}
-          title="Save"
-        />
-      ),
-      })
-    }, []);
+      navigation.setOptions(
+        {
+          headerRight: () => (
+            <Button
+              onPress={() => {
+                console.log('This is a button!')
+                onSaveButtonPress(data)
+              }}
+              title="Save"
+            />
+          ),
+        }
+      )
+    }, [ data ]);
 
-  function SaveNewRecipe( newRecipe ){
+  const onSaveButtonPress = (newRecipe) => {
+    console.log(newRecipe)
+    SaveNewRecipe(data)
+  }
+
+  const SaveNewRecipe = ( newRecipe ) => {
     storage.load({key: "recipeList"}).then((recipeList) => {
-      console.log(recipeList)
       recipeList.push(newRecipe)
       storage.save({
         key: "recipeList",
         data: recipeList,
         expires: null
       })
-
+      alert("Saved");
+      navigation.navigate("My Recipes")
     })
-    
   }
-  var newRecipeDirections = []
-  var newRecipeIngredients = [
-    {
-      name: "Ingredient 1",
-      unit: "Cup",
-      quantityUnit: "1",
-    },
-    {
-      name: "Ingredient 2",
-      unit: "Tbsp",
-      quantityUnit: "1",
-    },
-  ]
 
-  const [ingredients, setIngredients] = useState(newRecipeIngredients)
-  console.log(ingredients)
+
+
+  const updateIngredientName = (text, index) => {
+    var ingredients = [...data.ingredients]
+    ingredients[index].name = text
+    setData({...data, ingredients: ingredients})
+    // console.log(data.ingredients);
+  }
+
+  const updateIngredientUnit = (text, index) => {
+    var ingredients = [...data.ingredients]
+    ingredients[index].unit = text
+    setData({...data, ingredients: ingredients})
+    // console.log(data.ingredients);
+  }
+
+  const updateIngredientQuantityUnit = (text, index) => {
+    var ingredients = [...data.ingredients]
+    ingredients[index].quantityUnit = text
+    setData({...data, ingredients: ingredients})
+    // console.log(data.ingredients);
+  }
+
+  const deleteIngredient = (index) => {
+    var ingredients = [...data.ingredients]
+    ingredients.splice(index, 1)
+    setData({...data, ingredients: ingredients})
+  }
   
   return (
     <View
@@ -151,13 +160,15 @@ const NewRecipeScreen = ( saveRecipeButton ) => {
               flex: 1,
               justifyContent: "center"
             }}
-            onPress={() => (setIngredients([...ingredients, new Ingredient()]))}>
+            onPress={() => {
+              setData({...data, ingredients: [...data.ingredients, new Ingredient()]})
+            }}>
               <Text>New Ingredient</Text>
             </TouchableOpacity>
           </View>
         </View>
         <FlatList
-        data={ingredients}
+        data={data.ingredients}
         renderItem={ ( { item, index } ) => (
           <View
           style={{
@@ -169,24 +180,30 @@ const NewRecipeScreen = ( saveRecipeButton ) => {
               backgroundColor: "#fff"
             }}
             placeholder = {item.quantityUnit || "?"}
-            value={item.quantityUnit}
-            />
+            onChangeText={(text) => {
+              updateIngredientQuantityUnit(text, index)
+            }
+            }/>
 
             <TextInput style={{
               paddingHorizontal: 10,
               backgroundColor: "#fff"
             }}
             placeholder = {item.unit || "Unit"}
-            value={item.unit}
-            />
+            onChangeText={(text) => {
+              updateIngredientUnit(text, index)
+            }
+            }/>
 
             <TextInput style={{
               paddingHorizontal: 10,
               backgroundColor: "#fff"
             }}
             placeholder = {item.name || "Ingredient Name"}
-            value={item.name}
-            />
+            onChangeText={(text) => {
+              updateIngredientName(text, index)
+            }
+            }/>
             <TouchableOpacity
             style={{
               backgroundColor: "#fff",
@@ -197,7 +214,7 @@ const NewRecipeScreen = ( saveRecipeButton ) => {
             }}
             onPress={() => {
               var newIngredientsList = ingredients.splice(index, 1);
-              console.log(index)
+              // console.log(index)
               setIngredients([...ingredients])
             }}>
               <Text
