@@ -9,21 +9,19 @@ const recipeListSlice = createSlice({
   name: "recipeList",
   initialState: initialState,
   reducers: {
-    loadRecipeList: (state, action) => {
-      console.log("action:", action);
-      state.recipeList = recipeList
-      console.log("loaded");
+    loadRecipeList: (state) => {
+      return recipeList
     },
     addRecipe: (state, action) => {
-      if (!state.recipeList)
+      if (!state)
       {
-        state.recipeList = recipeList
+        state = recipeList
       }
-      state.recipeList.push(action.payload)
+      state.push(action.payload)
     },
     deleteRecipe: (state, action) => {
       console.log("state:", state)
-      state.recipeList.splice(action.payload, 1)
+      state.splice(action.payload, 1)
     }
   }
 })
