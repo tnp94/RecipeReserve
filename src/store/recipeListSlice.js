@@ -20,7 +20,6 @@ const recipeListSlice = createSlice({
       state.push(action.payload)
     },
     deleteRecipe: (state, action) => {
-      console.log("state:", state)
       state.splice(action.payload, 1)
     }
   }

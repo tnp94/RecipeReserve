@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard } from "react-native";
 import storage from "../Storage";
 // import { recipeList } from "../Recipes";
 import { useEffect, useState } from "react";
@@ -100,6 +100,7 @@ const NewRecipeScreen = ( { navigation } ) => {
   }
   
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <View
     style={{
       padding: 5
@@ -240,7 +241,11 @@ const NewRecipeScreen = ( { navigation } ) => {
               justifyContent: "center"
             }}
             onPress={() => {
-              setData({...data, ingredients: [...data.ingredients, ingredientTemplate()]})
+              if (Keyboard.isVisible()) {
+                Keyboard.dismiss()
+              } else {
+                setData({...data, ingredients: [...data.ingredients, ingredientTemplate()]})
+              }
             }}>
               <Text>New Ingredient</Text>
             </TouchableOpacity>
@@ -319,7 +324,11 @@ const NewRecipeScreen = ( { navigation } ) => {
               justifyContent: "center"
             }}
             onPress={() => {
-              setData({...data, directions: [...data.directions, ""]})
+              if (Keyboard.isVisible()) {
+                Keyboard.dismiss()
+              } else {
+                setData({...data, directions: [...data.directions, ""]})
+              }
             }}>
               <Text>New Direction</Text>
             </TouchableOpacity>
@@ -370,6 +379,7 @@ const NewRecipeScreen = ( { navigation } ) => {
       </View>
 
     </View>
+    </TouchableWithoutFeedback>
   )
 }
 

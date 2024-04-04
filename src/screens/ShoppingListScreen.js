@@ -2,8 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
 import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity } from "react-native";
 import { CheckBox, Separator } from "react-native-btr";
+import { useSelector } from "react-redux";
 
 const ShoppingListScreen = ({ navigation }) => {
+  const shoppingList = useSelector((state) =>  state.shoppingList)
+  const [data, setData] = useState(shoppingList)
   let mockShoppingListData = [
     {
       name: "Unsalted Butter (Softened)",
@@ -18,7 +21,7 @@ const ShoppingListScreen = ({ navigation }) => {
       checked: false
     },
   ]
-  const [data, setData] = useState(mockShoppingListData)
+  // const [data, setData] = useState(mockShoppingListData)
   const shoppingTableItem = ({ item, index }) => (
     <View style={{
       flexDirection: "row",

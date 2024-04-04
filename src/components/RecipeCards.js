@@ -12,9 +12,9 @@ import { useDispatch, useSelector } from "react-redux";
 Stack = createStackNavigator()
 const RecipeCards = ( ) => {
   const navigation = useNavigation()
+  const recipeList = useSelector((state) =>  state.recipeList)
   const [data, setData] = useState(recipeList)
 
-  const recipeList = useSelector((state) =>  state.recipeList)
 
   return (
     <View style={{

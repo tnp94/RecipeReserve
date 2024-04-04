@@ -1,7 +1,17 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import {
+  persistStore,
+  persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from 'redux-persist'
 import recipeListReducer from './recipeListSlice'
+import shoppingListReducer from './shoppingListSlice'
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { persistReducer, persistStore } from "redux-persist";
 
 const persistConfig = {
   key: 'root',
@@ -9,13 +19,20 @@ const persistConfig = {
 }
 
 const rootReducer = combineReducers({
-  recipeList: recipeListReducer
+  recipeList: recipeListReducer,
+  shoppingList: shoppingListReducer
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
 
 export const store = configureStore({
-  reducer: persistedReducer
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }),
 })
 
 export const persistor = persistStore(store)
