@@ -7,16 +7,36 @@ const RecipeDetailsScreen = ({ route }) => {
     <ScrollView>
         <Text style={{
           fontSize: 36, 
-          marginBottom: 12, 
           textAlign: "center",
           fontWeight: "bold"
           }}>
           {item.name}
         </Text>
-        <Text style={{
-          textAlign: "center"
-        }}>
 
+          <Text 
+            style={{
+          textAlign: "center",
+          fontSize: 12,
+            }}>
+            Prep Time: {(item.time.prep) !== 0 ? ( + (item.time.prep) + " minutes ") : "? "}
+          </Text>
+          <Text 
+            style={{
+          textAlign: "center",
+          fontSize: 12,
+            }}>
+            Active Time: {(item.time.active) !== 0 ? ( + (item.time.active) + " minutes") : "?"}
+          </Text>
+        <Text style={{
+          textAlign: "center",
+          marginBottom: 12,
+        }}>
+          <Text 
+            style={{
+              fontSize: 12,
+            }}>
+            {item.difficulty !== "" && ("Difficulty: " + item.difficulty)}
+          </Text>
         </Text>
         <View style={{
           marginBottom: 12

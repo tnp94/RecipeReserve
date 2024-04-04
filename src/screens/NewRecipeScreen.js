@@ -11,14 +11,12 @@ const NewRecipeScreen = ( { navigation } ) => {
 
   const state = {
     id: 0,
-    name: "Basic Template",
+    name: "",
     image: "",
     count: 0,
     ingredients: [
     ],
     time: {
-      prep: 0,
-      active: 0
     },
     difficulty: "",
     calories: 0,
@@ -93,6 +91,13 @@ const NewRecipeScreen = ( { navigation } ) => {
     ingredients.splice(index, 1)
     setData({...data, ingredients: ingredients})
   }
+
+  const updateDirection = (text, index) => {
+    var directions = [...data.directions]
+    directions[index] = text
+    setData({...data, directions: directions})
+    // console.log(data.ingredients);
+  }
   
   return (
     <View
@@ -126,7 +131,11 @@ const NewRecipeScreen = ( { navigation } ) => {
           backgroundColor: "#fff",
           padding: 5
         }}
-        placeholder="Recipe Name">
+        placeholder = {data.name || "Recipe Name"}
+        onChangeText={(text) => {
+          setData({...data, name: text})
+        }}
+        >
 
         </TextInput>
       </View>
@@ -147,7 +156,73 @@ const NewRecipeScreen = ( { navigation } ) => {
           backgroundColor: "#fff",
           padding: 5
         }}
-        placeholder="Easy/Medium/Hard">
+        placeholder = {data.difficulty || "Easy/Medium/Hard"}
+        onChangeText={(text) => {
+          setData({...data, difficulty: text})
+        }}>
+
+        </TextInput>
+      </View>
+
+      
+      <View
+      style={{
+        marginBottom: 10
+      }}
+      >
+        <Text
+        style={{
+          fontSize: 24
+        }}
+        >
+          Recipe Time
+        </Text>
+        <Text
+        style={{
+          fontSize: 18
+        }}
+        >
+          Prep time (minutes)
+        </Text>
+        <TextInput 
+        inputMode="numeric"
+        style={{
+          backgroundColor: "#fff",
+          padding: 5
+        }}
+        placeholder = {data.time.prep?.toString() || "20"}
+        onChangeText={(text) => {
+          if (/^\d+$/.test(text) || text === "") 
+          {
+            var time = {...data}.time
+            setData({...data, time: {active: data.time.active, prep: Number.parseFloat(text)}})
+
+          }
+        }}>
+
+        </TextInput>
+        <Text
+        style={{
+          fontSize: 18 
+        }}
+        >
+          Active time (minutes)
+        </Text>
+        <TextInput 
+        inputMode="numeric"
+        style={{
+          backgroundColor: "#fff",
+          padding: 5
+        }}
+        placeholder = {data.time.active?.toString() || "90"}
+        onChangeText={(text) => {
+          if (/^\d+$/.test(text) || text === "") 
+          {
+            var time = {...data}.time
+            setData({...data, time: {prep: data.time.prep, active: Number.parseFloat(text)}})
+
+          }
+        }}>
 
         </TextInput>
       </View>
@@ -224,6 +299,69 @@ const NewRecipeScreen = ( { navigation } ) => {
               <Text
               style={{
                 color: "red"
+              }}
+              >Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}/>
+      </View>
+
+      <View>
+        <View>
+          <View style={{flexDirection: "row"}}>
+            <Text>Directions</Text>
+            <TouchableOpacity
+            style={{
+              backgroundColor: "skyblue",
+              padding: 5,
+              borderRadius: 7,
+              flex: 1,
+              justifyContent: "center"
+            }}
+            onPress={() => {
+              setData({...data, directions: [...data.directions, ""]})
+            }}>
+              <Text>New Direction</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <FlatList
+        data={data.directions}
+        
+        renderItem={ ( { item, index } ) => (
+          <View
+          style={{
+            flexDirection: "row"
+          }}
+          >
+            <Text>{index + 1}</Text>
+            <TextInput style={{
+              paddingHorizontal: 10,
+              backgroundColor: "#fff",
+              flex: 7
+            }}
+            placeholder = {item.quantityUnit || "?"}
+            onChangeText={(text) => {
+              updateDirection(text, index)
+            }
+            }/>
+
+            <TouchableOpacity
+            style={{
+              backgroundColor: "#fff",
+              padding: 5,
+              borderRadius: 7,
+              flex: 1,
+              justifyContent: "center"
+            }}
+            onPress={() => {
+              var newIngredientsList = ingredients.splice(index, 1);
+              // console.log(index)
+              setIngredients([...ingredients])
+            }}>
+              <Text
+              style={{
+                color: "red",
               }}
               >Delete</Text>
             </TouchableOpacity>
