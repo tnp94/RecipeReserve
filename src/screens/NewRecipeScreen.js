@@ -147,7 +147,8 @@ const NewRecipeScreen = ( { navigation } ) => {
           backgroundColor: "#fff",
           padding: 5
         }}
-        placeholder = {data.name || "Recipe Name"}
+        placeholder = {"Recipe Name"}
+        value = {data.name}
         onChangeText={(text) => {
           setData({...data, name: text})
         }}
@@ -172,7 +173,8 @@ const NewRecipeScreen = ( { navigation } ) => {
           backgroundColor: "#fff",
           padding: 5
         }}
-        placeholder = {data.difficulty || "Easy/Medium/Hard"}
+        placeholder = {"Easy/Medium/Hard"}
+        value = {data.difficulty}
         onChangeText={(text) => {
           setData({...data, difficulty: text})
         }}>
@@ -206,7 +208,8 @@ const NewRecipeScreen = ( { navigation } ) => {
           backgroundColor: "#fff",
           padding: 5
         }}
-        placeholder = {data.time.prep?.toString() || "20"}
+        placeholder = {"20"}
+        value = {data.time.prep}
         onChangeText={(text) => {
           if (/^\d+$/.test(text) || text === "") 
           {
@@ -230,7 +233,8 @@ const NewRecipeScreen = ( { navigation } ) => {
           backgroundColor: "#fff",
           padding: 5
         }}
-        placeholder = {data.time.active?.toString() || "90"}
+        placeholder = {"90"}
+        value = {data.time.active}
         onChangeText={(text) => {
           if (/^\d+$/.test(text) || text === "") 
           {
@@ -278,7 +282,8 @@ const NewRecipeScreen = ( { navigation } ) => {
               paddingHorizontal: 10,
               backgroundColor: "#fff"
             }}
-            placeholder = {item.quantityUnit || "?"}
+            placeholder = {"?"}
+            value = {item.quantityUnit}
             onChangeText={(text) => {
               updateIngredientQuantityUnit(text, index)
             }
@@ -288,7 +293,8 @@ const NewRecipeScreen = ( { navigation } ) => {
               paddingHorizontal: 10,
               backgroundColor: "#fff"
             }}
-            placeholder = {item.unit || "Unit"}
+            placeholder = {"Unit"}
+            value = {item.unit}
             onChangeText={(text) => {
               updateIngredientUnit(text, index)
             }
@@ -298,7 +304,8 @@ const NewRecipeScreen = ( { navigation } ) => {
               paddingHorizontal: 10,
               backgroundColor: "#fff"
             }}
-            placeholder = {item.name || "Ingredient Name"}
+            placeholder = {"Ingredient Name"}
+            value = {item.name}
             onChangeText={(text) => {
               updateIngredientName(text, index)
             }
@@ -308,7 +315,8 @@ const NewRecipeScreen = ( { navigation } ) => {
               paddingHorizontal: 10,
               backgroundColor: "#fff"
             }}
-            placeholder = {item.note || "Note:Minced?/Softened?/Trimmed?"}
+            placeholder = {"Note:Minced?/Softened?/Trimmed?"}
+            value = {item.note}
             onChangeText={(text) => {
               updateIngredientNote(text, index)
             }
@@ -318,7 +326,8 @@ const NewRecipeScreen = ( { navigation } ) => {
               paddingHorizontal: 10,
               backgroundColor: "#fff"
             }}
-            placeholder = {item.category || "Category"}
+            placeholder = {"Category"}
+            value = {item.category}
             onChangeText={(text) => {
               updateIngredientCategory(text, index)
             }
@@ -334,9 +343,10 @@ const NewRecipeScreen = ( { navigation } ) => {
               justifyContent: "center"
             }}
             onPress={() => {
-              var newIngredientsList = ingredients.splice(index, 1);
+              var newIngredientsList = [...data.ingredients]
+              newIngredientsList.splice(index, 1);
               // console.log(index)
-              setIngredients([...ingredients])
+              setData({...data, ingredients: [...newIngredientsList]})
             }}>
               <Text
               style={{
@@ -386,7 +396,8 @@ const NewRecipeScreen = ( { navigation } ) => {
               backgroundColor: "#fff",
               flex: 7
             }}
-            placeholder = {item.quantityUnit || "?"}
+            placeholder = {"?"}
+            value = {item}
             onChangeText={(text) => {
               updateDirection(text, index)
             }
@@ -401,9 +412,10 @@ const NewRecipeScreen = ( { navigation } ) => {
               justifyContent: "center"
             }}
             onPress={() => {
-              var newIngredientsList = ingredients.splice(index, 1);
+              var newDirectionsList = [...data.directions]
+              newDirectionsList.splice(index, 1);
               // console.log(index)
-              setIngredients([...ingredients])
+              setData({...data, directions: [...newDirectionsList]})
             }}>
               <Text
               style={{
