@@ -1,3 +1,5 @@
+import { INGREDIENTCATEGORIES } from "./Models/Ingredient";
+
 export const recipeList = [
   {
     id: 0,
@@ -9,11 +11,15 @@ export const recipeList = [
         name: "Ingredient 1",
         unit: "Cup",
         quantityUnit: "1",
+        note: "",
+        category: ""
       },
       {
         name: "Ingredient 2",
         unit: "Tbsp",
         quantityUnit: "1",
+        note: "",
+        category: ""
       },
     ],
     time: {
@@ -40,46 +46,64 @@ export const recipeList = [
         name: "Unsalted Butter",
         unit: "Tbsp",
         quantityUnit: "4",
+        note: "Softened",
+        category: INGREDIENTCATEGORIES.DAIRY
       },
       {
-        name: "Minced Fresh Chives",
+        name: "Fresh Chives",
         unit: "Tbsp",
         quantityUnit: "2",
+        note: "Minced",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
-        name: "Minced Garlic",
+        name: "Garlic",
         unit: "Clove",
         quantityUnit: "1",
+        note: "Minced",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
         name: "Salt and Pepper",
         unit: "",
         quantityUnit: "",
+        note: "",
+        category: INGREDIENTCATEGORIES.BAKING
       },
       {
-        name: "Green Beans (Trimmed)",
+        name: "Green Beans",
         unit: "Lbs",
         quantityUnit: "1",
+        note: "Trimmed",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
         name: "Extra Virgin Olive Oil",
         unit: "Tbsp",
         quantityUnit: "2",
+        note: "",
+        category: INGREDIENTCATEGORIES.BAKING
       },
       {
-        name: "Small Red Potatoes (Peeled, Halved)",
+        name: "Small Red Potatoes",
         unit: "Lbs",
         quantityUnit: "1.5",
+        note: "Peeled, Halved",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
-        name: "Pork Tenderloin (Trimmed)",
+        name: "Pork Tenderloin",
         unit: "Whole",
         quantityUnit: "1-2",
+        note: "Trimmed",
+        category: INGREDIENTCATEGORIES.MEAT
       },
       {
         name: "Hoisin Sauce",
         unit: "Tbsp",
         quantityUnit: "2",
+        note: "",
+        category: ""
       },
     ],
     time: {
@@ -108,84 +132,116 @@ Lay pork lengthwise...",
     ingredients: [
       
       {
-        name: "Boneless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
+        name: "Boneless Beef Chuck-eye Roast",
         unit: "Lbs",
         quantityUnit: "4",
+        note: "Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces",
+        category: INGREDIENTCATEGORIES.MEAT
       },
       {
         name: "Salt and Pepper",
         unit: "",
         quantityUnit: "",
+        note: "",
+        category: ""
       },
       {
         name: "Canola Oil",
         unit: "Tbsp",
         quantityUnit: "3",
+        note: "",
+        category: INGREDIENTCATEGORIES.BAKING
       },
       {
         name: "Unsalted Butter",
         unit: "Tbsp",
         quantityUnit: "2",
+        note: "",
+        category: INGREDIENTCATEGORIES.DAIRY
       },
       {
-        name: "Onions (Chopped)",
+        name: "Onions",
         unit: "",
         quantityUnit: "2",
+        note: "Chopped",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
-        name: "Garlic (Minced)",
+        name: "Garlic",
         unit: "Clove",
         quantityUnit: "3",
+        note: "Minced",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
         name: "All-Purpose Flour",
         unit: "Cup",
         quantityUnit: "1/4",
+        note: "",
+        category: INGREDIENTCATEGORIES.BAKING
       },
       {
         name: "Tomato Paste",
         unit: "Tbsp",
         quantityUnit: "1",
+        note: "",
+        category: INGREDIENTCATEGORIES.CANNED
       },
       {
         name: "Dry Red Wine",
         unit: "Cup",
         quantityUnit: "1",
+        note: "",
+        category: ""
       },
       {
         name: "Beef Broth",
         unit: "Cup",
         quantityUnit: "3.5",
+        note: "",
+        category: ""
       },
       {
-        name: "Carrots (Peeled and Sliced 1 Inch Thick)",
+        name: "Carrots",
         unit: "Lbs",
         quantityUnit: "1",
+        note: "Peeled and Sliced 1 Inch Thick",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
         name: "Bay Leaf",
         unit: "Leaf",
         quantityUnit: "2",
+        note: "",
+        category: ""
       },
       {
-        name: "Fresh Thyme (Minced)",
+        name: "Fresh Thyme",
         unit: "Tbsp",
         quantityUnit: "1",
+        note: "Minced",
+        category: ""
       },
       {
-        name: "Red Potatoes (Unpeeled, Cut Into 1 Inch Pieces)",
+        name: "Red Potatoes",
         unit: "Lbs",
         quantityUnit: "1.5",
+        note: "Unpeeled, Cut Into 1 Inch Pieces",
+        category: INGREDIENTCATEGORIES.PRODUCE
       },
       {
         name: "Frozen Peas",
         unit: "Cup",
         quantityUnit: "1",
+        note: "",
+        category: INGREDIENTCATEGORIES.FROZEN
       },
       {
-        name: "Fresh Parsley (Minced)",
+        name: "Fresh Parsley",
         unit: "Tbsp",
         quantityUnit: "3",
+        note: "Minced",
+        category: ""
       },
     ],
     time: {

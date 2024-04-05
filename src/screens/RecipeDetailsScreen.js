@@ -54,7 +54,7 @@ const RecipeDetailsScreen = ({ route }) => {
               paddingHorizontal: 10
             }}
             key={ingredient.name}>
-              {ingredient.quantityUnit} {ingredient.unit} {ingredient.name}
+              {ingredient.quantityUnit} {ingredient.unit} {ingredient.name} {ingredient.category ? ingredient.category : ""}
             </Text>
             )}
         </View>
