@@ -11,6 +11,7 @@ import {
 } from 'redux-persist'
 import recipeListReducer from './recipeListSlice'
 import shoppingListReducer from './shoppingListSlice'
+import menuReducer from './menuSlice'
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const persistConfig = {
@@ -20,7 +21,8 @@ const persistConfig = {
 
 const rootReducer = combineReducers({
   recipeList: recipeListReducer,
-  shoppingList: shoppingListReducer
+  shoppingList: shoppingListReducer,
+  menu: menuReducer,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)

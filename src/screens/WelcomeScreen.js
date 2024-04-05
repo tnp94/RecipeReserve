@@ -1,13 +1,16 @@
 import { StyleSheet, View, Text, Image, Button } from "react-native";
 import { useDispatch } from "react-redux";
 import { loadRecipeList } from "../store/recipeListSlice";
+import { clearMenu } from "../store/menuSlice";
+import { clearShoppingList } from "../store/shoppingListSlice";
 
 const WelcomeScreen = ({ navigation }) => {
     const dispatch = useDispatch()
     return (
         <View style={{ flex: 1, alignItems: "center" }}>
             <Image style={{
-                width: "100%"
+                width: "100%",
+                height: "60%"
             }}
                 source={require("../../assets/images/ForkAndSpoon.png")}
             />
@@ -29,7 +32,16 @@ const WelcomeScreen = ({ navigation }) => {
                 title="Reset RecipeList data"
                 onPress={() => dispatch(loadRecipeList()) }
             >
-                Let's go!
+            </Button>
+            <Button
+                title="Reset menu data"
+                onPress={() => dispatch(clearMenu()) }
+            >
+            </Button>
+            <Button
+                title="Reset shopping list"
+                onPress={() => dispatch(clearShoppingList()) }
+            >
             </Button>
 
         </View>

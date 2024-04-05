@@ -6,6 +6,7 @@ import { TouchableOpacity } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { deleteRecipe } from "../store/recipeListSlice";
+import { addRecipeToMenu } from "../store/menuSlice";
 
 const RecipeCard = ({ item, index }) => {
   const navigation = useNavigation()
@@ -18,7 +19,7 @@ const RecipeCard = ({ item, index }) => {
       onPress: () => console.log('Cancel Pressed'),
       style: 'cancel',
     },
-    {text: 'OK', onPress: () => console.log('OK Pressed')},
+    {text: 'Add to menu', onPress: () => dispatch(addRecipeToMenu(item))},
     {text: 'Delete', onPress: () => dispatch(deleteRecipe(index))},
     ]);
   }

@@ -37,7 +37,7 @@ export const recipeList = [
     count: 0,
     ingredients: [
       {
-        name: "Unsalted Butter (Softened)",
+        name: "Unsalted Butter",
         unit: "Tbsp",
         quantityUnit: "4",
       },
@@ -108,7 +108,7 @@ Lay pork lengthwise...",
     ingredients: [
       
       {
-        name: "Bonless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
+        name: "Boneless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
         unit: "Lbs",
         quantityUnit: "4",
       },
@@ -314,7 +314,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //     ingredients: [
       
 //       {
-//         name: "Bonless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
+//         name: "Boneless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
 //         unit: "Lbs",
 //         quantityUnit: "4",
 //       },
@@ -520,7 +520,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //     ingredients: [
       
 //       {
-//         name: "Bonless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
+//         name: "Boneless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
 //         unit: "Lbs",
 //         quantityUnit: "4",
 //       },
@@ -726,7 +726,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //     ingredients: [
       
 //       {
-//         name: "Bonless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
+//         name: "Boneless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
 //         unit: "Lbs",
 //         quantityUnit: "4",
 //       },
@@ -932,7 +932,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //     ingredients: [
       
 //       {
-//         name: "Bonless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
+//         name: "Boneless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
 //         unit: "Lbs",
 //         quantityUnit: "4",
 //       },
@@ -1138,7 +1138,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //     ingredients: [
       
 //       {
-//         name: "Bonless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
+//         name: "Boneless Beef Chuck-eye Roast (Pulled apart at seams, trimmed, cut in to 1-1.5 inch pieces)",
 //         unit: "Lbs",
 //         quantityUnit: "4",
 //       },

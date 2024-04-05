@@ -29,10 +29,10 @@ const ShoppingListScreen = ({ navigation }) => {
       borderWidth: 1
     }}>
       <View style={{flex: 4, alignItems: "center"}}>
-        <Text>{item.name.toString()}</Text>
+        <Text>{item.name?.toString()}</Text>
       </View>
       <View style={{flex: 4, alignItems: "center"}}>
-        <Text>{item.quantityUnit.toString()} {item.unit}</Text>
+        <Text>{item.quantityUnit?.toString()} {item.unit}</Text>
       </View>
       <View 
       style={{
@@ -41,15 +41,6 @@ const ShoppingListScreen = ({ navigation }) => {
         checked={item.checked} 
         onPress={(newValue) => {
           let item = data[index]
-          AsyncStorage.getAllKeys((err, keys) => {
-            console.log('All Keys:');
-            AsyncStorage.multiGet(keys, (error, stores) => {
-              stores.map((result, i, store) => {
-                console.log({ [store[i][0]]: store[i][1] });
-                return true;
-              });
-            });
-          });
           item.checked = !item.checked; 
           setData([...data]);
         }}
@@ -69,9 +60,9 @@ const ShoppingListScreen = ({ navigation }) => {
   return (
     <View>
         <FlatList 
-        data={data} 
+        data={shoppingList} 
         renderItem={shoppingTableItem} 
-        keyExtractor={item => item.name}
+        keyExtractor={(item, index) => item.name + index}
         ItemSeparatorComponent={<Separator />}
         />
     </View>

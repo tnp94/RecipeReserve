@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import { persistor, store } from "./src/store/store";
 import { PersistGate } from "redux-persist/integration/react";
+import MenuScreen from "./src/screens/MenuScreen";
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -21,6 +22,7 @@ export default function App() {
             <Tab.Navigator>
               <Tab.Screen name="Welcome" component={WelcomeScreen} />
               <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
+              <Tab.Screen name="Menu" component={MenuScreen} />
               <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
             </Tab.Navigator>
           </NavigationContainer>
