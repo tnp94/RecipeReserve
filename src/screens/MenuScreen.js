@@ -62,7 +62,7 @@ const MenuScreen = ({ navigation }) => {
         <FlatList 
         data={menu} 
         renderItem={menuTableItem} 
-        keyExtractor={item => item.name}
+        keyExtractor={(item, index) => item.name + index.toString()}
         ItemSeparatorComponent={<Separator />}
         />
     </View>

@@ -31,7 +31,7 @@ const shoppingListSlice = createSlice({
       var checkedIndex = state.findIndex((item, index) => {
         return (item.id.recipeIndex == action.payload.recipeIndex && item.id.index == action.payload.index)
       })
-      if (checkedIndex > 0) {
+      if (checkedIndex >= 0) {
         state[checkedIndex].checked = !state[checkedIndex].checked
       }
     }
