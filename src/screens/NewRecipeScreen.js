@@ -72,6 +72,20 @@ const NewRecipeScreen = ( { navigation } ) => {
     // console.log(data.ingredients);
   }
 
+  const updateIngredientNote = (text, index) => {
+    var ingredients = [...data.ingredients]
+    ingredients[index].note = text
+    setData({...data, ingredients: ingredients})
+    // console.log(data.ingredients);
+  }
+
+  const updateIngredientCategory = (text, index) => {
+    var ingredients = [...data.ingredients]
+    ingredients[index].category = text
+    setData({...data, ingredients: ingredients})
+    // console.log(data.ingredients);
+  }
+
   const updateIngredientUnit = (text, index) => {
     var ingredients = [...data.ingredients]
     ingredients[index].unit = text
@@ -83,6 +97,7 @@ const NewRecipeScreen = ( { navigation } ) => {
     var ingredients = [...data.ingredients]
     ingredients[index].quantityUnit = text
     setData({...data, ingredients: ingredients})
+    console.log(data);
     // console.log(data.ingredients);
   }
 
@@ -288,6 +303,28 @@ const NewRecipeScreen = ( { navigation } ) => {
               updateIngredientName(text, index)
             }
             }/>
+
+            <TextInput style={{
+              paddingHorizontal: 10,
+              backgroundColor: "#fff"
+            }}
+            placeholder = {item.note || "Note:Minced?/Softened?/Trimmed?"}
+            onChangeText={(text) => {
+              updateIngredientNote(text, index)
+            }
+            }/>
+
+            <TextInput style={{
+              paddingHorizontal: 10,
+              backgroundColor: "#fff"
+            }}
+            placeholder = {item.category || "Category"}
+            onChangeText={(text) => {
+              updateIngredientCategory(text, index)
+            }
+            }/>
+
+
             <TouchableOpacity
             style={{
               backgroundColor: "#fff",

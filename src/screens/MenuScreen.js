@@ -22,7 +22,7 @@ const MenuScreen = ({ navigation }) => {
           ),
         }
       )
-    }, [ ]);
+    }, [ menu ]);
     
   const onGenerateShoppingListPress = (menu) => {
     Alert.alert('Generate Shopping List?', 'This will clear the current shopping list', [

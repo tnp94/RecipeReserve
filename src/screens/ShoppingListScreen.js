@@ -31,7 +31,7 @@ const ShoppingListScreen = ({ navigation }) => {
       padding: 5,
     }}>
       <View style={{flex: 4, alignItems: "center"}}>
-        <Text>{item.name?.toString()}</Text>
+        <Text>{item.name?.toString()} {item.note ? `(${item.note})` : ""}</Text>
       </View>
       <View style={{flex: 4, alignItems: "center"}}>
         <Text>{item.quantityUnit?.toString()} {item.unit}</Text>
@@ -71,7 +71,7 @@ const ShoppingListScreen = ({ navigation }) => {
       </View>
         <FlatList 
         data={shoppingList.filter((item) => {
-          return item.category == category
+          return item.category == category || ((category == INGREDIENTCATEGORIES.UNCATEGORIZED ) && (!Object.values(INGREDIENTCATEGORIES).includes(item.category) || item.category == ""))
         })} 
         renderItem={shoppingTableItem} 
         keyExtractor={(item, index) => item.name + index.toString()}

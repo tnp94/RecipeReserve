@@ -49,11 +49,11 @@ const RecipeDetailsScreen = ({ route }) => {
             }}>
             Ingredients
           </Text>
-            {item.ingredients.map(( ingredient ) => 
+            {item.ingredients.map(( ingredient, index ) => 
             <Text style={{
               paddingHorizontal: 10
             }}
-            key={ingredient.name}>
+            key={ingredient.name + index.toString()}>
               {ingredient.quantityUnit} {ingredient.unit} {ingredient.name} {ingredient.note ? `(${ingredient.note})` : ""}
             </Text>
             )}
