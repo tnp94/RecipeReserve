@@ -15,13 +15,19 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "io.thomaspollard.recipereserve",
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "io.thomaspollard.recipereserve",
+      "runtimeVersion": "1.0.0"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +37,9 @@
         "projectId": "60d3d1d1-a98e-4bdb-97a1-2e3b0f3d5706"
       }
     },
-    "owner": "thomaspollard_projects"
+    "owner": "thomaspollard_projects",
+    "updates": {
+      "url": "https://u.expo.dev/60d3d1d1-a98e-4bdb-97a1-2e3b0f3d5706"
+    }
   }
 }

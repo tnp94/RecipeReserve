@@ -1,10 +1,12 @@
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView } from "react-native";
 import storage from "../Storage";
 // import { recipeList } from "../Recipes";
 import { useEffect, useState } from "react";
 import { ingredientTemplate } from "../Models/Ingredient";
 import { useDispatch } from "react-redux";
 import { addRecipe } from "../store/recipeListSlice";
+import { Separator } from "react-native-btr";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const NewRecipeScreen = ( { navigation } ) => {
   const dispatch = useDispatch()
@@ -50,17 +52,8 @@ const NewRecipeScreen = ( { navigation } ) => {
   }
 
   const SaveNewRecipe = ( newRecipe ) => {
-    storage.load({key: "recipeList"}).then((recipeList) => {
-      recipeList.push(newRecipe)
-      // storage.save({
-      //   key: "recipeList",
-      //   data: recipeList,
-      //   expires: null
-      // })
-      dispatch(addRecipe(newRecipe))
-      alert("Saved");
-      // navigation.navigate("My Recipes")
-    })
+    dispatch(addRecipe(newRecipe))
+    alert("Saved");
   }
 
 
@@ -115,320 +108,328 @@ const NewRecipeScreen = ( { navigation } ) => {
   }
   
   return (
+    <KeyboardAwareScrollView>
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    <View
-    style={{
-      padding: 5
-    }}
-    >
-        <Text
+      <ScrollView
+      nestedScrollEnabled={true}
+      style={{
+        padding: 5
+      }}
+      >
+          <Text
+          style={{
+            fontSize: 32,
+            alignSelf: "center",
+            marginBottom: 10
+          }}
+          >
+            Let's add a new Recipe!
+          </Text>
+        <View
         style={{
-          fontSize: 32,
-          alignSelf: "center",
           marginBottom: 10
         }}
         >
-          Let's add a new Recipe!
-        </Text>
-      <View
-      style={{
-        marginBottom: 10
-      }}
-      >
-        <Text
-        style={{
-          fontSize: 24
-        }}
-        >
-          Recipe Name
-        </Text>
-        <TextInput 
-        style={{
-          backgroundColor: "#fff",
-          padding: 5
-        }}
-        placeholder = {"Recipe Name"}
-        value = {data.name}
-        onChangeText={(text) => {
-          setData({...data, name: text})
-        }}
-        >
-
-        </TextInput>
-      </View>
-      <View
-      style={{
-        marginBottom: 10
-      }}
-      >
-        <Text
-        style={{
-          fontSize: 24
-        }}
-        >
-          Recipe difficulty
-        </Text>
-        <TextInput 
-        style={{
-          backgroundColor: "#fff",
-          padding: 5
-        }}
-        placeholder = {"Easy/Medium/Hard"}
-        value = {data.difficulty}
-        onChangeText={(text) => {
-          setData({...data, difficulty: text})
-        }}>
-
-        </TextInput>
-      </View>
-
-      
-      <View
-      style={{
-        marginBottom: 10
-      }}
-      >
-        <Text
-        style={{
-          fontSize: 24
-        }}
-        >
-          Recipe Time
-        </Text>
-        <Text
-        style={{
-          fontSize: 18
-        }}
-        >
-          Prep time (minutes)
-        </Text>
-        <TextInput 
-        inputMode="numeric"
-        style={{
-          backgroundColor: "#fff",
-          padding: 5
-        }}
-        placeholder = {"20"}
-        value = {data.time.prep}
-        onChangeText={(text) => {
-          if (/^\d+$/.test(text) || text === "") 
-          {
-            var time = {...data}.time
-            setData({...data, time: {active: data.time.active, prep: Number.parseFloat(text)}})
-
-          }
-        }}>
-
-        </TextInput>
-        <Text
-        style={{
-          fontSize: 18 
-        }}
-        >
-          Active time (minutes)
-        </Text>
-        <TextInput 
-        inputMode="numeric"
-        style={{
-          backgroundColor: "#fff",
-          padding: 5
-        }}
-        placeholder = {"90"}
-        value = {data.time.active}
-        onChangeText={(text) => {
-          if (/^\d+$/.test(text) || text === "") 
-          {
-            var time = {...data}.time
-            setData({...data, time: {prep: data.time.prep, active: Number.parseFloat(text)}})
-
-          }
-        }}>
-
-        </TextInput>
-      </View>
-
-      <View>
-        <View>
-          <View style={{flexDirection: "row"}}>
-            <Text>Ingredients</Text>
-            <TouchableOpacity
-            style={{
-              backgroundColor: "skyblue",
-              padding: 5,
-              borderRadius: 7,
-              flex: 1,
-              justifyContent: "center"
-            }}
-            onPress={() => {
-              if (Keyboard.isVisible()) {
-                Keyboard.dismiss()
-              } else {
-                setData({...data, ingredients: [...data.ingredients, ingredientTemplate()]})
-              }
-            }}>
-              <Text>New Ingredient</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        <FlatList
-        data={data.ingredients}
-        renderItem={ ( { item, index } ) => (
-          <View
+          <Text
           style={{
-            flexDirection: "row"
+            fontSize: 24
           }}
           >
-            <TextInput style={{
-              paddingHorizontal: 10,
-              backgroundColor: "#fff"
-            }}
-            placeholder = {"?"}
-            value = {item.quantityUnit}
-            onChangeText={(text) => {
-              updateIngredientQuantityUnit(text, index)
-            }
-            }/>
+            Recipe Name
+          </Text>
+          <TextInput 
+          style={{
+            backgroundColor: "#fff",
+            padding: 5
+          }}
+          placeholder = {"Recipe Name"}
+          value = {data.name}
+          onChangeText={(text) => {
+            setData({...data, name: text})
+          }}
+          >
 
-            <TextInput style={{
-              paddingHorizontal: 10,
-              backgroundColor: "#fff"
-            }}
-            placeholder = {"Unit"}
-            value = {item.unit}
-            onChangeText={(text) => {
-              updateIngredientUnit(text, index)
-            }
-            }/>
-
-            <TextInput style={{
-              paddingHorizontal: 10,
-              backgroundColor: "#fff"
-            }}
-            placeholder = {"Ingredient Name"}
-            value = {item.name}
-            onChangeText={(text) => {
-              updateIngredientName(text, index)
-            }
-            }/>
-
-            <TextInput style={{
-              paddingHorizontal: 10,
-              backgroundColor: "#fff"
-            }}
-            placeholder = {"Note:Minced?/Softened?/Trimmed?"}
-            value = {item.note}
-            onChangeText={(text) => {
-              updateIngredientNote(text, index)
-            }
-            }/>
-
-            <TextInput style={{
-              paddingHorizontal: 10,
-              backgroundColor: "#fff"
-            }}
-            placeholder = {"Category"}
-            value = {item.category}
-            onChangeText={(text) => {
-              updateIngredientCategory(text, index)
-            }
-            }/>
-
-
-            <TouchableOpacity
-            style={{
-              backgroundColor: "#fff",
-              padding: 5,
-              borderRadius: 7,
-              flex: 1,
-              justifyContent: "center"
-            }}
-            onPress={() => {
-              var newIngredientsList = [...data.ingredients]
-              newIngredientsList.splice(index, 1);
-              // console.log(index)
-              setData({...data, ingredients: [...newIngredientsList]})
-            }}>
-              <Text
-              style={{
-                color: "red"
-              }}
-              >Delete</Text>
-            </TouchableOpacity>
-          </View>
-        )}/>
-      </View>
-
-      <View>
-        <View>
-          <View style={{flexDirection: "row"}}>
-            <Text>Directions</Text>
-            <TouchableOpacity
-            style={{
-              backgroundColor: "skyblue",
-              padding: 5,
-              borderRadius: 7,
-              flex: 1,
-              justifyContent: "center"
-            }}
-            onPress={() => {
-              if (Keyboard.isVisible()) {
-                Keyboard.dismiss()
-              } else {
-                setData({...data, directions: [...data.directions, ""]})
-              }
-            }}>
-              <Text>New Direction</Text>
-            </TouchableOpacity>
-          </View>
+          </TextInput>
         </View>
-        <FlatList
-        data={data.directions}
+        <View
+        style={{
+          marginBottom: 10
+        }}
+        >
+          <Text
+          style={{
+            fontSize: 24
+          }}
+          >
+            Recipe difficulty
+          </Text>
+          <TextInput 
+          style={{
+            backgroundColor: "#fff",
+            padding: 5
+          }}
+          placeholder = {"Easy/Medium/Hard"}
+          value = {data.difficulty}
+          onChangeText={(text) => {
+            setData({...data, difficulty: text})
+          }}>
+
+          </TextInput>
+        </View>
+
         
-        renderItem={ ( { item, index } ) => (
-          <View
+        <View
+        style={{
+          marginBottom: 10
+        }}
+        >
+          <Text
           style={{
-            flexDirection: "row"
+            fontSize: 24
           }}
           >
-            <Text>{index + 1}</Text>
-            <TextInput style={{
-              paddingHorizontal: 10,
-              backgroundColor: "#fff",
-              flex: 7
-            }}
-            placeholder = {"?"}
-            value = {item}
-            onChangeText={(text) => {
-              updateDirection(text, index)
+            Recipe Time
+          </Text>
+          <Text
+          style={{
+            fontSize: 18
+          }}
+          >
+            Prep time (minutes)
+          </Text>
+          <TextInput 
+          inputMode="numeric"
+          style={{
+            backgroundColor: "#fff",
+            padding: 5
+          }}
+          placeholder = {"20"}
+          value = {data.time.prep}
+          onChangeText={(text) => {
+            if (/^\d+$/.test(text) || text === "") 
+            {
+              var time = {...data}.time
+              setData({...data, time: {active: data.time.active, prep: Number.parseFloat(text)}})
+
             }
-            }/>
+          }}>
 
-            <TouchableOpacity
-            style={{
-              backgroundColor: "#fff",
-              padding: 5,
-              borderRadius: 7,
-              flex: 1,
-              justifyContent: "center"
-            }}
-            onPress={() => {
-              var newDirectionsList = [...data.directions]
-              newDirectionsList.splice(index, 1);
-              // console.log(index)
-              setData({...data, directions: [...newDirectionsList]})
-            }}>
-              <Text
+          </TextInput>
+          <Text
+          style={{
+            fontSize: 18 
+          }}
+          >
+            Active time (minutes)
+          </Text>
+          <TextInput 
+          inputMode="numeric"
+          style={{
+            backgroundColor: "#fff",
+            padding: 5
+          }}
+          placeholder = {"90"}
+          value = {data.time.active}
+          onChangeText={(text) => {
+            if (/^\d+$/.test(text) || text === "") 
+            {
+              var time = {...data}.time
+              setData({...data, time: {prep: data.time.prep, active: Number.parseFloat(text)}})
+
+            }
+          }}>
+
+          </TextInput>
+        </View>
+
+        <View>
+          <View>
+            <View style={{flexDirection: "row"}}>
+              <Text>Ingredients</Text>
+              <TouchableOpacity
               style={{
-                color: "red",
+                backgroundColor: "skyblue",
+                padding: 5,
+                borderRadius: 7,
+                flex: 1,
+                justifyContent: "center"
               }}
-              >Delete</Text>
-            </TouchableOpacity>
+              onPress={() => {
+                if (Keyboard.isVisible()) {
+                  Keyboard.dismiss()
+                } else {
+                  setData({...data, ingredients: [...data.ingredients, ingredientTemplate()]})
+                }
+              }}>
+                <Text>New Ingredient</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}/>
-      </View>
+          <FlatList
+          scrollEnabled={false}
+          data={data.ingredients}
+          ItemSeparatorComponent={<Separator />}
+          renderItem={ ( { item, index } ) => (
+            <View
+            style={{
+              flexDirection: "row"
+            }}
+            >
+              <TextInput style={{
+                paddingHorizontal: 5,
+                backgroundColor: "#fff",
+                borderWidth: 1,
+                borderColor: "#eee",
+              }}
+              placeholder = {"?"}
+              value = {item.quantityUnit}
+              onChangeText={(text) => {
+                updateIngredientQuantityUnit(text, index)
+              }
+              }/>
 
-    </View>
+              <TextInput style={{
+                paddingHorizontal: 5,
+                backgroundColor: "#fff"
+              }}
+              placeholder = {"Unit"}
+              value = {item.unit}
+              onChangeText={(text) => {
+                updateIngredientUnit(text, index)
+              }
+              }/>
+
+              <TextInput style={{
+                paddingHorizontal: 10,
+                backgroundColor: "#fff"
+              }}
+              placeholder = {"Ingredient Name"}
+              value = {item.name}
+              onChangeText={(text) => {
+                updateIngredientName(text, index)
+              }
+              }/>
+
+              <TextInput style={{
+                paddingHorizontal: 10,
+                backgroundColor: "#fff"
+              }}
+              placeholder = {"Note:Minced?/Softened?/Trimmed?"}
+              value = {item.note}
+              onChangeText={(text) => {
+                updateIngredientNote(text, index)
+              }
+              }/>
+
+              <TextInput style={{
+                paddingHorizontal: 10,
+                backgroundColor: "#fff"
+              }}
+              placeholder = {"Category"}
+              value = {item.category}
+              onChangeText={(text) => {
+                updateIngredientCategory(text, index)
+              }
+              }/>
+
+
+              <TouchableOpacity
+              style={{
+                backgroundColor: "#fff",
+                padding: 5,
+                borderRadius: 7,
+                flex: 1,
+                justifyContent: "center"
+              }}
+              onPress={() => {
+                var newIngredientsList = [...data.ingredients]
+                newIngredientsList.splice(index, 1);
+                // console.log(index)
+                setData({...data, ingredients: [...newIngredientsList]})
+              }}>
+                <Text
+                style={{
+                  color: "red"
+                }}
+                >Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}/>
+        </View>
+
+        <View>
+          <View>
+            <View style={{flexDirection: "row"}}>
+              <Text>Directions</Text>
+              <TouchableOpacity
+              style={{
+                backgroundColor: "skyblue",
+                padding: 5,
+                borderRadius: 7,
+                flex: 1,
+                justifyContent: "center"
+              }}
+              onPress={() => {
+                if (Keyboard.isVisible()) {
+                  Keyboard.dismiss()
+                } else {
+                  setData({...data, directions: [...data.directions, ""]})
+                }
+              }}>
+                <Text>New Direction</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <FlatList
+          scrollEnabled={false}
+          data={data.directions}
+          ItemSeparatorComponent={<Separator />}
+          renderItem={ ( { item, index } ) => (
+            <View
+            style={{
+              flexDirection: "row"
+            }}
+            >
+              <Text>{index + 1}</Text>
+              <TextInput style={{
+                paddingHorizontal: 10,
+                backgroundColor: "#fff",
+                flex: 7
+              }}
+              placeholder = {"?"}
+              value = {item}
+              onChangeText={(text) => {
+                updateDirection(text, index)
+              }
+              }/>
+
+              <TouchableOpacity
+              style={{
+                backgroundColor: "#fff",
+                padding: 5,
+                borderRadius: 7,
+                flex: 1,
+                justifyContent: "center"
+              }}
+              onPress={() => {
+                var newDirectionsList = [...data.directions]
+                newDirectionsList.splice(index, 1);
+                // console.log(index)
+                setData({...data, directions: [...newDirectionsList]})
+              }}>
+                <Text
+                style={{
+                  color: "red",
+                }}
+                >Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}/>
+        </View>
+
+      </ScrollView>
     </TouchableWithoutFeedback>
+      </KeyboardAwareScrollView>
   )
 }
 
