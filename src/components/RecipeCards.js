@@ -3,7 +3,6 @@ import { StyleSheet, View, Text, Image, TouchableOpacity, SafeAreaView, Alert } 
 import RecipeDetailsScreen from "../screens/RecipeDetailsScreen";
 import { createStackNavigator } from "@react-navigation/stack";
 import { FlatList } from "react-native-gesture-handler";
-import storage from "../Storage";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import RecipeCard from "./RecipeCard";

@@ -1,5 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-import storage from "../Storage";
 import { recipeList } from "../Recipes";
 
 const initialState = recipeList

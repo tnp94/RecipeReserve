@@ -1,5 +1,4 @@
 import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView } from "react-native";
-import storage from "../Storage";
 // import { recipeList } from "../Recipes";
 import { useEffect, useState } from "react";
 import { ingredientTemplate } from "../Models/Ingredient";

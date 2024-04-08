@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
 import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity } from "react-native";
 import { CheckBox, Separator } from "react-native-btr";
