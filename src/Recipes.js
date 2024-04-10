@@ -1,10 +1,9 @@
 import { INGREDIENTCATEGORIES } from "./Models/Ingredient";
 
-export const recipeList = [
-  {
-    id: 0,
-    name: "Basic Template",
+export const recipeList = {
+  "Basic Template": {
     image: "",
+    name: "Basic Template",
     count: 0,
     ingredients: [
       {
@@ -36,10 +35,9 @@ export const recipeList = [
       ""
     ]
   },
-  {
-    id: 1,
-    name: "One-Pan Pork Tenderloin with Green Beans and Potatoes",
+  "One-Pan Pork Tenderloin with Green Beans and Potatoes": {
     image: "",
+    name: "One-Pan Pork Tenderloin with Green Beans and Potatoes",
     count: 0,
     ingredients: [
       {
@@ -124,13 +122,11 @@ Lay pork lengthwise...",
       "Gently stir vegetables on sheet to combine. Return sheet to oven....",
     ]
   },
-  {
-    id: 2,
-    name: "Best Beef Stew",
+  "Best Beef Stew": {
     image: "",
+    name: "Best Beef Stew",
     count: 0,
     ingredients: [
-      
       {
         name: "Boneless Beef Chuck-eye Roast",
         unit: "Lbs",
@@ -261,6 +257,7 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
     ]
   },
+}
 //   {
 //     id: 3,
 //     name: "Basic Template",
@@ -1291,4 +1288,4 @@ Pat beef dry with paper towels and season lightly with salt and pepper. Heat 2 t
 //       "Season with salt and pepper to taste. Stir in peas, cover, and let sit for 10 minutes. Serve, sprinkling parsley over individual portions.",
 //     ]
 //   },
-]
+// ]

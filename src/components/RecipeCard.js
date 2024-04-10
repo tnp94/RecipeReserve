@@ -1,15 +1,14 @@
 import { StyleSheet, View, Text, Image, FlatList, Alert } from "react-native";
-import { recipeList } from "../Recipes";
-import { createStackNavigator } from "@react-navigation/stack";
-import RecipeDetailsScreen from "../screens/RecipeDetailsScreen";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
-import { useDispatch } from "react-redux";
-import { deleteRecipe } from "../store/recipeListSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { deleteRecipe } from "../store/recipeSlice";
 import { addRecipeToMenu } from "../store/menuSlice";
 
-const RecipeCard = ({ item, index }) => {
+const RecipeCard = ({ recipeName, index }) => {
   const navigation = useNavigation()
+  const recipe = useSelector((state) => state.recipes[recipeName])
+  console.log("recipe", recipe);
   const dispatch = useDispatch()
   
   function recipeLongPress(index) {
@@ -19,53 +18,54 @@ const RecipeCard = ({ item, index }) => {
       onPress: () => console.log('Cancel Pressed'),
       style: 'cancel',
     },
-    {text: 'Add to menu', onPress: () => dispatch(addRecipeToMenu(item))},
-    {text: 'Delete', onPress: () => dispatch(deleteRecipe(index))},
+    {text: 'Add to menu', onPress: () => dispatch(addRecipeToMenu(recipe))},
+    {text: 'Delete', onPress: () => dispatch(deleteRecipe(recipeName))},
     ]);
   }
 
-  return (
-    <TouchableOpacity 
-        onPress={() => navigation.navigate("Recipe Details",  { item } )}
-        onLongPress={() => {recipeLongPress(index)}}
-        key={index}
+  if (recipe) 
+    return (
+      <TouchableOpacity 
+      onPress={() => navigation.navigate("Recipe Details",  { recipeName } )}
+      onLongPress={() => {recipeLongPress(index)}}
+      key={index}
+      style={{
+        margin: 5,
+        padding: 5,
+        backgroundColor: '#fff',
+        borderColor: "#333",
+        borderRadius: 16,
+        alignItems: "center",
+        shadowOffset: {
+          width: 0,
+          height: 4
+        },
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        flex: 1
+      }}
+      >
+        <Image
         style={{
-          margin: 5,
-          padding: 5,
-          backgroundColor: '#fff',
-          borderColor: "#333",
-          borderRadius: 16,
-          alignItems: "center",
-          shadowOffset: {
-            width: 0,
-            height: 4
-          },
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-          flex: 1
+          width: 70,
+          height: 70,
+          borderRadius: 20
         }}
-        >
-          <Image
-          style={{
-            width: 70,
-            height: 70,
-            borderRadius: 20
-          }}
-          source={require("../../assets/images/ForkAndSpoon.png")} />
-          <Text style={{
-            flexWrap: "wrap",
-            flex: 1,
-            paddingHorizontal: 5,
-          }}>{index} {item.name}</Text>
-          <Text 
-          style={{
-            fontSize: 12,
-          }}>
-            Time: {(item.time.prep + item.time.active) !== 0 ? ( + (item.time.prep + item.time.active) + " minutes") : "?"}
-            {item.difficulty !== "" && (" | Difficulty: " + item.difficulty)}
-          </Text>
-        </TouchableOpacity>
-  )
+        source={require("../../assets/images/ForkAndSpoon.png")} />
+        <Text style={{
+          flexWrap: "wrap",
+          flex: 1,
+          paddingHorizontal: 5,
+        }}>{index} {recipe.name}</Text>
+        <Text 
+        style={{
+          fontSize: 12,
+        }}>
+          Time: {(recipe.time.prep + recipe.time.active) !== 0 ? ( + (recipe.time.prep + recipe.time.active) + " minutes") : "?"}
+          {recipe.difficulty !== "" && (" | Difficulty: " + recipe.difficulty)}
+        </Text>
+      </TouchableOpacity>
+    )
 }
 
 export default RecipeCard;

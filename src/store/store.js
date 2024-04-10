@@ -9,7 +9,7 @@ import {
   PURGE,
   REGISTER,
 } from 'redux-persist'
-import recipeListReducer from './recipeListSlice'
+import recipesReducer from './recipeSlice'
 import shoppingListReducer from './shoppingListSlice'
 import menuReducer from './menuSlice'
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,7 +20,7 @@ const persistConfig = {
 }
 
 const rootReducer = combineReducers({
-  recipeList: recipeListReducer,
+  recipes: recipesReducer,
   shoppingList: shoppingListReducer,
   menu: menuReducer,
 })

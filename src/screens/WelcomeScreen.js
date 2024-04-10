@@ -1,6 +1,6 @@
 import { StyleSheet, View, Text, Image, Button } from "react-native";
 import { useDispatch } from "react-redux";
-import { loadRecipeList } from "../store/recipeListSlice";
+import { loadRecipeList } from "../store/recipeSlice";
 import { clearMenu } from "../store/menuSlice";
 import { clearShoppingList } from "../store/shoppingListSlice";
 

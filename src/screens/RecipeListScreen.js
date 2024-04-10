@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
 import NewRecipeButton from "../components/NewRecipeButton";
-import { loadRecipeList } from "../store/recipeListSlice";
+import { loadRecipeList } from "../store/recipeSlice";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 
@@ -19,7 +19,6 @@ const RecipeListScreen = ({ navigation }) => {
         headerRight: () => (
           <Button
             onPress={() => {
-              alert("Pressed load button")
               dispatch(loadRecipeList())
             }}
             title="Reset recipes"

@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button, 
 import { useEffect, useState } from "react";
 import { ingredientTemplate } from "../Models/Ingredient";
 import { useDispatch } from "react-redux";
-import { addRecipe } from "../store/recipeListSlice";
+import { addRecipe } from "../store/recipeSlice";
 import { Separator } from "react-native-btr";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 

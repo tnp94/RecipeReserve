@@ -1,8 +1,11 @@
 import { StyleSheet, View, Text, Image, TouchableOpacity, Button } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
+import { useSelector } from "react-redux";
 
 const RecipeDetailsScreen = ({ route }) => {
-  const { item } = route.params;
+  const { recipeName } = route.params;
+  const recipe = useSelector((state) => state.recipes[recipeName])
+  console.log("recipe: ", recipe);
   return (
     <ScrollView>
         <Text style={{
@@ -10,7 +13,7 @@ const RecipeDetailsScreen = ({ route }) => {
           textAlign: "center",
           fontWeight: "bold"
           }}>
-          {item.name}
+          {recipe.name}
         </Text>
 
           <Text 
@@ -18,14 +21,14 @@ const RecipeDetailsScreen = ({ route }) => {
           textAlign: "center",
           fontSize: 12,
             }}>
-            Prep Time: {(item.time.prep) !== 0 ? ( + (item.time.prep) + " minutes ") : "? "}
+            Prep Time: {(recipe.time.prep) !== 0 ? ( + (recipe.time.prep) + " minutes ") : "? "}
           </Text>
           <Text 
             style={{
           textAlign: "center",
           fontSize: 12,
             }}>
-            Active Time: {(item.time.active) !== 0 ? ( + (item.time.active) + " minutes") : "?"}
+            Active Time: {(recipe.time.active) !== 0 ? ( + (recipe.time.active) + " minutes") : "?"}
           </Text>
         <Text style={{
           textAlign: "center",
@@ -35,7 +38,7 @@ const RecipeDetailsScreen = ({ route }) => {
             style={{
               fontSize: 12,
             }}>
-            {item.difficulty !== "" && ("Difficulty: " + item.difficulty)}
+            {recipe.difficulty !== "" && ("Difficulty: " + recipe.difficulty)}
           </Text>
         </Text>
         <View style={{
@@ -49,7 +52,7 @@ const RecipeDetailsScreen = ({ route }) => {
             }}>
             Ingredients
           </Text>
-            {item.ingredients.map(( ingredient, index ) => 
+            {recipe.ingredients.map(( ingredient, index ) => 
             <Text style={{
               paddingHorizontal: 10
             }}
@@ -69,7 +72,7 @@ const RecipeDetailsScreen = ({ route }) => {
             }}>
             Directions
           </Text>
-            {item.directions.map(( step, index ) => 
+            {recipe.directions.map(( step, index ) => 
             <Text style={{
               paddingHorizontal: 10
             }}

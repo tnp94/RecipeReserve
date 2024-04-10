@@ -11,23 +11,22 @@ import { useDispatch, useSelector } from "react-redux";
 Stack = createStackNavigator()
 const RecipeCards = ( ) => {
   const navigation = useNavigation()
-  const recipeList = useSelector((state) =>  state.recipeList)
-  const [data, setData] = useState(recipeList)
-
+  const recipeList = useSelector((state) =>  state.recipes)
+  console.log("recipeList", Object.keys(recipeList));
 
   return (
     <View style={{
       flex: 1,
     }}>
       <FlatList
-        data={recipeList}
+        data={Object.keys(recipeList)}
         numColumns={2}
         renderItem={ ({ item, index }) => (
           <View style={{
             flex: 0.5,
             alignContent: "center"
           }}>
-            <RecipeCard item={item} index={index}/>
+            <RecipeCard recipeName={item} index={index}/>
           </View>
         )}
       />
