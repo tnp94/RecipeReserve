@@ -41,7 +41,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
               onPress={() => {
                 onSaveButtonPress(data)
               }}
-              title="Save"
+              title="Save/copy"
             />
           ),
         }

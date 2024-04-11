@@ -3,6 +3,8 @@ import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button, Aler
 import { CheckBox, Separator } from "react-native-btr";
 import { useDispatch, useSelector } from "react-redux";
 import { clearShoppingList, generateShoppingList } from "../store/shoppingListSlice";
+import { Swipeable } from "react-native-gesture-handler";
+import { deleteRecipeFromMenu } from "../store/menuSlice";
 
 const MenuScreen = ({ navigation }) => {
   const menu = useSelector((state) =>  state.menu)
@@ -37,24 +39,46 @@ const MenuScreen = ({ navigation }) => {
     ]);
   }
 
-  const menuTableItem = ({ item, index }) => (
-    <View style={{
-      flexDirection: "row",
-      padding: 5,
-      borderWidth: 1
-    }}>
-      <View style={{flex: 4, alignItems: "center"}}>
-        <Text>{item.name.toString()}</Text>
-      </View>
-      <View style={{flex: 4, alignItems: "center"}}>
-        <Text>{index}</Text>
-      </View>
-      <View 
-      style={{
-      }}>
-      </View>
-    </View>
-  )
+  const menuTableItem = ({ item, index }) => {
+    
+  
+    const deleteMenuItem = () => {
+      dispatch(deleteRecipeFromMenu(index))
+    }
+    const renderRightActions = () => {
+      return (
+        <Button
+          title="Delete"
+          color={"red"}
+          onPress={() => deleteMenuItem(index)}
+        >
+        </Button>
+      )
+    }
+    return (
+      <Swipeable
+        renderRightActions={renderRightActions}
+        overshootFriction={8}
+      >
+        <View style={{
+          flexDirection: "row",
+          padding: 5,
+          borderWidth: 1
+        }}>
+          <View style={{flex: 4, alignItems: "center"}}>
+            <Text>{item.name.toString()}</Text>
+          </View>
+          <View style={{flex: 4, alignItems: "center"}}>
+            <Text>{index}</Text>
+          </View>
+          <View 
+          style={{
+          }}>
+          </View>
+        </View>
+      </Swipeable>
+    )
+  }
 
   return (
     <View>
