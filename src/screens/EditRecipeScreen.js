@@ -30,6 +30,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
     directions: [
     ]
   }, ...recipe}
+  console.log("state:", state);
   const [data, setData] = useState(state)
   
   useEffect(() => {
@@ -75,7 +76,6 @@ const EditRecipeScreen = ( { navigation, route } ) => {
   }
 
   const SubmitEditRecipe = ( recipeName, newRecipe ) => {
-    console.log("============newRecipe:", newRecipe);
     newRecipe.name = recipeName;
     dispatch(editRecipe({recipeName: recipeName, recipe: newRecipe} ))
   }
@@ -84,36 +84,34 @@ const EditRecipeScreen = ( { navigation, route } ) => {
 
   const updateIngredientName = (text, index) => {
     var ingredients = [...data.ingredients]
-    ingredients[index].name = text
+    ingredients[index] = {...data.ingredients[index], name: text}
     setData({...data, ingredients: ingredients})
     // console.log(data.ingredients);
   }
 
   const updateIngredientNote = (text, index) => {
-    console.log("text:", text, index);
     var ingredients = [...data.ingredients]
-    ingredients[index].note = text
+    ingredients[index] = {...data.ingredients[index], note: text}
     setData({...data, ingredients: ingredients})
-    // console.log(data.ingredients);
   }
 
   const updateIngredientCategory = (text, index) => {
     var ingredients = [...data.ingredients]
-    ingredients[index].category = text
+    ingredients[index] = {...data.ingredients[index], category: text}
     setData({...data, ingredients: ingredients})
     // console.log(data.ingredients);
   }
 
   const updateIngredientUnit = (text, index) => {
     var ingredients = [...data.ingredients]
-    ingredients[index].unit = text
+    ingredients[index] = {...data.ingredients[index], unit: text}
     setData({...data, ingredients: ingredients})
     // console.log(data.ingredients);
   }
 
   const updateIngredientQuantityUnit = (text, index) => {
     var ingredients = [...data.ingredients]
-    ingredients[index].quantityUnit = text.toString()
+    ingredients[index] = {...data.ingredients[index], quantityUnit: text.toString()}
     setData({...data, ingredients: ingredients})
     // console.log(data.ingredients);
   }
