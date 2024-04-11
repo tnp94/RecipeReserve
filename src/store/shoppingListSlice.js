@@ -11,7 +11,12 @@ const shoppingListSlice = createSlice({
       state.push(action.payload)
     },
     deleteItem: (state, action) => {
-      state.splice(action.payload, 1)
+      var checkedIndex = state.findIndex((item, index) => {
+        return (item.id.recipeIndex == action.payload.id.recipeIndex && item.id.index == action.payload.id.index)
+      })
+      if (checkedIndex >= 0) {
+        state.splice(checkedIndex, 1)
+      }
     },
     clearShoppingList: (state, action) => {
       return initialState
