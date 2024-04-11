@@ -1,11 +1,28 @@
 import { StyleSheet, View, Text, Image, TouchableOpacity, Button } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { useSelector } from "react-redux";
+import { useNavigation } from "@react-navigation/native"
+import { useEffect } from "react";
 
 const RecipeDetailsScreen = ({ route }) => {
+  const navigation = useNavigation()
   const { recipeName } = route.params;
   const recipe = useSelector((state) => state.recipes[recipeName])
-  console.log("recipe: ", recipe);
+  useEffect(() => {
+    navigation.setOptions(
+      {
+        headerRight: () => (
+          <Button
+            onPress={() => {
+              navigation.navigate("Edit Recipe", { recipeName: recipeName })
+            }}
+            title="Edit/copy"
+          />
+        ),
+      }
+    )
+  }, [ recipe.name ]);
+  if (recipe)
   return (
     <ScrollView>
         <Text style={{

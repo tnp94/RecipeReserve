@@ -25,13 +25,23 @@ const recipesSlice = createSlice({
       }
       payload.name = recipeName
       state[recipeName] = payload
+      console.log(`Created recipe: ${recipeName}`);
     },
     deleteRecipe: (state, action) => {
       delete state[action.payload]
+    },
+    editRecipe: (state, action) => {
+      var oldName = action.payload.recipeName;
+      var recipe = action.payload.recipe;
+      console.log("name", action.payload.recipeName);
+      console.log("payload", action.payload);
+      state[oldName] = recipe;
+
+      // state[action.payload.recipeName] = action.payload.recipe
     }
   }
 })
 
-export const { addRecipe, deleteRecipe, loadRecipeList } = recipesSlice.actions;
+export const { addRecipe, deleteRecipe, loadRecipeList, editRecipe } = recipesSlice.actions;
 
 export default recipesSlice.reducer;

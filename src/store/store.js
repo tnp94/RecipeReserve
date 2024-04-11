@@ -9,7 +9,7 @@ import {
   PURGE,
   REGISTER,
 } from 'redux-persist'
-import recipesReducer from './recipeSlice'
+import recipesReducer from './recipesSlice'
 import shoppingListReducer from './shoppingListSlice'
 import menuReducer from './menuSlice'
 import AsyncStorage from "@react-native-async-storage/async-storage";

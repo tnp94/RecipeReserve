@@ -2,13 +2,12 @@ import { StyleSheet, View, Text, Image, FlatList, Alert } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
-import { deleteRecipe } from "../store/recipeSlice";
+import { deleteRecipe } from "../store/recipesSlice";
 import { addRecipeToMenu } from "../store/menuSlice";
 
 const RecipeCard = ({ recipeName, index }) => {
   const navigation = useNavigation()
   const recipe = useSelector((state) => state.recipes[recipeName])
-  console.log("recipe", recipe);
   const dispatch = useDispatch()
   
   function recipeLongPress(index) {

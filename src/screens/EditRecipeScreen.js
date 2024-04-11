@@ -8,10 +8,12 @@ import { Separator } from "react-native-btr";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useNavigation } from "@react-navigation/native"
 
-const NewRecipeScreen = ( { navigation, route } ) => {
+const EditRecipeScreen = ( { navigation, route } ) => {
+  const { recipeName } = route.params;
+  const recipe = useSelector((state) => state.recipes[recipeName])
   const dispatch = useDispatch()
 
-  const state = {
+  const state = {...{
     id: 0,
     name: "",
     image: "",
@@ -27,7 +29,7 @@ const NewRecipeScreen = ( { navigation, route } ) => {
     yield: 0,
     directions: [
     ]
-  }
+  }, ...recipe}
   const [data, setData] = useState(state)
   
   useEffect(() => {
@@ -48,13 +50,37 @@ const NewRecipeScreen = ( { navigation, route } ) => {
   const onSaveButtonPress = (newRecipe) => {
     console.log("recipeName:", recipeName);
     console.log("newRecipe.name:", newRecipe.name);
-    SaveNewRecipe(data)
-    navigation.popToTop();
+    Alert.alert('Save edits', 'Do you want to create this as a new recipe?', [
+      {text: 'Save edits', onPress: () => {
+        SubmitEditRecipe(recipeName, data);
+        navigation.pop();
+      }},
+      {text: 'Create as new recipe', onPress: () => {
+        Alert.prompt("New Recipe Name", "Please enter the new recipe name", (text) => {
+          data.name = text;
+          SaveNewRecipe(data);
+          navigation.popToTop("RecipeList");
+        }, undefined, data.name)
+      }},
+      {
+        text: 'Cancel',
+        onPress: () => console.log('Cancel Pressed'),
+        style: 'cancel',
+      },
+    ]);
   }
 
   const SaveNewRecipe = ( newRecipe ) => {
     dispatch(addRecipe(newRecipe))
   }
+
+  const SubmitEditRecipe = ( recipeName, newRecipe ) => {
+    console.log("============newRecipe:", newRecipe);
+    newRecipe.name = recipeName;
+    dispatch(editRecipe({recipeName: recipeName, recipe: newRecipe} ))
+  }
+
+
 
   const updateIngredientName = (text, index) => {
     var ingredients = [...data.ingredients]
@@ -134,19 +160,19 @@ const NewRecipeScreen = ( { navigation, route } ) => {
           >
             Recipe Name
           </Text>
-          <TextInput 
+          <Text 
           style={{
             backgroundColor: "#fff",
             padding: 5
           }}
           placeholder = {"Recipe Name"}
           value = {data.name}
-          onChangeText={(text) => {
-            setData({...data, name: text})
+          onPress={() => {
+            Alert.alert("To alter the name, save it as a new recipe")
           }}
           >
-
-          </TextInput>
+            {data.name}
+          </Text>
         </View>
         <View
         style={{
@@ -432,4 +458,4 @@ const NewRecipeScreen = ( { navigation, route } ) => {
   )
 }
 
-export default NewRecipeScreen;
+export default EditRecipeScreen;

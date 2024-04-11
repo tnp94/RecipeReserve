@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
 import NewRecipeButton from "../components/NewRecipeButton";
-import { loadRecipeList } from "../store/recipeSlice";
+import { loadRecipeList } from "../store/recipesSlice";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 

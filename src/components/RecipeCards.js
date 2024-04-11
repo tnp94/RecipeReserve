@@ -12,7 +12,6 @@ Stack = createStackNavigator()
 const RecipeCards = ( ) => {
   const navigation = useNavigation()
   const recipeList = useSelector((state) =>  state.recipes)
-  console.log("recipeList", Object.keys(recipeList));
 
   return (
     <View style={{
