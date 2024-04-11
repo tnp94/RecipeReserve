@@ -9,6 +9,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeCards from "../components/RecipeCards";
 import RecipeListScreen from "./RecipeListScreen";
 import NewRecipeScreen from "./NewRecipeScreen";
+import EditRecipeScreen from "./EditRecipeScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -18,6 +19,7 @@ const RecipeListNavigator = ({ navigation }) => {
         <Stack.Screen name="My Recipes" component={RecipeListScreen} />
         <Stack.Screen name="Recipe Details" component={RecipeDetailsScreen} />
         <Stack.Screen name="New Recipe" component={NewRecipeScreen} />
+        <Stack.Screen name="Edit Recipe" component={EditRecipeScreen} />
     </Stack.Navigator>
   )
 }

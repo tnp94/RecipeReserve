@@ -11,7 +11,6 @@ const menuSlice = createSlice({
       return []
     },
     addRecipeToMenu: (state, action) => {
-      console.log(state);
       state.push(action.payload)
     },
     deleteRecipeFromMenu: (state, action) => {
