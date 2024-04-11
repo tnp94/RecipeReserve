@@ -90,6 +90,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
   }
 
   const updateIngredientNote = (text, index) => {
+    console.log("text:", text, index);
     var ingredients = [...data.ingredients]
     ingredients[index].note = text
     setData({...data, ingredients: ingredients})
