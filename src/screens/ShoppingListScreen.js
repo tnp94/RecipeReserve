@@ -33,14 +33,25 @@ const ShoppingListScreen = ({ navigation }) => {
     }
     const renderRightActions = () => {
       return (
-            <Button
-              title="Delete"
-              color={"red"}
-              onPress={() => deleteShoppingItem()}
-            >
-            </Button>
-          )
-        }
+        <View>
+          <TouchableOpacity
+          style={{
+            padding: 5,
+            borderRadius: 7,
+            justifyContent: "center",
+            flex: 1
+          }}
+          onPress={() => deleteShoppingItem()}
+          >
+            <Text
+              style={{
+                color: "red"
+              }}
+            >Delete</Text>
+          </TouchableOpacity>
+          </View>
+      )
+    }
     return (
       <Swipeable
         renderRightActions={renderRightActions}
@@ -86,7 +97,7 @@ const ShoppingListScreen = ({ navigation }) => {
         <FlatList 
         data={shoppingList.filter((item) => {
           return item.category == category || ((category == INGREDIENTCATEGORIES.UNCATEGORIZED ) && (!Object.values(INGREDIENTCATEGORIES).includes(item.category) || item.category == ""))
-        })} 
+        })}
         renderItem={shoppingTableItem} 
         keyExtractor={(item, index) => item.name + index.toString()}
         ItemSeparatorComponent={<Separator color="black" size={1} />}

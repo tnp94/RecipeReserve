@@ -47,12 +47,37 @@ const MenuScreen = ({ navigation }) => {
     }
     const renderRightActions = () => {
       return (
-        <Button
-          title="Delete"
-          color={"red"}
-          onPress={() => deleteMenuItem(index)}
+        <View
+        style= {{
+        }}
         >
-        </Button>
+          <TouchableOpacity
+          style={{
+            padding: 5,
+            borderRadius: 7,
+            flex: 1,
+            justifyContent: "center",
+          }}
+          onPress={() => deleteMenuItem(index)}
+          >
+            <Text
+              style={{
+                color: "red"
+              }}
+            >Delete</Text>
+          </TouchableOpacity>
+          {/* <Button
+            title="Delete"
+            color={"red"}
+            style= {{
+              flex: 1,
+              margin: 0,
+              padding: 0,
+            }}
+            onPress={() => deleteMenuItem(index)}
+          >
+          </Button> */}
+        </View>
       )
     }
     return (
@@ -81,7 +106,11 @@ const MenuScreen = ({ navigation }) => {
   }
 
   return (
-    <View>
+    <View
+    style={{
+      flex: 1
+    }}
+    >
         <FlatList 
         data={menu} 
         renderItem={menuTableItem} 
