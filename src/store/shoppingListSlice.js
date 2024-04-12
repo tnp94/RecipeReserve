@@ -1,6 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialState = []
+const initialState = {
+  shoppingList: {},
+  itemID: 0
+}
 // console.log(initialState);
 
 const shoppingListSlice = createSlice({
@@ -8,36 +11,29 @@ const shoppingListSlice = createSlice({
   initialState: initialState,
   reducers: {
     addItem: (state, action) => {
-      state.push(action.payload)
+      state.shoppingList[state.itemID] = action.payload
+      state.itemID += 1
     },
     deleteItem: (state, action) => {
-      var checkedIndex = state.findIndex((item, index) => {
-        return (item.id.recipeIndex == action.payload.id.recipeIndex && item.id.index == action.payload.id.index)
-      })
-      if (checkedIndex >= 0) {
-        state.splice(checkedIndex, 1)
-      }
+      delete state.shoppingList[action.payload]
     },
     clearShoppingList: (state, action) => {
       return initialState
     },
     generateShoppingList: (state, action) => {
-      const shoppingList = []
-      action.payload.forEach((recipe, recipeIndex) => {
-        recipe.ingredients.forEach((ingredient, index) => {
-          shoppingList.push({...ingredient, checked: false, id: {recipeIndex, index}})
+      var shoppingList = {}
+      var itemID = 0
+      action.payload.forEach((recipe) => {
+        recipe.ingredients.forEach((ingredient) => {
+          shoppingList[itemID] = {...ingredient, checked: false, id: itemID}
+          itemID += 1;
         })
       });
-      shoppingList.sort((a, b) => a.name.localeCompare(b.name))
-      return shoppingList
+      state.shoppingList = {...shoppingList};
+      state.itemID= itemID
     },
     checkOffShoppingItem: (state, action) => {
-      var checkedIndex = state.findIndex((item, index) => {
-        return (item.id.recipeIndex == action.payload.recipeIndex && item.id.index == action.payload.index)
-      })
-      if (checkedIndex >= 0) {
-        state[checkedIndex].checked = !state[checkedIndex].checked
-      }
+      state.shoppingList[action.payload].checked = !state.shoppingList[action.payload].checked
     }
   }
 })

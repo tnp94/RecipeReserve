@@ -7,29 +7,13 @@ import { INGREDIENTCATEGORIES } from "../Models/Ingredient";
 import { Swipeable } from "react-native-gesture-handler";
 
 const ShoppingListScreen = ({ navigation }) => {
-  const shoppingList = useSelector((state) =>  state.shoppingList)
-  const [data, setData] = useState(shoppingList)
+  const shoppingList = useSelector((state) =>  state.shoppingList.shoppingList)
   const dispatch = useDispatch()
-  let mockShoppingListData = [
-    {
-      name: "Unsalted Butter (Softened)",
-      unit: "Tbsp",
-      quantityUnit: "4",
-      checked: true
-    },
-    {
-      name: "Carrots",
-      unit: "Whole",
-      quantityUnit: "4",
-      checked: false
-    },
-  ]
-
   
   // const [data, setData] = useState(mockShoppingListData)
   const shoppingTableItem = ({ item, index }) => {
     const deleteShoppingItem = () => {
-      dispatch(deleteItem(item))
+      dispatch(deleteItem(item.id))
     }
     const renderRightActions = () => {
       return (
@@ -95,11 +79,14 @@ const ShoppingListScreen = ({ navigation }) => {
       </Text>
       </View>
         <FlatList 
-        data={shoppingList.filter((item) => {
-          return item.category == category || ((category == INGREDIENTCATEGORIES.UNCATEGORIZED ) && (!Object.values(INGREDIENTCATEGORIES).includes(item.category) || item.category == ""))
-        })}
+        data={Object.values(shoppingList).filter(( value, key ) => {
+          return value.category == category || ((category == INGREDIENTCATEGORIES.UNCATEGORIZED ) && (!Object.values(INGREDIENTCATEGORIES).includes(value.category) || value.category == ""))
+        }).sort((a, b) => a.name.localeCompare(b.name))}
         renderItem={shoppingTableItem} 
-        keyExtractor={(item, index) => item.name + index.toString()}
+        keyExtractor={(item, index) => {
+          // console.log(item);
+          return item.id
+        }}
         ItemSeparatorComponent={<Separator color="black" size={1} />}
         />
     </View>
