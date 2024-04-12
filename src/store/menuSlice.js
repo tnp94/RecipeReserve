@@ -1,6 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialState = []
+const initialState = {
+  recipeID: 0,
+  menu: {}
+}
 // console.log(initialState);
 
 const menuSlice = createSlice({
@@ -8,13 +11,14 @@ const menuSlice = createSlice({
   initialState: initialState,
   reducers: {
     clearMenu: (state) => {
-      return []
+      return initialState
     },
     addRecipeToMenu: (state, action) => {
-      state.push(action.payload)
+      state.menu[state.recipeID] = action.payload;
+      state.recipeID += 1
     },
     deleteRecipeFromMenu: (state, action) => {
-      state.splice(action.payload, 1)
+      delete state.menu[action.payload]
     }
   }
 })

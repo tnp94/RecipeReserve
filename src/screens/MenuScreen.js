@@ -7,7 +7,7 @@ import { Swipeable } from "react-native-gesture-handler";
 import { deleteRecipeFromMenu } from "../store/menuSlice";
 
 const MenuScreen = ({ navigation }) => {
-  const menu = useSelector((state) =>  state.menu)
+  const menu = useSelector((state) =>  state.menu.menu)
   const dispatch = useDispatch()
   useEffect(() => {
       navigation.setOptions(
@@ -40,10 +40,11 @@ const MenuScreen = ({ navigation }) => {
   }
 
   const menuTableItem = ({ item, index }) => {
-    
-  
+    const recipeID = item[0]
+    const recipe = item[1]
+
     const deleteMenuItem = () => {
-      dispatch(deleteRecipeFromMenu(index))
+      dispatch(deleteRecipeFromMenu(recipeID))
     }
     const renderRightActions = () => {
       return (
@@ -58,7 +59,7 @@ const MenuScreen = ({ navigation }) => {
             flex: 1,
             justifyContent: "center",
           }}
-          onPress={() => deleteMenuItem(index)}
+          onPress={() => deleteMenuItem(recipeID)}
           >
             <Text
               style={{
@@ -91,7 +92,7 @@ const MenuScreen = ({ navigation }) => {
           borderWidth: 1
         }}>
           <View style={{flex: 4, alignItems: "center"}}>
-            <Text>{item.name.toString()}</Text>
+            <Text>{recipe.name.toString()}</Text>
           </View>
           <View style={{flex: 4, alignItems: "center"}}>
             <Text>{index}</Text>
@@ -112,9 +113,12 @@ const MenuScreen = ({ navigation }) => {
     }}
     >
         <FlatList 
-        data={menu} 
+        data={Object.entries(menu)} 
         renderItem={menuTableItem} 
-        keyExtractor={(item, index) => item.name + index.toString()}
+        keyExtractor={(item, index) => 
+        {
+          return item[0]
+        }}
         ItemSeparatorComponent={<Separator />}
         />
     </View>
