@@ -28,6 +28,7 @@ const RecipeCards = ( ) => {
             <RecipeCard recipeName={item} index={index}/>
           </View>
         )}
+        keyExtractor={(item) => item}
       />
     </View>
   )

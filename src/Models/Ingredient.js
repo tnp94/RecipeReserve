@@ -15,5 +15,5 @@ export const INGREDIENTCATEGORIES = {
   BAKERY: "Bakery",
   DELI: "Deli",
   FROZEN: "Frozen",
-  UNCATEGORIZED: "Uncategorized"
+  UNCATEGORIZED: "Other"
 }

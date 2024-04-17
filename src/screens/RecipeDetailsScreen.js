@@ -90,12 +90,13 @@ const RecipeDetailsScreen = ({ route }) => {
             Directions
           </Text>
             {recipe.directions.map(( step, index ) => 
-            <Text style={{
-              paddingHorizontal: 10
-            }}
-            key={index}>
-              <Text style={{fontWeight: "bold"}}>{index + 1}.</Text> {step}
-            </Text>
+              <Text style={{
+                paddingHorizontal: 10,
+                marginBottom: 5
+              }}
+              key={index}>
+                <Text style={{fontWeight: "bold"}}>{index + 1}.</Text> {step}
+              </Text>
             )}
         </View>
     </ScrollView>
