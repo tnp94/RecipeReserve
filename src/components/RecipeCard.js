@@ -4,13 +4,15 @@ import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { deleteRecipe } from "../store/recipesSlice";
 import { addRecipeToMenu } from "../store/menuSlice";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 const RecipeCard = ({ recipeName, index }) => {
   const navigation = useNavigation()
   const recipe = useSelector((state) => state.recipes[recipeName])
   const dispatch = useDispatch()
   const ref = useRef(null)
+  const [swipedLeft, setSwipedLeft] = useState(false)
+  const [swipedRight, setSwipedRight] = useState(false)
 
   const closeRef = () => {
     ref.current.close()
@@ -30,31 +32,17 @@ const RecipeCard = ({ recipeName, index }) => {
   const renderRightActions = () => {
     return (
       <View
-      style= {{
-        flexDirection: "column",
-        gap: 2
-      }}
+      style={styles.swipeableButtoncontainer}
       >
         <TouchableOpacity
-        style={{
-          backgroundColor: "#ff4466",
-          borderTopRightRadius: 16,
-          borderBottomRightRadius: 16,
-          // backgroundColor: "blue",
-          justifyContent: "center",
-          flex: 1
-        }}
+        style={styles.swipableRightButton}
         onPress={() => {
           closeRef()
           dispatch(dispatch(deleteRecipe(recipeName)))
         }}
         >
           <Text
-            style={{
-              padding: 5,
-              color: "black",
-              fontWeight: "bold"
-            }}
+            style={styles.swipeableButtonText}
           >Delete</Text>
         </TouchableOpacity>
       </View>
@@ -63,30 +51,17 @@ const RecipeCard = ({ recipeName, index }) => {
   const renderLeftActions = () => {
     return (
       <View
-      style= {{
-        flexDirection: "column",
-        gap: 2
-      }}
+      style={styles.swipeableButtoncontainer}
       >
         <TouchableOpacity
-        style={{
-          backgroundColor: "#99ccff",
-          borderTopLeftRadius: 16,
-          borderBottomLeftRadius: 16,
-          // backgroundColor: "blue",
-          justifyContent: "center",
-          flex: 1
-        }}
+        style={styles.swipableLeftButton}
         onPress={() => {
           closeRef()
           dispatch(addRecipeToMenu(recipe))
         }}
         >
           <Text
-            style={{
-              padding: 5,
-              color: "black",
-            }}
+            style={styles.swipeableButtonText}
           >Add to Menu</Text>
         </TouchableOpacity>
       </View>
@@ -96,15 +71,7 @@ const RecipeCard = ({ recipeName, index }) => {
   if (recipe) 
     return (
       <View
-        style= {{
-          margin: 5,
-          shadowOffset: {
-            width: 0,
-            height: 4
-          },
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-        }}
+        style={styles.cardContainer}
       >
         <Swipeable
           ref={ref}
@@ -113,46 +80,105 @@ const RecipeCard = ({ recipeName, index }) => {
           overshootFriction={8}
           key={recipeName}
           onSwipeableWillOpen={(direction) => {
-            // if (direction == "left")
-            console.log(ref);
+            setSwipedLeft(direction == "left")
+            setSwipedRight(direction == "right")
+          }}
+          onSwipeableWillClose={(direction) => {
+            setSwipedLeft(false)
+            setSwipedRight(false)
           }}
         >
           <TouchableOpacity 
           onPress={() => navigation.navigate("Recipe Details",  { recipeName } )}
           onLongPress={() => {recipeLongPress(index)}}
           key={index}
-          style={{
-            padding: 5,
-            backgroundColor: '#fff',
-            borderColor: "#333",
-            borderRadius: 16,
-            alignItems: "center",
-            flex: 1
-          }}
+          style={[styles.cardButton, (swipedLeft && styles.flattenLeft), (swipedRight && styles.flattenRight)]}
           >
             <Image
-            style={{
-              width: 70,
-              height: 70,
-              borderRadius: 20
-            }}
+            style={styles.recipeImage}
             source={require("../../assets/images/ForkAndSpoon.png")} />
-            <Text style={{
-              flexWrap: "wrap",
-              flex: 1,
-              paddingHorizontal: 5,
-            }}>{index} {recipe.name}</Text>
-            <Text 
-            style={{
-              fontSize: 12,
-            }}>
-              Time: {(recipe.time.prep + recipe.time.active) !== 0 ? ( + (recipe.time.prep + recipe.time.active) + " minutes") : "?"}
-              {recipe.difficulty !== "" && (" | Difficulty: " + recipe.difficulty)}
-            </Text>
+            <View style={styles.recipeDetailsContainer}>
+              <Text style={styles.recipeTitle}>{recipe.name}</Text>
+              <Text 
+              style={styles.recipeSubtitle}>
+                Time: {(recipe.time.prep + recipe.time.active) !== 0 ? ( + (recipe.time.prep + recipe.time.active) + " minutes") : "?"}
+                {recipe.difficulty !== "" && (" | Difficulty: " + recipe.difficulty)}
+              </Text>
+            </View>
           </TouchableOpacity>
         </Swipeable>
       </View>
     )
 }
+
+const styles = StyleSheet.create({
+  swipableLeftButton: {
+    backgroundColor: "#99ccff",
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+    // backgroundColor: "blue",
+    justifyContent: "center",
+    flex: 1
+  },
+  swipableRightButton: {
+    backgroundColor: "#ff4466",
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    // backgroundColor: "blue",
+    justifyContent: "center",
+    flex: 1,
+  },
+  cardContainer: {
+    margin: 5,
+    shadowOffset: {
+      width: 0,
+      height: 4
+    },
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+  },
+  cardButton: {
+    backgroundColor: '#fff',
+    borderColor: "#333",
+    borderRadius: 16,
+    alignItems: "center",
+    flex: 1,
+    height: 150
+  },
+  recipeImage: {
+    width: "100%",
+    flex: 2,
+  },
+  recipeTitle: {
+    flexWrap: "wrap",
+    paddingHorizontal: 5,
+    fontWeight: "bold"
+  },
+  recipeSubtitle: {
+    fontSize: 12,
+  },
+  swipeableButtonText: {
+    padding: 5,
+    color: "black",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  recipeDetailsContainer: {
+    padding: 5
+  },
+  swipeableButtoncontainer: {
+    flexDirection: "column",
+    gap: 2,
+    maxWidth: "40%",
+  },
+  flattenRight: {
+    borderBottomRightRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  flattenLeft: {
+    borderBottomLeftRadius: 0,
+    borderTopLeftRadius: 0,
+  }
+})
 
 export default RecipeCard;
