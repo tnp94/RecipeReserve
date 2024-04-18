@@ -99,6 +99,9 @@ const RecipeDetailsScreen = ({ route }) => {
               </Text>
             )}
         </View>
+        <View>
+          {/* {recipe.image && <Image src={require(recipe.image)}/>} */}
+        </View>
     </ScrollView>
   )
 }

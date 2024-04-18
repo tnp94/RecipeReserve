@@ -143,11 +143,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     flex: 1,
-    height: 150
+    height: 150,
+    overflow: "hidden"
   },
   recipeImage: {
     width: "100%",
     flex: 2,
+    overflow: "hidden"
+    // borderTopLeftRadius: 16,
+    // borderTopRightRadius: 16,
   },
   recipeTitle: {
     flexWrap: "wrap",
@@ -155,6 +159,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold"
   },
   recipeSubtitle: {
+    textAlign: "center",
     fontSize: 12,
   },
   swipeableButtonText: {
