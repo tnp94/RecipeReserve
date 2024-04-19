@@ -136,6 +136,7 @@ const styles = StyleSheet.create({
     },
     shadowColor: "#000",
     shadowOpacity: 0.1,
+    elevation: 3,
   },
   cardButton: {
     backgroundColor: '#fff',

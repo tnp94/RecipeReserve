@@ -293,90 +293,103 @@ const EditRecipeScreen = ( { navigation, route } ) => {
           scrollEnabled={false}
           data={data.ingredients}
           ItemSeparatorComponent={<Separator />}
-          renderItem={ ( { item, index } ) => (
-            <View
-            style={{
-              flexDirection: "row"
-            }}
-            >
-              <TextInput style={{
-                paddingHorizontal: 5,
-                backgroundColor: "#fff",
-                borderWidth: 1,
-                borderColor: "#eee",
-              }}
-              placeholder = {"?"}
-              value = {item.quantityUnit.toString()}
-              onChangeText={(text) => {
-                updateIngredientQuantityUnit(text, index)
-              }
-              }/>
-
-              <TextInput style={{
-                paddingHorizontal: 5,
-                backgroundColor: "#fff"
-              }}
-              placeholder = {"Unit"}
-              value = {item.unit.toString()}
-              onChangeText={(text) => {
-                updateIngredientUnit(text, index)
-              }
-              }/>
-
-              <TextInput style={{
-                paddingHorizontal: 10,
-                backgroundColor: "#fff"
-              }}
-              placeholder = {"Ingredient Name"}
-              value = {item.name.toString()}
-              onChangeText={(text) => {
-                updateIngredientName(text, index)
-              }
-              }/>
-
-              <TextInput style={{
-                paddingHorizontal: 10,
-                backgroundColor: "#fff"
-              }}
-              placeholder = {"Note:Minced?/Softened?/Trimmed?"}
-              value = {item.note}
-              onChangeText={(text) => {
-                updateIngredientNote(text, index)
-              }
-              }/>
-
-              <TextInput style={{
-                paddingHorizontal: 10,
-                backgroundColor: "#fff"
-              }}
-              placeholder = {"Category"}
-              value = {item.category}
-              onChangeText={(text) => {
-                updateIngredientCategory(text, index)
-              }
-              }/>
-
-
-              <TouchableOpacity
+          renderItem={({ item, index }) => (
+            <View style={{
+              flexDirection: "column",
+              borderWidth: 1,
+            }}>
+              <View
               style={{
-                backgroundColor: "#fff",
-                padding: 5,
-                borderRadius: 7,
-                flex: 1,
-                justifyContent: "center"
+                flexDirection: "row"
               }}
-              onPress={() => {
-                var newIngredientsList = [...data.ingredients]
-                newIngredientsList.splice(index, 1);
-                // console.log(index)
-                setData({...data, ingredients: [...newIngredientsList]})
-              }}>
-                <Text
-                style={{
-                  color: "red"
+              >
+                <TextInput style={{
+                  paddingHorizontal: 5,
+                  backgroundColor: "#fff",
+                  borderWidth: 1,
+                  borderColor: "#eee",
                 }}
-                >Delete</Text>
-              </TouchableOpacity>
+                placeholder={"#"}
+                value={item.quantityUnit.toString()}
+                onChangeText={(text) => {
+                  updateIngredientQuantityUnit(text, index)
+                }
+                }/>
+
+                <TextInput style={{
+                  paddingHorizontal: 5,
+                  backgroundColor: "#fff",
+                }}
+                placeholder = {"Unit"}
+                value={item.unit.toString()}
+                onChangeText={(text) => {
+                  updateIngredientUnit(text, index)
+                }
+                }/>
+
+                <TextInput style={{
+                  paddingHorizontal: 10,
+                  backgroundColor: "#fff",
+                  flex: 1
+                }}
+                placeholder = {"Ingredient Name"}
+                value = {item.name.toString()}
+                onChangeText={(text) => {
+                  updateIngredientName(text, index)
+                }
+                }/>
+              </View>
+              <View
+              style={{
+                flexDirection: "row"
+              }}
+              >
+                <TextInput style={{
+                  paddingHorizontal: 10,
+                  backgroundColor: "#fff",
+                  flex: 1
+                }}
+                placeholder = {"Note:Minced?/Softened?/Trimmed?"}
+                value = {item.note}
+                onChangeText={(text) => {
+                  updateIngredientNote(text, index)
+                }
+                }/>
+
+                <TextInput style={{
+                  paddingHorizontal: 10,
+                  backgroundColor: "#fff",
+                  flex: 1
+                }}
+                placeholder = {"Category"}
+                value = {item.category}
+                onChangeText={(text) => {
+                  updateIngredientCategory(text, index)
+                }
+                }/>
+
+
+                <TouchableOpacity
+                style={{
+                  backgroundColor: "#fff",
+                  padding: 5,
+                  borderRadius: 7,
+                  flex: 1,
+                  justifyContent: "center"
+                }}
+                onPress={() => {
+                  var newIngredientsList = [...data.ingredients]
+                  newIngredientsList.splice(index, 1);
+                  // console.log(index)
+                  setData({...data, ingredients: [...newIngredientsList]})
+                }}>
+                  <Text
+                  style={{
+                    color: "red"
+                  }}
+                  >Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}/>
         </View>
@@ -408,7 +421,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
           scrollEnabled={false}
           data={data.directions}
           ItemSeparatorComponent={<Separator />}
-          renderItem={ ( { item, index } ) => (
+          renderItem={({ item, index }) => (
             <View
             style={{
               flexDirection: "row"
@@ -420,8 +433,9 @@ const EditRecipeScreen = ( { navigation, route } ) => {
                 backgroundColor: "#fff",
                 flex: 7
               }}
-              placeholder = {"?"}
-              value = {item}
+              placeholder={"?"}
+              value={item}
+              multiline={true}
               onChangeText={(text) => {
                 updateDirection(text, index)
               }
