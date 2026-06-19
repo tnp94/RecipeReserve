@@ -1,8 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import WelcomeScreen from "./src/screens/WelcomeScreen"
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import RecipeDetailsScreen from "./src/screens/RecipeDetailsScreen";
 import RecipeListNavigator from "./src/screens/RecipeListNavigator";
 import ShoppingListScreen from "./src/screens/ShoppingListScreen";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,7 +10,6 @@ import { PersistGate } from "redux-persist/integration/react";
 import MenuScreen from "./src/screens/MenuScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 export default function App() {
   return (

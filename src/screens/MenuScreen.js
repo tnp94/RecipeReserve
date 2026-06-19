@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button, Alert } from "react-native";
-import { CheckBox, Separator } from "react-native-btr";
+import Separator from "../components/Separator";
 import { useDispatch, useSelector } from "react-redux";
 import { clearShoppingList, generateShoppingList } from "../store/shoppingListSlice";
 import { Swipeable } from "react-native-gesture-handler";
@@ -119,7 +119,7 @@ const MenuScreen = ({ navigation }) => {
         {
           return item[0]
         }}
-        ItemSeparatorComponent={<Separator />}
+        ItemSeparatorComponent={Separator}
         />
     </View>
   )

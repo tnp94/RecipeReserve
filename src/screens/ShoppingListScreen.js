@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button } from "react-native";
-import { CheckBox, Separator } from "react-native-btr";
+import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button, Pressable } from "react-native";
+import Separator from "../components/Separator";
 import { useDispatch, useSelector } from "react-redux";
 import { checkOffShoppingItem, deleteItem } from "../store/shoppingListSlice";
 import { INGREDIENTCATEGORIES } from "../Models/Ingredient";
@@ -51,16 +51,17 @@ const ShoppingListScreen = ({ navigation }) => {
           <View style={{flex: 4, alignItems: "center"}}>
             <Text>{item.quantityUnit?.toString()} {item.unit}</Text>
           </View>
-          <View 
-          style={{
-          }}>
-            <CheckBox
-            checked={item.checked} 
-            onPress={(newValue) => {
-              dispatch(checkOffShoppingItem(item.id))
+          <Pressable
+            onPress={() => dispatch(checkOffShoppingItem(item.id))}
+            style={{
+              width: 22, height: 22, borderWidth: 2, borderColor: "#555",
+              borderRadius: 3, alignItems: "center", justifyContent: "center"
             }}
-            />
-          </View>
+          >
+            {item.checked && (
+              <View style={{ width: 12, height: 12, backgroundColor: "#555", borderRadius: 2 }} />
+            )}
+          </Pressable>
         </View>
       </Swipeable>
     )
@@ -87,18 +88,18 @@ const ShoppingListScreen = ({ navigation }) => {
           // console.log(item);
           return item.id
         }}
-        ItemSeparatorComponent={<Separator color="black" size={1} />}
+        ItemSeparatorComponent={() => <Separator color="black" size={1} />}
         />
     </View>
   )
 
   return (
     <View>
-        <FlatList 
-        data={Object.values(INGREDIENTCATEGORIES)} 
-        renderItem={shoppingTableCategory} 
+        <FlatList
+        data={Object.values(INGREDIENTCATEGORIES)}
+        renderItem={shoppingTableCategory}
         keyExtractor={(item, index) => item.name + index.toString()}
-        ItemSeparatorComponent={<Separator color="black" size={3} />}
+        ItemSeparatorComponent={() => <Separator color="black" size={3} />}
         />
     </View>
   )

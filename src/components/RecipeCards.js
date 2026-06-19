@@ -1,14 +1,8 @@
-import { StyleSheet, View, Text, Image, TouchableOpacity, SafeAreaView, Alert } from "react-native";
-// import { recipeList } from "../Recipes";
-import RecipeDetailsScreen from "../screens/RecipeDetailsScreen";
-import { createStackNavigator } from "@react-navigation/stack";
+import { View } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
-import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import RecipeCard from "./RecipeCard";
-import { useDispatch, useSelector } from "react-redux";
-
-Stack = createStackNavigator()
+import { useSelector } from "react-redux";
 const RecipeCards = ( ) => {
   const navigation = useNavigation()
   const recipeList = useSelector((state) =>  state.recipes)

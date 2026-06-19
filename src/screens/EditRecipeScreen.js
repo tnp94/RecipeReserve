@@ -1,11 +1,9 @@
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Alert } from "react-native";
-// import { recipeList } from "../Recipes";
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Alert, Platform } from "react-native";
 import { useEffect, useState } from "react";
 import { ingredientTemplate } from "../Models/Ingredient";
 import { useDispatch, useSelector } from "react-redux";
 import { addRecipe, deleteRecipe, editRecipe } from "../store/recipesSlice";
-import { Separator } from "react-native-btr";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import Separator from "../components/Separator";
 import { useNavigation } from "@react-navigation/native"
 
 const EditRecipeScreen = ( { navigation, route } ) => {
@@ -130,7 +128,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
   }
   
   return (
-    <KeyboardAwareScrollView>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <ScrollView
       nestedScrollEnabled={true}
@@ -292,7 +290,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
           <FlatList
           scrollEnabled={false}
           data={data.ingredients}
-          ItemSeparatorComponent={<Separator />}
+          ItemSeparatorComponent={Separator}
           renderItem={({ item, index }) => (
             <View style={{
               flexDirection: "column",
@@ -420,7 +418,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
           <FlatList
           scrollEnabled={false}
           data={data.directions}
-          ItemSeparatorComponent={<Separator />}
+          ItemSeparatorComponent={Separator}
           renderItem={({ item, index }) => (
             <View
             style={{
@@ -467,7 +465,7 @@ const EditRecipeScreen = ( { navigation, route } ) => {
 
       </ScrollView>
     </TouchableWithoutFeedback>
-      </KeyboardAwareScrollView>
+    </KeyboardAvoidingView>
   )
 }
 
