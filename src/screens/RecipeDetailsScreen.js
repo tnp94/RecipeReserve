@@ -3,25 +3,26 @@ import { ScrollView } from "react-native-gesture-handler";
 import { useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native"
 import { useEffect } from "react";
+import { selectRecipeById } from "../store/recipesSlice";
 
 const RecipeDetailsScreen = ({ route }) => {
   const navigation = useNavigation()
-  const { recipeName } = route.params;
-  const recipe = useSelector((state) => state.recipes[recipeName])
+  const { recipeId } = route.params;
+  const recipe = useSelector((state) => selectRecipeById(state, recipeId))
   useEffect(() => {
     navigation.setOptions(
       {
         headerRight: () => (
           <Button
             onPress={() => {
-              navigation.navigate("Recipe Form", { recipeName: recipeName })
+              navigation.navigate("Recipe Form", { recipeId })
             }}
             title="Edit/copy"
           />
         ),
       }
     )
-  }, [ recipe.name ]);
+  }, [recipeId]);
   if (recipe)
   return (
     <ScrollView>

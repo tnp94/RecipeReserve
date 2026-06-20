@@ -2,13 +2,13 @@ import { StyleSheet, View, Text, Image, FlatList, Alert, TouchableOpacity } from
 import { Swipeable } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
-import { deleteRecipe } from "../store/recipesSlice";
+import { deleteRecipe, selectRecipeById } from "../store/recipesSlice";
 import { addRecipeToMenu } from "../store/menuSlice";
 import { useRef, useState } from "react";
 
-const RecipeCard = ({ recipeName, index }) => {
+const RecipeCard = ({ recipeId, index }) => {
   const navigation = useNavigation()
-  const recipe = useSelector((state) => state.recipes[recipeName])
+  const recipe = useSelector((state) => selectRecipeById(state, recipeId))
   const dispatch = useDispatch()
   const ref = useRef(null)
   const [swipedLeft, setSwipedLeft] = useState(false)
@@ -26,7 +26,7 @@ const RecipeCard = ({ recipeName, index }) => {
       style: 'cancel',
     },
     {text: 'Add to menu', onPress: () => dispatch(addRecipeToMenu(recipe))},
-    {text: 'Delete', onPress: () => dispatch(deleteRecipe(recipeName))},
+    {text: 'Delete', onPress: () => dispatch(deleteRecipe(recipeId))},
     ]);
   }
   const renderRightActions = () => {
@@ -38,7 +38,7 @@ const RecipeCard = ({ recipeName, index }) => {
         style={styles.swipableRightButton}
         onPress={() => {
           closeRef()
-          dispatch(dispatch(deleteRecipe(recipeName)))
+          dispatch(deleteRecipe(recipeId))
         }}
         >
           <Text
@@ -78,7 +78,7 @@ const RecipeCard = ({ recipeName, index }) => {
           renderRightActions={renderRightActions}
           renderLeftActions={renderLeftActions}
           overshootFriction={8}
-          key={recipeName}
+          key={recipeId}
           onSwipeableWillOpen={(direction) => {
             setSwipedLeft(direction == "left")
             setSwipedRight(direction == "right")
@@ -89,7 +89,7 @@ const RecipeCard = ({ recipeName, index }) => {
           }}
         >
           <TouchableOpacity 
-          onPress={() => navigation.navigate("Recipe Details",  { recipeName } )}
+          onPress={() => navigation.navigate("Recipe Details", { recipeId })}
           onLongPress={() => {recipeLongPress(index)}}
           key={index}
           style={[styles.cardButton, (swipedLeft && styles.flattenLeft), (swipedRight && styles.flattenRight)]}

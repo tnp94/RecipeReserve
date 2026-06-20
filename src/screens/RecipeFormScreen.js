@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWit
 import { useEffect, useState } from "react";
 import { ingredientTemplate } from "../Models/Ingredient";
 import { useDispatch, useSelector } from "react-redux";
-import { addRecipe, editRecipe } from "../store/recipesSlice";
+import { addRecipe, editRecipe, selectRecipeById } from "../store/recipesSlice";
 import Separator from "../components/Separator";
 
 const emptyRecipe = {
@@ -21,10 +21,10 @@ const emptyRecipe = {
 };
 
 const RecipeFormScreen = ({ navigation, route }) => {
-  const recipeName = route.params?.recipeName;
-  const isEditing = !!recipeName;
+  const recipeId = route.params?.recipeId;
+  const isEditing = !!recipeId;
 
-  const existingRecipe = useSelector((state) => isEditing ? state.recipes[recipeName] : null);
+  const existingRecipe = useSelector((state) => isEditing ? selectRecipeById(state, recipeId) : null);
   const dispatch = useDispatch();
 
   const [data, setData] = useState(isEditing ? { ...emptyRecipe, ...existingRecipe } : emptyRecipe);
@@ -43,7 +43,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
         {
           text: "Save edits",
           onPress: () => {
-            dispatch(editRecipe({ recipeName, recipe: { ...recipe, name: recipeName } }));
+            dispatch(editRecipe({ id: recipeId, changes: recipe }));
             navigation.pop();
           },
         },

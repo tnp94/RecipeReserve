@@ -1,47 +1,48 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createEntityAdapter } from "@reduxjs/toolkit";
 import { recipeList } from "../Recipes";
 
-const initialState = recipeList
-// console.log(initialState);
+const recipesAdapter = createEntityAdapter();
+
+export const initialState = recipesAdapter.setAll(
+  recipesAdapter.getInitialState({ nextId: recipeList.length + 1 }),
+  recipeList
+);
 
 const recipesSlice = createSlice({
   name: "recipes",
-  initialState: initialState,
+  initialState,
   reducers: {
     loadRecipeList: (state) => {
-      return recipeList
+      recipesAdapter.setAll(state, recipeList);
+      state.nextId = recipeList.length + 1;
     },
     addRecipe: (state, action) => {
-      var payload = {...action.payload}
-      if (!state)
-      {
-        state = recipeList
+      const recipe = { ...action.payload };
+      let name = recipe.name;
+      let count = 0;
+      const existingNames = new Set(state.ids.map((id) => state.entities[id].name));
+      while (existingNames.has(name)) {
+        count++;
+        name = `${recipe.name} copy ${count}`;
       }
-      var recipeName = payload.name
-      var count = 0
-      for (var index = Object.keys(state).findIndex((recipe) => recipe == recipeName); Object.keys(state).findIndex((recipe) => recipe == recipeName) >= 0; index++) {
-        count += 1;
-        recipeName = `${payload.name} copy ${count}`
-      }
-      payload.name = recipeName
-      state[recipeName] = payload
-      console.log(`Created recipe: ${recipeName}`);
+      recipe.name = name;
+      recipe.id = state.nextId;
+      state.nextId += 1;
+      recipesAdapter.addOne(state, recipe);
     },
     deleteRecipe: (state, action) => {
-      delete state[action.payload]
+      recipesAdapter.removeOne(state, action.payload);
     },
     editRecipe: (state, action) => {
-      var oldName = action.payload.recipeName;
-      var recipe = action.payload.recipe;
-      console.log("name", action.payload.recipeName);
-      console.log("payload", action.payload);
-      state[oldName] = recipe;
-
-      // state[action.payload.recipeName] = action.payload.recipe
-    }
-  }
-})
+      const { id, changes } = action.payload;
+      recipesAdapter.updateOne(state, { id, changes });
+    },
+  },
+});
 
 export const { addRecipe, deleteRecipe, loadRecipeList, editRecipe } = recipesSlice.actions;
+
+export const { selectAll: selectAllRecipes, selectById: selectRecipeById } =
+  recipesAdapter.getSelectors((state) => state.recipes);
 
 export default recipesSlice.reducer;
