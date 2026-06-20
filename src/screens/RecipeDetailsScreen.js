@@ -14,7 +14,7 @@ const RecipeDetailsScreen = ({ route }) => {
         headerRight: () => (
           <Button
             onPress={() => {
-              navigation.navigate("Edit Recipe", { recipeName: recipeName })
+              navigation.navigate("Recipe Form", { recipeName: recipeName })
             }}
             title="Edit/copy"
           />

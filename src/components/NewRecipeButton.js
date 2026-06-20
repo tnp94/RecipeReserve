@@ -13,7 +13,7 @@ const NewRecipeButton = ( ) => {
         flex: 1,
         justifyContent: "center"
       }}
-      onPress={() => (navigation.navigate("New Recipe"))}>
+      onPress={() => (navigation.navigate("Recipe Form"))}>
         <Text>New Recipe</Text>
       </TouchableOpacity>
   )
