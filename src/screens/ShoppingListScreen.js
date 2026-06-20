@@ -1,54 +1,51 @@
-import { useState } from "react";
-import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button, Pressable } from "react-native";
+import { useMemo } from "react";
+import { View, Text, SectionList, TouchableOpacity, Pressable } from "react-native";
 import Separator from "../components/Separator";
 import { useDispatch, useSelector } from "react-redux";
 import { checkOffShoppingItem, deleteItem } from "../store/shoppingListSlice";
 import { INGREDIENTCATEGORIES } from "../Models/Ingredient";
 import { Swipeable } from "react-native-gesture-handler";
 
+const CATEGORIES = Object.values(INGREDIENTCATEGORIES);
+
 const ShoppingListScreen = ({ navigation }) => {
-  const shoppingList = useSelector((state) =>  state.shoppingList.shoppingList)
-  const dispatch = useDispatch()
-  
-  // const [data, setData] = useState(mockShoppingListData)
-  const shoppingTableItem = ({ item, index }) => {
-    const deleteShoppingItem = () => {
-      dispatch(deleteItem(item.id))
-    }
-    const renderRightActions = () => {
-      return (
-        <View>
-          <TouchableOpacity
-          style={{
-            padding: 5,
-            borderRadius: 7,
-            justifyContent: "center",
-            flex: 1
-          }}
-          onPress={() => deleteShoppingItem()}
-          >
-            <Text
-              style={{
-                color: "red"
-              }}
-            >Delete</Text>
-          </TouchableOpacity>
-          </View>
-      )
-    }
+  const shoppingList = useSelector((state) => state.shoppingList.shoppingList);
+  const dispatch = useDispatch();
+
+  const sections = useMemo(() => {
+    const items = Object.values(shoppingList);
+    return CATEGORIES
+      .map((category) => {
+        const data = items
+          .filter((item) =>
+            category === INGREDIENTCATEGORIES.UNCATEGORIZED
+              ? !CATEGORIES.includes(item.category) || item.category === ""
+              : item.category === category
+          )
+          .sort((a, b) => a.name.localeCompare(b.name));
+        return { title: category, data };
+      })
+      .filter((section) => section.data.length > 0);
+  }, [shoppingList]);
+
+  const renderItem = ({ item }) => {
+    const renderRightActions = () => (
+      <View>
+        <TouchableOpacity
+          style={{ padding: 5, borderRadius: 7, justifyContent: "center", flex: 1 }}
+          onPress={() => dispatch(deleteItem(item.id))}
+        >
+          <Text style={{ color: "red" }}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    );
     return (
-      <Swipeable
-        renderRightActions={renderRightActions}
-        overshootFriction={8}
-      >
-        <View style={{
-          flexDirection: "row",
-          padding: 5,
-        }}>
-          <View style={{flex: 4, alignItems: "center"}}>
+      <Swipeable renderRightActions={renderRightActions} overshootFriction={8}>
+        <View style={{ flexDirection: "row", padding: 5 }}>
+          <View style={{ flex: 4, alignItems: "center" }}>
             <Text>{item.name?.toString()} {item.note ? `(${item.note})` : ""}</Text>
           </View>
-          <View style={{flex: 4, alignItems: "center"}}>
+          <View style={{ flex: 4, alignItems: "center" }}>
             <Text>{item.quantityUnit?.toString()} {item.unit}</Text>
           </View>
           <Pressable
@@ -64,45 +61,32 @@ const ShoppingListScreen = ({ navigation }) => {
           </Pressable>
         </View>
       </Swipeable>
-    )
-  }
-  const shoppingTableCategory = ({ item: category, index }) => (
-    <View style={{
-      padding: 5,
-      borderWidth: 1
-    }}>
-      <View>
-        <Text style={{
-        fontSize: 24,
-        fontWeight: "bold"
-      }}>
-        {category.toString()}
-      </Text>
-      </View>
-        <FlatList 
-        data={Object.values(shoppingList).filter(( value, key ) => {
-          return value.category == category || ((category == INGREDIENTCATEGORIES.UNCATEGORIZED ) && (!Object.values(INGREDIENTCATEGORIES).includes(value.category) || value.category == ""))
-        }).sort((a, b) => a.name.localeCompare(b.name))}
-        renderItem={shoppingTableItem} 
-        keyExtractor={(item, index) => {
-          // console.log(item);
-          return item.id
-        }}
-        ItemSeparatorComponent={() => <Separator color="black" size={1} />}
-        />
+    );
+  };
+
+  const renderSectionHeader = ({ section: { title } }) => (
+    <View style={{ padding: 5, borderWidth: 1, borderBottomWidth: 0 }}>
+      <Text style={{ fontSize: 24, fontWeight: "bold" }}>{title}</Text>
     </View>
-  )
+  );
+
+  const renderSectionFooter = () => (
+    <View style={{ borderWidth: 1, borderTopWidth: 0, height: 4 }} />
+  );
 
   return (
-    <View>
-        <FlatList
-        data={Object.values(INGREDIENTCATEGORIES)}
-        renderItem={shoppingTableCategory}
-        keyExtractor={(item, index) => item.name + index.toString()}
-        ItemSeparatorComponent={() => <Separator color="black" size={3} />}
-        />
+    <View style={{ flex: 1 }}>
+      <SectionList
+        sections={sections}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
+        renderSectionFooter={renderSectionFooter}
+        keyExtractor={(item) => item.id?.toString()}
+        ItemSeparatorComponent={() => <Separator color="black" size={1} />}
+        SectionSeparatorComponent={() => <Separator color="black" size={3} />}
+      />
     </View>
-  )
-}
+  );
+};
 
 export default ShoppingListScreen;
