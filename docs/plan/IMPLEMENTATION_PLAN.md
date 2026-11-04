@@ -770,3 +770,102 @@ compiling and working with the new shapes (see step 6).
 | Parallel agents editing the same files | Strict file ownership per task; orchestrator commits between phases |
 | Web behavior differs (Alert, swipe) | `useDialog` everywhere; visible "⋯" buttons on web; browser smoke test in Phase 4 |
 | Native-only issues not testable in this cloud container | Web export + Jest here; owner should smoke-test on iOS/Android via Expo Go |
+
+---
+
+## 5. Follow-up round 2 (owner feedback, 2026-11-04)
+
+Feedback: (1) the finder shows nothing for "Garlic"; add recent-ingredient and
+recipe-ingredient suggestions to the finder input; (2) tab icons; (3) drag-and-drop on web;
+(4) a short "Added to menu" confirmation when adding by swipe.
+
+**Root cause of (1):** `findRecipes` drops every recipe missing more than 2 ingredients.
+Both seed recipes that use garlic miss 8+, so nothing showed. Fix: keep Full/Almost
+groups and add a third group of recipes that use at least one entered ingredient.
+
+All §2.7 rules still apply. Persisted shape changes require a migration + test.
+
+### Task 5A — Finder: partial matches, recent ingredients, autocomplete
+**Files you own:** `src/domain/recipeFinder.js`, `src/domain/ingredientSuggestions.js` (new),
+their tests, `src/store/finderSlice.js`, `src/store/migrations.js`, `src/store/store.js`,
+`src/store/__tests__/*` (finder/migration tests), `src/screens/RecipeFinderScreen.js`.
+
+1. `findRecipes` returns `{ fullMatches, nearMatches, otherMatches }`. `otherMatches` = recipes
+   that pass every other rule (≥ 1 matched, every "required" matched) but have
+   `missing.length > maxMissing`. Same sort. Update tests (add one for "garlic" against two
+   recipes with many ingredients → appears in `otherMatches`).
+2. `ingredientSuggestions.js`:
+   - `collectIngredientNames(recipes)` → unique trimmed ingredient names across all recipes
+     (dedupe by `normalizeName`, keep first seen), sorted case-insensitively.
+   - `suggestIngredients(allNames, query, { exclude = [], limit = 8 } = {})`: `q = query.trim().toLowerCase()`;
+     `""` → `[]`. Drop names whose `normalizeName` equals the `normalizeName` of any `exclude`
+     entry. Keep names where lower-case name contains `q` OR `normalizeName(name)` contains
+     `normalizeName(q)`. Rank: 0 = name starts with q, 1 = some word starts with q, 2 = other;
+     ties by name (case-insensitive). Return at most `limit`. Tests for each rule.
+3. `finderSlice`: new field `recent: string[]` (most recent first, max 12, de-duplicated by
+   `normalizeName`, newest display text wins). `addFinderIngredients(names)` moves every
+   valid submitted name to the front of `recent` (even if it was already in the current list).
+   New action `clearRecentFinderIngredients()`. Selector `selectRecentFinderIngredients`
+   (returns `state.finder.recent ?? []`). Initial state `{ ingredients: [], recent: [], nextId: 1 }`.
+4. Migration **v3**: `finder.recent = finder.recent ?? []` (create `finder` if missing). Persist
+   `version: 3`. Test it.
+5. `RecipeFinderScreen` input:
+   - Track `focused`. `onBlur` hides suggestions after a 150 ms delay so taps register; the
+     screen's `ScrollView` uses `keyboardShouldPersistTaps="handled"`.
+   - Focused and input empty → inline dropdown titled "Recent" with up to 8 recent names not
+     already in the current list, plus a "Clear recent" text button. Hidden if none.
+   - Input non-empty → inline dropdown titled "From your recipes" with
+     `suggestIngredients(collectIngredientNames(recipes), text, { exclude: currentNames })`.
+     Hidden if none.
+   - Tapping a suggestion adds it (`addFinderIngredients([name])`), clears the input and keeps
+     focus. Enter / "Add" still add the typed text (comma-split).
+   - Dropdown is rendered inline directly under the input (not an absolute overlay), rows
+     ≥ 44 px tall, bordered card style.
+6. Results: third section "Uses some of your ingredients" for `otherMatches`. Card shows
+   "Have {matched} of {total} ingredients" and "Missing {n} ingredients" (no add-missing button).
+
+### Task 5B — Tab icons and toast confirmation
+**Files you own:** `package.json`, `package-lock.json`, `App.js`, `src/components/toast/ToastProvider.js` (new),
+`src/components/RecipeCard.js`, `src/screens/RecipeDetailsScreen.js`.
+
+1. `npx expo install @expo/vector-icons` (adds the SDK-54-compatible version to dependencies).
+2. Tab icons with `Ionicons` (`focused ? filled : outline`): Home `home`, Recipes `book`,
+   Menu `calendar`, Shopping List `cart`, Settings `settings` (outline = `<name>-outline`).
+   `tabBarActiveTintColor: colors.accentStrong`.
+3. `ToastProvider` + `useToast()` → `show(message, { actionLabel, onAction, duration = 2500 } = {})`.
+   One toast at a time (a new `show` replaces the current one and restarts the timer).
+   Absolutely positioned dark pill (`rgba(30,30,30,0.92)`, white text, radius pill), centered
+   horizontally, `bottom: 72`, max width 480, fade in/out with `Animated`
+   (`useNativeDriver: Platform.OS !== "web"`), container `pointerEvents="box-none"`,
+   `accessibilityLiveRegion="polite"`. Optional action is a bold `accentStrong`-light text
+   button that calls `onAction` and hides the toast. Place `<ToastProvider>` in `App.js`
+   inside `DialogProvider`, wrapping `NavigationContainer`.
+4. `RecipeCard`: swipe "Add to Menu" and the actions-dialog "Add to menu" call
+   `toast.show(`Added "${recipe.name}" to menu`, { actionLabel: "View", onAction: () => navigation.navigate("Menu") })`.
+   `RecipeDetailsScreen` "Add to menu": replace the dialog with the same toast.
+
+### Task 5C — Drag-and-drop on the menu (web only)
+**Files you own:** `src/screens/MenuScreen.js`, `src/components/menu/*` (incl. new `useWebDrag.js`).
+
+1. Only when `Platform.OS === "web"`; native behavior unchanged. Use HTML5 drag-and-drop on
+   the DOM nodes behind react-native-web Views (a host `View` ref is the DOM element): set
+   `draggable="true"` and attach `dragstart/dragend/dragover/dragenter/dragleave/drop`
+   listeners in effects; clean up on unmount. Payload in `dataTransfer` under
+   `application/x-recipereserve` as JSON `{ type: "entry" | "slot" | "day", id }`.
+2. `useWebDrag.js` exports `useDraggable(ref, payload, enabled)` and
+   `useDropTarget(ref, { accepts: string[], onDrop(payload) }, enabled)` → `isOver` boolean.
+   `dragover` calls `preventDefault()` only for accepted types (check `dataTransfer.types`
+   includes the MIME type; store the dragged type in a module-level variable on dragstart
+   since payload data is unreadable during dragover).
+3. Behaviors:
+   - Entry row → another entry row: `swapMenuEntries`.
+   - Entry row → a slot (header or body, including an empty slot): `moveMenuEntry` (no-op if same slot).
+   - Entry row → Unplanned section: `moveMenuEntry({ slotId: null })`.
+   - Slot header → another day card/column: `moveSlot` (no-op if same day).
+   - Day header → another day header: `swapDays`.
+4. While dragging, the dragged element has opacity 0.5; a target under the pointer gets a
+   2px `colors.accentStrong` border/background tint. Draggable elements: `cursor: "grab"`,
+   `userSelect: "none"`. Taps still open the existing options.
+5. On web, show a muted hint under the toolbar: "Tip: drag a recipe onto a meal to move it,
+   or onto another recipe to swap. Drag a day's name onto another day to swap days."
+6. Verify with Playwright's `page.dragAndDrop()` (Chromium supports HTML5 DnD).
