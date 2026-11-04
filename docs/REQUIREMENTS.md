@@ -92,7 +92,7 @@ feature supports or extends it.
 | X-3 | **Scan a recipe** from a printed page (camera → OCR → recipe form). | Pre-fill the recipe form for review. |
 | X-4 | **Import from URL** — paste a link to a recipe web page and add it. | Many sites expose schema.org `Recipe` JSON-LD. |
 | X-5 | **Paste recipe text** — copy/paste raw text and parse it into a recipe. | Shares the parsing/review step with X-3 and X-4. |
-| X-7 ⭐ | **"What can I make?" recipe finder (priority)** — the user enters the ingredients they have on hand **for this search**. Nothing is stored long-term, so there's no inventory to keep up to date. The app suggests recipes that use those ingredients:<br>• **Full matches:** recipes the user can make with what they have.<br>• **Near matches:** recipes missing only one or two ingredients, with the missing items listed (and an option to add them to the shopping list).<br>Results are ranked by how many of the recipe's ingredients the user has. In the search, each entered ingredient can be quickly tagged with one tap:<br>• **Soon to expire:** prefer recipes that use it (ranks them higher).<br>• **Must use / required:** only show recipes that include it. | Uses up food before it spoils and can save a trip to the store. Pantry staples (P-1) can be pre-filled as a starting point. Searches the user's own recipes first, and the online repository (X-1) later. |
+| X-7 ⭐ | **"What can I make?" recipe finder (priority)** — the user enters the ingredients they have on hand **for this search**. Nothing is stored long-term, so there's no inventory to keep up to date. The app suggests recipes that use those ingredients:<br>• **Full matches:** recipes the user can make with what they have.<br>• **Near matches:** recipes missing only one or two ingredients, with the missing items listed (and an option to add them to the shopping list).<br>Results are ranked by how many of the recipe's ingredients the user has. In the search, each entered ingredient can be quickly tagged with one tap:<br>• **Soon to expire:** prefer recipes that use it (ranks them higher).<br>• **Must use / required:** only show recipes that include it.<br>The ingredients from the last search are remembered and pre-filled next time. Each one can be removed with one tap, and a **Clear all** button empties the list. | Uses up food before it spoils and can save a trip to the store. Pantry staples (P-1) can be pre-filled as a starting point. Searches the user's own recipes first, and the online repository (X-1) later. |
 | X-6 | **Saved meal plans** — save a whole week's menu and load it again later. | e.g. a "busy week" plan to reuse. |
 
 X-3, X-4, and X-5 are all "get a recipe into the app without typing it" and should share
@@ -111,11 +111,10 @@ one parse → review → save flow.
 - **Platforms:** iOS and Android, plus web, offering a fuller interface for people who want it.
 - **Accounts:** Not required. The app works fully offline and local-only. Accounts are optional and only needed for sharing/sync stretch goals.
 - **Stretch priority:** The recipe finder (X-7) is the priority stretch goal.
-- **Recipe finder:** Includes near matches. There's no inventory to maintain: ingredients are entered for each search and can be tagged with one tap (soon to expire / required).
+- **Recipe finder:** Includes near matches. There's no inventory to maintain: ingredients are entered for each search and can be tagged with one tap (soon to expire / required). The last search's ingredients are remembered, each is easy to remove, and there's a Clear all button.
 - **Promoted to core:** Scaling servings, manually added list items, and pantry staples with a reminder to check them.
 
 ## 4. Open questions
 
 1. **Stretch priority:** The recipe finder (X-7) comes first. What order should the rest go in?
 2. **Recipe finder tags (X-7):** Are "Use for sure" and "Required" the same tag (only show recipes with it), or should "Use for sure" be a stronger preference that still allows recipes without it?
-3. **Recipe finder input (X-7):** Should the last search's ingredients be remembered for convenience, as long as nothing has to be kept up to date?
