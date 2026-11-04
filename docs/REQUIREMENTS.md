@@ -73,8 +73,6 @@ feature supports or extends it.
 | P-3 | After generating, the app reminds the user which staples and quantities were pre-checked, so they can make sure they really have enough before shopping. | ⬜ |
 | P-4 | The reminder has a "Don't remind me again" option, and the user can turn it back on in settings. | ⬜ |
 
----
-
 ### 1.5 Platforms & accounts
 
 | ID | Requirement | Status |
@@ -107,7 +105,7 @@ one parse → review → save flow.
 - **Combining ingredients:** Combine when units match. A combined item can be expanded to show which recipe needs what.
 - **Regenerating the list:** Ask the user first: replace or merge.
 - **Meal slots:** Fully flexible. Suggestions help the user but never restrict them.
-- **Platforms:** iOS and Android first. Web is also a target, offering a fuller interface for people who want it.
+- **Platforms:** iOS and Android, plus web, offering a fuller interface for people who want it.
 - **Accounts:** Not required. The app works fully offline and local-only. Accounts are optional and only needed for sharing/sync stretch goals.
 - **Promoted to core:** Scaling servings, manually added list items, and pantry staples with a reminder to check them.
 
