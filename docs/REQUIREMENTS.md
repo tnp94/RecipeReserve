@@ -45,7 +45,7 @@ feature supports or extends it.
 | M-1 | User can add a recipe to the menu (swipe or long-press on a recipe). | ✅ |
 | M-2 | User can add the same recipe to the menu more than once. | ✅ |
 | M-3 | User can remove a recipe from the menu. | ✅ |
-| M-4 | The menu is organized as a **week**: each recipe is assigned to a day and a meal (e.g. Tuesday dinner). | ⬜ |
+| M-4 | The menu is organized as a **week**: each recipe can be placed on a day and in a meal slot (e.g. Tuesday dinner). Slots are free-form: the user can add, rename, remove, or skip them, and can leave a recipe unassigned. Suggested slots (breakfast, lunch, dinner, snack) are only shortcuts and never restrict what the user can do. | ⬜ |
 | M-5 | Moving or swapping meals and days is quick and easy (e.g. drag-and-drop, or a "move to…" / "swap with…" action). Plans change often, so this should take one or two taps. | ⬜ |
 | M-6 | User can scale a recipe's servings on the menu (e.g. double or halve it), and shopping list quantities scale with it. | ⬜ |
 | M-7 | User can clear the menu and start a new week. | ⬜ |
@@ -75,6 +75,16 @@ feature supports or extends it.
 
 ---
 
+### 1.5 Platforms & accounts
+
+| ID | Requirement | Status |
+|---|---|---|
+| A-1 | Runs on iOS and Android. | ✅ (Expo) |
+| A-2 | Runs on the web, with a fuller layout that takes advantage of larger screens. | 🟡 Expo web target exists; no web-specific layout |
+| A-3 | Works with no account. All data can stay local on the device. | ✅ |
+
+---
+
 ## 2. Stretch goals
 
 | ID | Feature | Notes |
@@ -84,6 +94,7 @@ feature supports or extends it.
 | X-3 | **Scan a recipe** from a printed page (camera → OCR → recipe form). | Pre-fill the recipe form for review. |
 | X-4 | **Import from URL** — paste a link to a recipe web page and add it. | Many sites expose schema.org `Recipe` JSON-LD. |
 | X-5 | **Paste recipe text** — copy/paste raw text and parse it into a recipe. | Shares the parsing/review step with X-3 and X-4. |
+| X-6 | **Saved meal plans** — save a whole week's menu and load it again later. | e.g. a "busy week" plan to reuse. |
 
 X-3, X-4, and X-5 are all "get a recipe into the app without typing it" and should share
 one parse → review → save flow.
@@ -95,11 +106,11 @@ one parse → review → save flow.
 - **Menu structure:** Recipes go into days and meals. Moving them around must be easy.
 - **Combining ingredients:** Combine when units match. A combined item can be expanded to show which recipe needs what.
 - **Regenerating the list:** Ask the user first: replace or merge.
+- **Meal slots:** Fully flexible. Suggestions help the user but never restrict them.
+- **Platforms:** iOS and Android first. Web is also a target, offering a fuller interface for people who want it.
+- **Accounts:** Not required. The app works fully offline and local-only. Accounts are optional and only needed for sharing/sync stretch goals.
 - **Promoted to core:** Scaling servings, manually added list items, and pantry staples with a reminder to check them.
 
 ## 4. Open questions
 
-1. **Platforms:** Target iOS and Android only, or also web?
-2. **Accounts & sync:** Should the core app stay local-only (no login) until the stretch goals?
-3. **Stretch priority:** Which stretch goal matters most first?
-4. **Meal slots:** Fixed breakfast/lunch/dinner, or can the user set custom slots (e.g. snack)?
+1. **Stretch priority:** Which stretch goal matters most first?
