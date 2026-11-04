@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { View } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Button } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
@@ -9,10 +10,17 @@ import { selectAllRecipes } from "../store/recipesSlice";
 import { filterRecipes } from "../domain/recipeSearch";
 
 const RecipeListScreen = () => {
+  const navigation = useNavigation();
   const [query, setQuery] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const allRecipes = useSelector(selectAllRecipes);
   const recipes = filterRecipes(allRecipes, { query, favoritesOnly });
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => <Button onPress={() => navigation.navigate("Recipe Finder")} title="What can I make?" />,
+    });
+  }, [navigation]);
 
   return (
     <View style={{ flex: 1 }}>
