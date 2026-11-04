@@ -200,7 +200,7 @@ a finite number input → number kind):
 `formatNumber(n)` rules: round to 2 decimals first. Integer → `"2"`. Otherwise split into
 whole + fractional part; if the fractional part is within 0.02 of one of
 1/8, 1/4, 1/3, 3/8, 1/2, 5/8, 2/3, 3/4, 7/8 → `"1 1/2"` (or `"1/2"` when whole is 0);
-otherwise the number with up to 2 decimals, trailing zeros trimmed (`"1.38"`).
+otherwise the number with up to 2 decimals, trailing zeros trimmed (`"1.43"`; note `1.38` → `"1 3/8"`).
 
 `src/domain/ingredientKey.js`
 ```js
@@ -427,7 +427,7 @@ Phase 4:             Orchestrator: integration check in browser, docs (CLAUDE.md
      `"1 1/2"`→1.5, `"½"`→0.5, `"1½"`→1.5, `"1-2"`→1/2, `"1/2 - 1"`→0.5/1, `"2 to 3"`,
      `"3-1"`→1/3 (swapped), `"a pinch"`→text, `"1/0"`→text, number `3`→3/3.
    - format: `2`→"2", `0.5`→"1/2", `1.5`→"1 1/2", `0.333`→"1/3", `2.75`→"2 3/4",
-     `1.38`→"1.38", `0.1`→"0.1"; range `{1,2}`→"1-2".
+     `1.43`→"1.43", `1.38`→"1 3/8", `0.1`→"0.1"; range `{1,2}`→"1-2".
    - scale: `"1-2"` × 2 → 2/4; text unchanged; blank unchanged.
    - addQuantities throws on text.
    - singularize: onions→onion, potatoes→potato, berries→berry, peas→pea, glass→glass,
