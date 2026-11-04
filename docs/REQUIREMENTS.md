@@ -92,10 +92,13 @@ feature supports or extends it.
 | X-3 | **Scan a recipe** from a printed page (camera → OCR → recipe form). | Pre-fill the recipe form for review. |
 | X-4 | **Import from URL** — paste a link to a recipe web page and add it. | Many sites expose schema.org `Recipe` JSON-LD. |
 | X-5 | **Paste recipe text** — copy/paste raw text and parse it into a recipe. | Shares the parsing/review step with X-3 and X-4. |
+| X-7 ⭐ | **"What can I make?" recipe finder (priority)** — the user enters the ingredients they have on hand, and the app suggests recipes that use them. Ranked by how many of the recipe's ingredients the user already has, with any missing ingredients shown. Ingredients the user marks as expiring soon count extra in the ranking. | Uses up food before it spoils and can save a trip to the store. Could reuse the pantry staples list (P-1) as a starting point. Searches the user's own recipes first, and the online repository (X-1) later. |
 | X-6 | **Saved meal plans** — save a whole week's menu and load it again later. | e.g. a "busy week" plan to reuse. |
 
 X-3, X-4, and X-5 are all "get a recipe into the app without typing it" and should share
 one parse → review → save flow.
+
+⭐ = priority stretch goal.
 
 ---
 
@@ -107,8 +110,11 @@ one parse → review → save flow.
 - **Meal slots:** Fully flexible. Suggestions help the user but never restrict them.
 - **Platforms:** iOS and Android, plus web, offering a fuller interface for people who want it.
 - **Accounts:** Not required. The app works fully offline and local-only. Accounts are optional and only needed for sharing/sync stretch goals.
+- **Stretch priority:** The recipe finder (X-7) is the priority stretch goal.
 - **Promoted to core:** Scaling servings, manually added list items, and pantry staples with a reminder to check them.
 
 ## 4. Open questions
 
-1. **Stretch priority:** Which stretch goal matters most first?
+1. **Stretch priority:** The recipe finder (X-7) comes first. What order should the rest go in?
+2. **Recipe finder suggestions (X-7):** Should it suggest only recipes you can make with what you have, or also near matches that are missing one or two ingredients?
+3. **Expiration tracking (X-7):** Should the app remember what you have on hand and when it expires, or should you enter your ingredients fresh each time?
