@@ -869,3 +869,75 @@ their tests, `src/store/finderSlice.js`, `src/store/migrations.js`, `src/store/s
 5. On web, show a muted hint under the toolbar: "Tip: drag a recipe onto a meal to move it,
    or onto another recipe to swap. Drag a day's name onto another day to swap days."
 6. Verify with Playwright's `page.dragAndDrop()` (Chromium supports HTML5 DnD).
+
+---
+
+## 6. Follow-up round 3: cross-platform drag-and-drop
+
+Owner report: "drag and drop isn't working at all." Reproduced: the HTML5 implementation
+(§5, Task 5C) works with a desktop mouse but **not with touch** (phone/tablet browsers do
+not fire HTML5 drag events for fingers) and is intentionally disabled in the native app
+(Expo Go). Also found: `useDropTarget` attaches listeners only on mount, so the Unplanned
+target in `MenuScreen` goes stale if its View re-mounts (e.g. empty state → board, or
+narrow ↔ wide).
+
+Decision: replace HTML5 DnD with one implementation built on `react-native-gesture-handler`
+(already installed, works on iOS, Android, and web with mouse and touch). Dragging starts
+from a visible **grip handle (≡)** so tap-to-open and swipe-to-remove keep working.
+`react-native-reanimated` is NOT installed: use the Gesture API with `.runOnJS(true)` and
+React Native's `Animated` for the floating preview.
+
+### Task 6A — Gesture-based drag-and-drop for the weekly menu
+**Files you own:** `src/screens/MenuScreen.js`, `src/components/menu/*` (delete
+`useWebDrag.js`; create `src/components/menu/drag/DragProvider.js`, `DragHandle.js`,
+`useDropZone.js`).
+
+1. **DragProvider** (wraps the menu board inside `MenuScreen`; context):
+   - State: `active` (`{ type, id, label } | null`), `hoverKey` (string | null).
+   - Zone registry (a ref `Map`): `key → { key, accepts: string[], onDrop(payload), node }`.
+   - `begin(payload, x, y)`: set `active`; measure every registered zone with
+     `node.measureInWindow((x, y, w, h) => …)` into a rect cache; measure the provider's own
+     container in window coordinates (for positioning the preview); disable scrolling.
+   - `move(x, y)` (window coordinates from `absoluteX/absoluteY`): update the preview
+     position; hit-test cached rects — among zones containing the point whose `accepts`
+     includes `active.type`, pick the **smallest area** (innermost wins); set `hoverKey`
+     only when it changes. Auto-scroll: if the point is within 80px of the active
+     ScrollView's edge (vertical in narrow layout; horizontal outer ScrollView in wide layout),
+     `scrollTo` by 12px per move event (clamped to content), then re-measure zones
+     (throttle re-measure to once per 100 ms). Track scroll offsets via `onScroll`
+     (`scrollEventThrottle={16}`).
+   - `end()`: if `hoverKey` is set, call that zone's `onDrop(activePayload)`; then clear
+     state and re-enable scrolling. `cancel()`: clear without dropping.
+   - Renders a floating preview while `active`: an absolutely positioned pill
+     (`colors.accentStrong` background, white bold text = `label`, radius pill, shadow/elevation,
+     `pointerEvents="none"`) centered on the pointer via `Animated.ValueXY` translate.
+2. **useDropZone({ key, accepts, onDrop })** → `{ ref, isOver }`. `ref` is a **callback ref**
+   that registers/unregisters the current host node (so re-mounted Views re-register — fixes
+   the stale-target bug). `isOver = hoverKey === key`. Keep `onDrop` in a ref.
+   Keys: `unplanned`, `slot:<id>`, `entry:<id>`, `day:<n>`, `dayheader:<n>`.
+3. **DragHandle({ payload, label })**: `GestureDetector` with
+   `Gesture.Pan().minDistance(4).runOnJS(true)` — `onStart` → `begin`, `onUpdate` → `move`,
+   `onEnd` → `end`, `onFinalize(_, success)` → `cancel()` if not ended. Renders an Ionicons
+   `reorder-three` icon (size 22, `colors.muted`) in a 44×44 hit area with
+   `accessibilityLabel={`Drag ${label}`}`, `accessibilityHint="Drag to move"`; on web add style
+   `{ cursor: "grab", touchAction: "none", userSelect: "none" }`.
+4. Where handles go (all platforms):
+   - **Entry row**: handle at the left of the row. Row is also a drop zone (accepts `entry` → `swapMenuEntries`).
+     Native keeps `Swipeable` for swipe-to-remove; web renders without `Swipeable` (as now).
+   - **Slot header**: handle before the slot name (payload `slot`). Whole slot is a drop zone
+     (accepts `entry` → `moveMenuEntry`, no-op if same slot).
+   - **Day header**: handle before the day label (payload `day`). Header is a drop zone
+     (accepts `day` → `swapDays`). Whole day card is a drop zone (accepts `slot` → `moveSlot`, no-op if same day).
+   - **Unplanned** section is a drop zone (accepts `entry` → `moveMenuEntry({ slotId: null })`).
+   - Highlight targets with `isOver`: 2px `colors.accentStrong` border (use `borderColor`
+     on an existing 2px transparent border so layout doesn't shift) + `rgba(47,128,237,0.12)` background.
+5. Use `ScrollView` from `react-native-gesture-handler` for the menu's scroll views (so the
+   pan and scrolling coordinate on native) and pass `scrollEnabled={!active}`.
+6. Hint text (all platforms, muted, under the toolbar): "Tip: hold ≡ and drag a recipe onto a
+   meal to move it, or onto another recipe to swap. Drag a day's ≡ onto another day to swap days."
+7. Remove `useWebDrag.js` and every import of it. Taps, "⋯", Move to…/Swap with… unchanged.
+8. Verify in Chromium (Playwright) at 1280×800 with **mouse** (`page.mouse.down/move/up`
+   in ≥ 15 steps) and at Pixel-7 emulation with **touch** (CDP `Input.dispatchTouchEvent`
+   touchStart/touchMove×10/touchEnd), against `npx expo export --platform web` served
+   locally: entry → slot, entry → entry swap, entry → Unplanned, slot → another day, day →
+   day swap; plus one auto-scroll drag in the narrow layout (Monday entry → Sunday slot).
