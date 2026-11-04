@@ -1,15 +1,42 @@
+import { useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../../theme";
-import { SUGGESTED_SLOT_NAMES } from "../../store/menuSlice";
+import { useDispatch } from "react-redux";
+import { SUGGESTED_SLOT_NAMES, moveSlot, swapDays } from "../../store/menuSlice";
+import { IS_WEB, dropOverStyle, useDraggable, useDropTarget } from "./useWebDrag";
 import Chip from "../Chip";
 import MenuSlot from "./MenuSlot";
 
 const MenuDay = ({ day, onDayMenu, onAddSlot, onCustomSlot, onSlotRename, onSlotMenu, onEntryPress, onEntryRemove }) => {
   const used = new Set(day.slots.map((s) => s.name.trim().toLowerCase()));
   const suggestions = SUGGESTED_SLOT_NAMES.filter((n) => !used.has(n.toLowerCase()));
+  const dispatch = useDispatch();
+  const cardRef = useRef(null);
+  const headerRef = useRef(null);
+  useDraggable(headerRef, { type: "day", id: day.day }, IS_WEB);
+  const slotOver = useDropTarget(
+    cardRef,
+    {
+      accepts: ["slot"],
+      onDrop: (p) => {
+        if (!day.slots.some((s) => s.id === p.id)) dispatch(moveSlot({ slotId: p.id, day: day.day }));
+      },
+    },
+    IS_WEB
+  );
+  const dayOver = useDropTarget(
+    headerRef,
+    {
+      accepts: ["day"],
+      onDrop: (p) => {
+        if (p.id !== day.day) dispatch(swapDays({ dayA: p.id, dayB: day.day }));
+      },
+    },
+    IS_WEB
+  );
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
+    <View ref={cardRef} style={[styles.card, dropOverStyle(slotOver)]}>
+      <View ref={headerRef} style={[styles.header, dropOverStyle(dayOver)]}>
         <Text style={styles.title}>{day.label}</Text>
         <Pressable style={styles.more} onPress={() => onDayMenu(day)} accessibilityRole="button" accessibilityLabel={`${day.label} options`}>
           <Text style={styles.moreText}>{"⋯"}</Text>

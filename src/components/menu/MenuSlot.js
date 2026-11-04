@@ -1,10 +1,29 @@
+import { useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, spacing } from "../../theme";
+import { useDispatch } from "react-redux";
+import { moveMenuEntry } from "../../store/menuSlice";
 import MenuEntryRow from "./MenuEntryRow";
+import { IS_WEB, dropOverStyle, useDraggable, useDropTarget } from "./useWebDrag";
 
-const MenuSlot = ({ slot, onRename, onMenu, onEntryPress, onEntryRemove }) => (
-  <View style={styles.slot}>
-    <View style={styles.header}>
+const MenuSlot = ({ slot, onRename, onMenu, onEntryPress, onEntryRemove }) => {
+  const dispatch = useDispatch();
+  const slotRef = useRef(null);
+  const headerRef = useRef(null);
+  useDraggable(headerRef, { type: "slot", id: slot.id }, IS_WEB);
+  const isOver = useDropTarget(
+    slotRef,
+    {
+      accepts: ["entry"],
+      onDrop: (p) => {
+        if (!slot.entries.some((e) => e.id === p.id)) dispatch(moveMenuEntry({ entryId: p.id, slotId: slot.id }));
+      },
+    },
+    IS_WEB
+  );
+  return (
+  <View ref={slotRef} style={[styles.slot, dropOverStyle(isOver)]}>
+    <View ref={headerRef} style={styles.header}>
       <Pressable style={styles.nameButton} onPress={onRename} accessibilityRole="button" accessibilityLabel={`Rename ${slot.name}`}>
         <Text style={styles.name} numberOfLines={1}>{slot.name}</Text>
       </Pressable>
@@ -25,7 +44,8 @@ const MenuSlot = ({ slot, onRename, onMenu, onEntryPress, onEntryRemove }) => (
       ))
     )}
   </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   slot: { marginTop: spacing.sm },

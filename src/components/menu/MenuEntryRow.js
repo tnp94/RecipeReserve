@@ -1,8 +1,25 @@
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRef } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
+import { useDispatch } from "react-redux";
 import { colors, radius, spacing } from "../../theme";
+import { swapMenuEntries } from "../../store/menuSlice";
+import { IS_WEB, dropOverStyle, useDraggable, useDropTarget } from "./useWebDrag";
 
 const MenuEntryRow = ({ entry, onPress, onRemove }) => {
+  const dispatch = useDispatch();
+  const dragRef = useRef(null);
+  useDraggable(dragRef, { type: "entry", id: entry.id }, IS_WEB);
+  const isOver = useDropTarget(
+    dragRef,
+    {
+      accepts: ["entry"],
+      onDrop: (p) => {
+        if (p.id !== entry.id) dispatch(swapMenuEntries({ entryIdA: p.id, entryIdB: entry.id }));
+      },
+    },
+    IS_WEB
+  );
   const renderRightActions = () => (
     <Pressable
       style={styles.removeAction}
@@ -13,20 +30,28 @@ const MenuEntryRow = ({ entry, onPress, onRemove }) => {
       <Text style={styles.removeText}>Remove</Text>
     </Pressable>
   );
+  const content = (
+    <Pressable
+      style={styles.row}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Options for ${entry.recipe.name}`}
+    >
+      <Text style={styles.name} numberOfLines={2}>{entry.recipe.name}</Text>
+      {entry.scale !== 1 ? (
+        <View style={styles.badge}><Text style={styles.badgeText}>{`×${entry.scale}`}</Text></View>
+      ) : null}
+      {IS_WEB ? <Text style={styles.more}>{"⋯"}</Text> : null}
+    </Pressable>
+  );
+  // On web the row is a plain draggable View (no Swipeable: it fights HTML5 drag);
+  // the "⋯" affordance opens the same options on tap.
+  if (IS_WEB) {
+    return <View ref={dragRef} style={dropOverStyle(isOver)}>{content}</View>;
+  }
   return (
     <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
-      <Pressable
-        style={styles.row}
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`Options for ${entry.recipe.name}`}
-      >
-        <Text style={styles.name} numberOfLines={2}>{entry.recipe.name}</Text>
-        {entry.scale !== 1 ? (
-          <View style={styles.badge}><Text style={styles.badgeText}>{`×${entry.scale}`}</Text></View>
-        ) : null}
-        {Platform.OS === "web" ? <Text style={styles.more}>{"⋯"}</Text> : null}
-      </Pressable>
+      {content}
     </Swipeable>
   );
 };

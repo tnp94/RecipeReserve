@@ -48,11 +48,20 @@ DialogProvider → NavigationContainer → bottom tabs. (SafeAreaProvider is req
 `dialog.alert(title, message, buttons)` (same API as `Alert.alert`) and
 `dialog.prompt({ title, defaultValue, confirmText, onSubmit })`. Use `AppModal` for richer sheets.
 Every swipe / long-press action also has a visible "⋯" button on web.
+For brief confirmations use `useToast().show(message, { actionLabel, onAction })` from
+`src/components/toast/ToastProvider.js`. Tab icons use `Ionicons` from `@expo/vector-icons`.
+
+### Menu drag-and-drop (web only)
+
+`src/components/menu/useWebDrag.js` (`useDraggable`, `useDropTarget`) attaches HTML5 drag
+events to the DOM nodes behind react-native-web Views. Entry → entry swaps, entry → slot or
+Unplanned moves, slot header → day moves the slot, day header → day header swaps days. On
+web, entry rows render without `Swipeable` so dragging works; native is unchanged.
 
 ### State (Redux + redux-persist)
 
 The whole root reducer (`src/store/rootReducer.js`) is persisted to AsyncStorage. Persist
-`version: 2`; migrations live in `src/store/migrations.js` — bump the version and add a
+`version: 3`; migrations live in `src/store/migrations.js` — bump the version and add a
 migration (with a test) whenever a persisted shape changes.
 
 | Slice | Shape |
@@ -62,7 +71,7 @@ migration (with a test) whenever a persisted shape changes.
 | `shoppingList` | entity adapter `{ ids, entities, nextId }` — items with `mergeKey, nameKey, name, unit, category, quantityText, checked, isStaple, source: "menu"\|"manual", contributions[]` |
 | `pantry` | `{ staples: { [nameKey]: { nameKey, name } } }` |
 | `settings` | `{ showStapleReminder }` |
-| `finder` | `{ ingredients: [{ id, name, tag: null\|"expiring"\|"required" }], nextId }` |
+| `finder` | `{ ingredients: [{ id, name, tag: null\|"expiring"\|"required" }], recent: string[], nextId }` |
 
 Key points:
 - Menu entries reference recipes by `recipeId` (no copies). Deleting a recipe or "Reset recipes" removes orphaned entries via `extraReducers`. Entry `slotId: null` = Unplanned. Order within a slot = order of `entries.ids`.

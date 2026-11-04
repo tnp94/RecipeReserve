@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, Pressable, Button, StyleSheet } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Platform, View, Text, ScrollView, Pressable, Button, StyleSheet } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addSlot,
@@ -24,6 +24,7 @@ import { selectShowStapleReminder, setShowStapleReminder } from "../store/settin
 import { useDialog } from "../components/dialog/DialogProvider";
 import useLayout from "../hooks/useLayout";
 import { colors, radius, spacing } from "../theme";
+import { IS_WEB, dropOverStyle, useDropTarget } from "../components/menu/useWebDrag";
 import MenuDay from "../components/menu/MenuDay";
 import MenuEntryRow from "../components/menu/MenuEntryRow";
 import EntryOptionsModal from "../components/menu/EntryOptionsModal";
@@ -158,8 +159,20 @@ const MenuScreen = ({ navigation }) => {
       .filter((g) => g.entries.length > 0);
   }, [unplanned, week, activeModal?.entryId]);
 
+  const unplannedRef = useRef(null);
+  const unplannedOver = useDropTarget(
+    unplannedRef,
+    {
+      accepts: ["entry"],
+      onDrop: (p) => {
+        if (!unplanned.some((e) => e.id === p.id)) dispatch(moveMenuEntry({ entryId: p.id, slotId: null }));
+      },
+    },
+    IS_WEB
+  );
+
   const renderUnplanned = () => (
-    <View style={styles.unplanned}>
+    <View ref={unplannedRef} style={[styles.unplanned, dropOverStyle(unplannedOver)]}>
       <View style={styles.unplannedHeader}>
         <Text style={styles.unplannedTitle}>Unplanned</Text>
       </View>
@@ -196,11 +209,18 @@ const MenuScreen = ({ navigation }) => {
     </View>
   );
 
+  const dragHint = Platform.OS === "web" ? (
+    <Text style={styles.dragHint}>
+      Tip: drag a recipe onto a meal to move it, or onto another recipe to swap. Drag a day's name onto another day to swap days.
+    </Text>
+  ) : null;
+
   const colWidth = Math.max(150, Math.floor((width - 48) / 8));
 
   return (
     <View style={styles.screen}>
       {toolbar}
+      {dragHint}
       {isWide ? (
         <ScrollView horizontal style={styles.flex} contentContainerStyle={styles.columns}>
           <ScrollView style={{ width: colWidth }} contentContainerStyle={styles.column}>
@@ -314,6 +334,7 @@ const styles = StyleSheet.create({
   count: { color: colors.muted, fontSize: 15 },
   newWeek: { minHeight: 44, justifyContent: "center", paddingLeft: spacing.md },
   newWeekText: { color: colors.accentStrong, fontSize: 16, fontWeight: "bold" },
+  dragHint: { color: colors.muted, fontSize: 13, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   narrowContent: { padding: spacing.lg },
   columns: { flexGrow: 1, padding: spacing.sm },
   column: { padding: spacing.sm },
