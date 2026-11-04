@@ -1,28 +1,35 @@
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
-import { useNavigation } from "@react-navigation/native";
 import RecipeCard from "./RecipeCard";
-import { useSelector } from "react-redux";
-import { selectAllRecipes } from "../store/recipesSlice";
+import useLayout from "../hooks/useLayout";
+import { colors } from "../theme";
 
-const RecipeCards = () => {
-  const navigation = useNavigation()
-  const recipes = useSelector(selectAllRecipes)
+const RecipeCards = ({ recipes, hasAnyRecipes = true }) => {
+  const { width } = useLayout();
+  const numColumns = width < 600 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 5;
 
   return (
     <View style={{ flex: 1 }}>
       <FlatList
+        key={numColumns}
         data={recipes}
-        numColumns={2}
-        renderItem={({ item, index }) => (
-          <View style={{ flex: 0.5, alignContent: "center" }}>
-            <RecipeCard recipeId={item.id} index={index} />
+        numColumns={numColumns}
+        renderItem={({ item }) => (
+          <View style={{ width: `${100 / numColumns}%` }}>
+            <RecipeCard recipeId={item.id} />
           </View>
         )}
         keyExtractor={(item) => item.id.toString()}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", color: colors.muted, padding: 24 }}>
+            {hasAnyRecipes
+              ? "No recipes match your search."
+              : "No recipes yet. Tap New Recipe to add one."}
+          </Text>
+        }
       />
     </View>
-  )
-}
+  );
+};
 
 export default RecipeCards;
