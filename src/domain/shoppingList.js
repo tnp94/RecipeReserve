@@ -56,7 +56,12 @@ export function buildShoppingItems({ entries, recipesById, stapleKeys }) {
         groups.set(mergeKey, group);
       }
       group.categories.push(ingredient.category);
-      group.contributions.push(contribution);
+      // One contribution per menu entry per item: a recipe that lists the same ingredient
+      // twice (e.g. salt in a marinade and a sauce) adds to its existing contribution.
+      // Merging and per-recipe removal rely on menuEntryId being unique within an item.
+      const same = group.contributions.find((c) => c.menuEntryId === entry.id);
+      if (same) combineInto(same, contribution);
+      else group.contributions.push(contribution);
     });
   }
 
@@ -77,16 +82,35 @@ export function buildShoppingItems({ entries, recipesById, stapleKeys }) {
   });
 }
 
+// Folds `extra` (same menu entry, same merge key) into `target`. Only number and blank
+// kinds share a merge key, so both are the same kind here.
+function combineInto(target, extra) {
+  if (target.quantity.kind === "number" && extra.quantity.kind === "number") {
+    target.quantity = addQuantities(target.quantity, extra.quantity);
+    target.quantityText = formatQuantity(target.quantity);
+  }
+  if (extra.note && !target.note.split("; ").includes(extra.note)) {
+    target.note = target.note ? `${target.note}; ${extra.note}` : extra.note;
+  }
+}
+
 export function mergeItem(existing, built) {
-  const contributions = [...existing.contributions];
+  const builtByEntry = new Map(built.contributions.map((c) => [c.menuEntryId, c]));
+  const contributions = [];
+  const seen = new Set();
+  // Keep existing order; an entry's (possibly duplicated, from older lists) contributions
+  // are replaced by the single freshly built one.
+  for (const c of existing.contributions) {
+    if (seen.has(c.menuEntryId)) continue;
+    seen.add(c.menuEntryId);
+    contributions.push(builtByEntry.get(c.menuEntryId) ?? c);
+  }
   let gainedNew = false;
   for (const c of built.contributions) {
-    const i = contributions.findIndex((x) => x.menuEntryId === c.menuEntryId);
-    if (i >= 0) contributions[i] = c;
-    else {
-      contributions.push(c);
-      gainedNew = true;
-    }
+    if (seen.has(c.menuEntryId)) continue;
+    seen.add(c.menuEntryId);
+    contributions.push(c);
+    gainedNew = true;
   }
   let checked;
   if (built.isStaple) checked = true;

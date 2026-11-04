@@ -54,9 +54,11 @@ For brief confirmations use `useToast().show(message, { actionLabel, onAction })
 ### Menu drag-and-drop (all platforms)
 
 Built on `react-native-gesture-handler` (no reanimated: gestures use `.runOnJS(true)`), in
-`src/components/menu/drag/`: `DragProvider` (active drag, zone registry measured with
-`measureInWindow`, smallest-zone hit test, floating preview, edge auto-scroll: 56px zone,
-300 ms dwell, speed scales with depth), `DragHandle` (≡ grip with a Pan gesture), and
+`src/components/menu/drag/`: `DragProvider` (drag state in a small external store read via
+`useSyncExternalStore`, so a hover change re-renders only the affected zones; zone registry
+measured with `measureInWindow`; smallest-zone hit test limited to the board's visible area;
+floating preview; edge auto-scroll on any registered `DragScrollView` — the innermost one
+under the pointer — with a 56px zone, 300 ms dwell, speed scaling with depth), `DragHandle` (≡ grip; its Pan gesture is memoized so re-renders never replace it mid-drag), and
 `useDropZone` (callback ref, so re-mounted Views re-register). Drags start only from ≡ handles
 so tap and native swipe-to-remove keep working. Entry → entry swaps, entry → slot or Unplanned
 moves, slot → day moves the slot, day → day swaps. Slot → slot reorders (`reorderSlot`; `onDrop(payload, {x,y,rect})` + `hoverHalf` pick before/after, shown as an insertion line). Menu scroll views come from

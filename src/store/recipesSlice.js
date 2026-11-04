@@ -3,6 +3,8 @@ import { recipeList } from "../Recipes";
 
 const recipesAdapter = createEntityAdapter();
 
+const nameKey = (name) => String(name ?? "").trim().toLowerCase();
+
 export const initialState = recipesAdapter.setAll(
   recipesAdapter.getInitialState({ nextId: recipeList.length + 1 }),
   recipeList
@@ -18,12 +20,15 @@ const recipesSlice = createSlice({
     },
     addRecipe: (state, action) => {
       const recipe = { ...action.payload };
-      let name = recipe.name;
+      const base = String(recipe.name ?? "").trim();
+      let name = base;
       let count = 0;
-      const existingNames = new Set(state.ids.map((id) => state.entities[id].name));
-      while (existingNames.has(name)) {
+      // Same comparison as isRecipeNameTaken (trimmed, case-insensitive), so a recipe
+      // added here can always be saved later with "Save changes".
+      const existingNames = new Set(state.ids.map((id) => nameKey(state.entities[id].name)));
+      while (existingNames.has(nameKey(name))) {
         count++;
-        name = `${recipe.name} copy ${count}`;
+        name = `${base} copy ${count}`;
       }
       recipe.name = name;
       recipe.id = state.nextId;
@@ -48,12 +53,8 @@ export const { addRecipe, deleteRecipe, loadRecipeList, editRecipe, toggleFavori
   recipesSlice.actions;
 
 export function isRecipeNameTaken(state, name, excludeId) {
-  const wanted = String(name ?? "").trim().toLowerCase();
-  return state.recipes.ids.some(
-    (id) =>
-      id !== excludeId &&
-      String(state.recipes.entities[id].name ?? "").trim().toLowerCase() === wanted
-  );
+  const wanted = nameKey(name);
+  return state.recipes.ids.some((id) => id !== excludeId && nameKey(state.recipes.entities[id].name) === wanted);
 }
 
 export const { selectAll: selectAllRecipes, selectById: selectRecipeById } =

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, Button, StyleSheet } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addSlot,
@@ -28,7 +27,7 @@ import { selectShowStapleReminder, setShowStapleReminder } from "../store/settin
 import { useDialog } from "../components/dialog/DialogProvider";
 import useLayout from "../hooks/useLayout";
 import { colors, radius, spacing } from "../theme";
-import DragProvider, { DragScrollView, dropOverStyle, useDragState } from "../components/menu/drag/DragProvider";
+import DragProvider, { DragScrollView, dropOverStyle } from "../components/menu/drag/DragProvider";
 import useDropZone from "../components/menu/drag/useDropZone";
 import MenuDay from "../components/menu/MenuDay";
 import MenuEntryRow from "../components/menu/MenuEntryRow";
@@ -62,16 +61,6 @@ const UnplannedSection = ({ entries, onEntryPress, onEntryRemove }) => {
         ))
       )}
     </View>
-  );
-};
-
-// Vertical column scroller (wide layout) locked while dragging.
-const ColumnScroll = ({ children, style, contentContainerStyle }) => {
-  const { active } = useDragState();
-  return (
-    <ScrollView style={style} contentContainerStyle={contentContainerStyle} scrollEnabled={!active}>
-      {children}
-    </ScrollView>
   );
 };
 
@@ -133,11 +122,13 @@ const MenuScreen = ({ navigation }) => {
     }
   };
 
-  useEffect(() => {
+  // Re-set the header only when what the Generate flow reads changes.
+  useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => <Button onPress={onGeneratePress} title="Generate list" />,
     });
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, entryCount, itemCount, showReminder]);
 
   const onNewWeek = () =>
     dialog.alert("Start a new week?", "Your shopping list won't change.", [
@@ -267,13 +258,14 @@ const MenuScreen = ({ navigation }) => {
       <DragProvider>
         {isWide ? (
           <DragScrollView horizontal style={styles.flex} contentContainerStyle={styles.columns}>
-            <ColumnScroll style={{ width: colWidth }} contentContainerStyle={styles.column}>
+            {/* Each column is its own vertical auto-scroll target while dragging. */}
+            <DragScrollView style={{ width: colWidth }} contentContainerStyle={styles.column}>
               {renderUnplanned()}
-            </ColumnScroll>
+            </DragScrollView>
             {week.map((day) => (
-              <ColumnScroll key={day.day} style={{ width: colWidth }} contentContainerStyle={styles.column}>
+              <DragScrollView key={day.day} style={{ width: colWidth }} contentContainerStyle={styles.column}>
                 {renderDay(day)}
-              </ColumnScroll>
+              </DragScrollView>
             ))}
           </DragScrollView>
         ) : (
@@ -346,6 +338,7 @@ const MenuScreen = ({ navigation }) => {
       <DayPickerModal
         visible={activeModal?.type === "slotDay"}
         title={"Move to…"}
+        excludeDay={activeModal?.type === "slotDay" ? slotsState.entities[activeModal.slotId]?.day : undefined}
         onClose={close}
         onSelect={(day) => {
           dispatch(moveSlot({ slotId: activeModal.slotId, day }));

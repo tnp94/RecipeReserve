@@ -22,8 +22,8 @@ describe("orderDaySlots", () => {
   });
 });
 
-describe("moveSlotTarget / canMoveSlot", () => {
-  const { moveSlotTarget, canMoveSlot } = require("../menuOrder");
+describe("moveSlotTarget", () => {
+  const { moveSlotTarget } = require("../menuOrder");
   // Applies a result the way reorderSlot does, then returns the displayed names.
   const apply = (slots, id, dir) => {
     const t = moveSlotTarget(slots, id, dir);
@@ -44,15 +44,15 @@ describe("moveSlotTarget / canMoveSlot", () => {
   it("returns null when the display would not change", () => {
     const s = mk("Breakfast", "Lunch");
     expect(moveSlotTarget(s, "s1", "up")).toBeNull();
-    expect(canMoveSlot(s, "s1", "up")).toBe(false);
-    expect(canMoveSlot(s, "s0", "down")).toBe(false);
+    expect(moveSlotTarget(s, "s1", "up")).toBeNull();
+    expect(moveSlotTarget(s, "s0", "down")).toBeNull();
     expect(moveSlotTarget(s, "s0", "up")).toBeNull();
     expect(moveSlotTarget(s, "nope", "up")).toBeNull();
   });
   it("lets a custom slot pass a ranked one", () => {
     const s = mk("Brunch", "Breakfast");
     expect(apply(s, "s0", "down")).toEqual(["Breakfast", "Brunch"]);
-    expect(canMoveSlot(s, "s0", "down")).toBe(true);
+    expect(moveSlotTarget(s, "s0", "down")).not.toBeNull();
   });
 });
 
@@ -66,5 +66,23 @@ describe("moveSlotTarget with ids not in displayed order", () => {
     const at = rest.findIndex((q) => q.id === t.targetSlotId);
     rest.splice(t.position === "before" ? at : at + 1, 0, s[2]);
     expect(orderDaySlots(rest).map((q) => q.name)).toEqual(["Lunch", "Snack", "Dinner"]);
+  });
+});
+
+describe("normalizeDayIds", () => {
+  const { normalizeDayIds } = require("../menuOrder");
+  const entities = {
+    a: { id: "a", day: 0, name: "Dinner" },
+    b: { id: "b", day: 1, name: "Lunch" },
+    c: { id: "c", day: 0, name: "Snack" },
+    d: { id: "d", day: 0, name: "Breakfast" },
+  };
+  it("puts one day's ids in displayed order without touching other days", () => {
+    expect(normalizeDayIds(["a", "b", "c", "d"], entities, 0)).toEqual(["d", "b", "c", "a"]);
+  });
+  it("returns a new array and leaves the input alone", () => {
+    const ids = ["a", "b", "c", "d"];
+    normalizeDayIds(ids, entities, 0);
+    expect(ids).toEqual(["a", "b", "c", "d"]);
   });
 });

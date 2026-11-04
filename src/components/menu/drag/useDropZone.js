@@ -1,11 +1,14 @@
-import { useCallback, useRef } from "react";
-import { useDragApi, useDragState } from "./DragProvider";
+import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useDragApi } from "./DragProvider";
 
 // Registers a View as a drop target. `ref` is a callback ref so a re-mounted View
 // re-registers itself. Keys: unplanned, slot:<id>, entry:<id>, day:<n> (card: slot|entry), dayheader:<n>.
+//
+// Subscribes to the drag store with a per-zone snapshot that only changes when this zone
+// becomes / stops being the hover target (or its half changes), so other zones don't
+// re-render while the pointer moves.
 export default function useDropZone({ key, accepts, onDrop }) {
   const api = useDragApi();
-  const { hoverKey, hoverHalf, active } = useDragState();
   const onDropRef = useRef(onDrop);
   onDropRef.current = onDrop;
   const acceptsKey = accepts.join("|");
@@ -26,6 +29,12 @@ export default function useDropZone({ key, accepts, onDrop }) {
     [api, key, acceptsKey]
   );
 
-  const isOver = hoverKey === key;
-  return { ref, isOver, hoverHalf: isOver ? hoverHalf : null, activeType: active ? active.type : null, activeId: active ? active.id : null };
+  // Primitive snapshot: null unless hovered, else "half|type|id".
+  const snapshot = useSyncExternalStore(api.subscribe, () => {
+    const s = api.getState();
+    return s.hoverKey === key && s.active ? `${s.hoverHalf ?? ""}|${s.active.type}|${s.active.id}` : null;
+  });
+  if (snapshot === null) return { ref, isOver: false, hoverHalf: null, activeType: null, activeId: null };
+  const [half, type, id] = snapshot.split("|");
+  return { ref, isOver: true, hoverHalf: half || null, activeType: type, activeId: id };
 }

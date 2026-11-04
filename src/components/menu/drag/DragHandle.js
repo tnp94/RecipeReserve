@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,13 +8,20 @@ import { useDragApi } from "./DragProvider";
 // Grip handle (≡). Dragging starts here so tap-to-open and swipe-to-remove keep working.
 const DragHandle = ({ payload, label }) => {
   const api = useDragApi();
-  const gesture = Gesture.Pan()
-    .minDistance(4)
-    .runOnJS(true)
-    .onStart((e) => api.begin({ ...payload, label }, e.absoluteX, e.absoluteY))
-    .onUpdate((e) => api.move(e.absoluteX, e.absoluteY))
-    .onEnd(() => api.end())
-    .onFinalize(() => api.cancel()); // no-op when end() already ran
+  const { type, id } = payload;
+  // Built once per handle (not per render) so a re-render mid-drag never hands
+  // GestureDetector a new gesture while the pan is active.
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .minDistance(4)
+        .runOnJS(true)
+        .onStart((e) => api.begin({ type, id, label }, e.absoluteX, e.absoluteY))
+        .onUpdate((e) => api.move(e.absoluteX, e.absoluteY))
+        .onEnd(() => api.end())
+        .onFinalize(() => api.cancel()), // no-op when end() already ran
+    [api, type, id, label]
+  );
 
   return (
     <GestureDetector gesture={gesture}>

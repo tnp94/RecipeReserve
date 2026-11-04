@@ -1,7 +1,7 @@
 import { createSlice, createEntityAdapter, createSelector } from "@reduxjs/toolkit";
 import { deleteRecipe, loadRecipeList } from "./recipesSlice";
 import { recipeList } from "../Recipes";
-import { orderDaySlots } from "../domain/menuOrder";
+import { normalizeDayIds, orderDaySlots } from "../domain/menuOrder";
 
 export const WEEK_DAYS = [
   "Monday",
@@ -155,16 +155,7 @@ const menuSlice = createSlice({
       ids.splice(position === "before" ? at : at + 1, 0, slotId);
       // Keep the day's ids in displayed order so later moves are relative to what the
       // user sees (B/L/D resolve to the nearest valid order).
-      const positions = [];
-      const daySlots = [];
-      ids.forEach((id, i) => {
-        if (state.slots.entities[id].day === target.day) {
-          positions.push(i);
-          daySlots.push(state.slots.entities[id]);
-        }
-      });
-      orderDaySlots(daySlots).forEach((s, k) => (ids[positions[k]] = s.id));
-      state.slots.ids = ids;
+      state.slots.ids = normalizeDayIds(ids, state.slots.entities, target.day);
     },
     swapDays: (state, action) => {
       const { dayA, dayB } = action.payload;

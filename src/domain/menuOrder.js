@@ -47,6 +47,18 @@ export function moveSlotTarget(daySlotsInIdOrder, slotId, direction) {
   return null;
 }
 
-export function canMoveSlot(daySlotsInIdOrder, slotId, direction) {
-  return moveSlotTarget(daySlotsInIdOrder, slotId, direction) !== null;
+// Rewrites `ids` so the slots on `day` appear in their displayed (orderDaySlots) order,
+// in the same positions. Other days' ids are untouched. Returns a new array.
+export function normalizeDayIds(ids, entities, day) {
+  const positions = [];
+  const daySlots = [];
+  ids.forEach((id, i) => {
+    if (entities[id]?.day === day) {
+      positions.push(i);
+      daySlots.push(entities[id]);
+    }
+  });
+  const out = ids.slice();
+  orderDaySlots(daySlots).forEach((slot, k) => (out[positions[k]] = slot.id));
+  return out;
 }

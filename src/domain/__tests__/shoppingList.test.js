@@ -208,3 +208,39 @@ describe("mergeItem", () => {
     expect(mergeItem({ ...existing, category: "Meat" }, built).category).toBe("Meat");
   });
 });
+
+describe("recipe that lists the same ingredient twice", () => {
+  const salty = recipe(1, "Salty", [
+    ing("Salt", "1", "tsp", { note: "for the marinade" }),
+    ing("Salt", "2", "tsp", { note: "for the sauce" }),
+  ]);
+
+  it("builds one contribution per menu entry with the summed quantity", () => {
+    const [item] = build([entry(1, 1)], [salty]);
+    expect(item.contributions).toHaveLength(1);
+    expect(item.quantityText).toBe("3");
+    expect(item.contributions[0].note).toBe("for the marinade; for the sauce");
+  });
+
+  it("merging after a scale change replaces, not mixes, the old quantity", () => {
+    const existing = { ...build([entry(1, 1)], [salty])[0], id: "item-1" };
+    const merged = mergeItem(existing, build([entry(1, 1, 3)], [salty])[0]);
+    expect(merged.contributions).toHaveLength(1);
+    expect(merged.quantityText).toBe("9");
+  });
+
+  it("collapses duplicate contributions saved by older versions when merging", () => {
+    const old = build([entry(1, 1)], [salty])[0];
+    const dup = { ...old.contributions[0], quantity: parseQuantity("1"), quantityText: "1" };
+    const existing = { ...old, id: "item-1", contributions: [dup, { ...dup, quantity: parseQuantity("2"), quantityText: "2" }] };
+    const merged = mergeItem(existing, build([entry(1, 1, 2)], [salty])[0]);
+    expect(merged.contributions.map((c) => c.menuEntryId)).toEqual(["entry-1"]);
+    expect(merged.quantityText).toBe("6");
+  });
+
+  it("keeps two recipes as two contributions", () => {
+    const [item] = build([entry(1, 1), entry(2, 1)], [salty]);
+    expect(item.contributions.map((c) => c.menuEntryId)).toEqual(["entry-1", "entry-2"]);
+    expect(item.quantityText).toBe("6");
+  });
+});
