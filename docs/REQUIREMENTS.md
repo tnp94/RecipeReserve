@@ -45,8 +45,10 @@ feature supports or extends it.
 | M-1 | User can add a recipe to the menu (swipe or long-press on a recipe). | ✅ |
 | M-2 | User can add the same recipe to the menu more than once. | ✅ |
 | M-3 | User can remove a recipe from the menu. | ✅ |
-| M-4 | The menu is organized as a **week** (e.g. recipes assigned to days / meals). | ⬜ See open question Q1 |
-| M-5 | User can clear/start a new week's menu. | ⬜ |
+| M-4 | The menu is organized as a **week**: each recipe is assigned to a day and a meal (e.g. Tuesday dinner). | ⬜ |
+| M-5 | Moving or swapping meals and days is quick and easy (e.g. drag-and-drop, or a "move to…" / "swap with…" action). Plans change often, so this should take one or two taps. | ⬜ |
+| M-6 | User can scale a recipe's servings on the menu (e.g. double or halve it), and shopping list quantities scale with it. | ⬜ |
+| M-7 | User can clear the menu and start a new week. | ⬜ |
 
 ### 1.3 Shopping list (primary feature)
 
@@ -57,8 +59,19 @@ feature supports or extends it.
 | S-3 | User can check items off (and un-check them) while shopping. | ✅ |
 | S-4 | User can delete individual items. | ✅ |
 | S-5 | User can manually add items not tied to a recipe (e.g. paper towels). | 🟡 `addItem` reducer exists; no UI yet |
-| S-6 | Duplicate ingredients across recipes are combined (e.g. 2 recipes × 1 onion → 2 onions). | ⬜ See open question Q3 |
-| S-7 | Shopping list persists across app restarts. | ✅ |
+| S-6 | The same ingredient from different recipes is combined into one line when the units match (e.g. 2 recipes × 1 onion → 2 onions). Ingredients with different units stay on separate lines. | ⬜ |
+| S-7 | A combined item can be expanded to show each recipe that needs it and the quantity/unit for each, so the user can make a substitution for one recipe. | ⬜ |
+| S-8 | If a shopping list already exists, "Generate List" asks the user whether to replace it or merge the new items in before doing anything. | ⬜ Today it replaces the list without asking |
+| S-9 | Shopping list persists across app restarts. | ✅ |
+
+### 1.4 Pantry staples
+
+| ID | Requirement | Status |
+|---|---|---|
+| P-1 | User can mark ingredients as pantry staples they usually have on hand (e.g. salt, oil). | ⬜ |
+| P-2 | When the list is generated, pantry staples are added already checked off. | ⬜ |
+| P-3 | After generating, the app reminds the user which staples and quantities were pre-checked, so they can make sure they really have enough before shopping. | ⬜ |
+| P-4 | The reminder has a "Don't remind me again" option, and the user can turn it back on in settings. | ⬜ |
 
 ---
 
@@ -77,19 +90,16 @@ one parse → review → save flow.
 
 ---
 
-## 3. Open questions
+## 3. Decisions
 
-1. **Menu structure (M-4):** Should the weekly menu assign recipes to specific days (and
-   meals like breakfast/lunch/dinner), or stay a simple unordered list of recipes for the week?
-2. **Servings scaling:** Should the user be able to scale a recipe's servings on the menu
-   (e.g. double a recipe) and have the shopping list quantities scale with it?
-3. **Combining ingredients (S-6):** Should "Generate List" merge the same ingredient across
-   recipes and sum quantities? Only when units match, or with unit conversion?
-4. **Regenerating the list:** Today "Generate List" replaces the whole list, losing check
-   marks and manually added items. Should it instead merge, or ask first?
-5. **Pantry items:** Should there be a way to mark staples you already have (salt, oil) so
-   they're skipped or pre-checked?
-6. **Platforms:** Target iOS and Android only, or also web?
-7. **Accounts & sync:** Is the core app intended to stay local-only (no login) until the
-   stretch goals, or should accounts/cloud backup come earlier?
-8. **Stretch priority:** Which stretch goal matters most first?
+- **Menu structure:** Recipes go into days and meals. Moving them around must be easy.
+- **Combining ingredients:** Combine when units match. A combined item can be expanded to show which recipe needs what.
+- **Regenerating the list:** Ask the user first: replace or merge.
+- **Promoted to core:** Scaling servings, manually added list items, and pantry staples with a reminder to check them.
+
+## 4. Open questions
+
+1. **Platforms:** Target iOS and Android only, or also web?
+2. **Accounts & sync:** Should the core app stay local-only (no login) until the stretch goals?
+3. **Stretch priority:** Which stretch goal matters most first?
+4. **Meal slots:** Fixed breakfast/lunch/dinner, or can the user set custom slots (e.g. snack)?
