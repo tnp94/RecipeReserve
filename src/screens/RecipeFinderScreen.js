@@ -72,7 +72,8 @@ const RecipeFinderScreen = () => {
     [allNames, text, ingredients]
   );
   const recentOptions = useMemo(
-    () => recent.filter((n) => !currentKeys.has(normalizeName(n))).slice(0, 8),
+    // Show every recent ingredient (typed or picked); ones already in the search are marked "Added".
+    () => recent.slice(0, 8).map((name) => ({ name, added: currentKeys.has(normalizeName(name)) })),
     [recent, currentKeys]
   );
   const showSuggestions = focused && text.trim() !== "" && suggestions.length > 0;
@@ -84,7 +85,7 @@ const RecipeFinderScreen = () => {
   };
   const onBlur = () => {
     clearTimeout(blurTimer.current);
-    blurTimer.current = setTimeout(() => setFocused(false), 150);
+    blurTimer.current = setTimeout(() => setFocused(false), 250);
   };
   const pick = (name) => {
     dispatch(addFinderIngredients([name]));
@@ -160,9 +161,17 @@ const RecipeFinderScreen = () => {
               <Text style={styles.dropdownActionText}>Clear recent</Text>
             </TouchableOpacity>
           </View>
-          {recentOptions.map((name) => (
-            <TouchableOpacity key={name} accessibilityRole="button" onPress={() => pick(name)} style={styles.dropdownRow}>
-              <Text style={styles.dropdownText}>{name}</Text>
+          {recentOptions.map(({ name, added }) => (
+            <TouchableOpacity
+              key={name}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: added }}
+              disabled={added}
+              onPress={() => pick(name)}
+              style={[styles.dropdownRow, added && styles.dropdownRowAdded]}
+            >
+              <Text style={[styles.dropdownText, added && styles.dropdownTextAdded]}>{name}</Text>
+              {added && <Text style={styles.addedBadge}>✓ Added</Text>}
             </TouchableOpacity>
           ))}
         </View>
@@ -266,6 +275,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   dropdownText: { fontSize: 16, color: colors.text },
+  dropdownRowAdded: { flexDirection: "row", alignItems: "center" },
+  dropdownTextAdded: { color: colors.muted, flex: 1 },
+  addedBadge: { fontSize: 13, color: colors.muted },
   toolbar: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   hint: { color: colors.muted, fontSize: 13 },
   ingredientRow: { paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
