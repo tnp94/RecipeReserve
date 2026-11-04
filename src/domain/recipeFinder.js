@@ -1,11 +1,11 @@
-import { normalizeName } from "./ingredientKey";
+import { normalizeName, wordsMatch } from "./ingredientKey";
 
 const words = (name) => normalizeName(name).split(" ").filter(Boolean);
 
 export function ingredientMatches(haveName, recipeIngredientName) {
   const haveWords = words(haveName);
-  const recipeWords = new Set(words(recipeIngredientName));
-  return haveWords.length > 0 && haveWords.every((w) => recipeWords.has(w));
+  const recipeWords = words(recipeIngredientName);
+  return haveWords.length > 0 && haveWords.every((w) => recipeWords.some((r) => wordsMatch(w, r)));
 }
 
 export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {

@@ -1,10 +1,36 @@
+// Words that end in "s" but are already singular (or have no plural form).
+const UNCHANGED = new Set([
+  "asparagus", "hummus", "couscous", "molasses", "citrus", "octopus", "cactus",
+  "swiss", "brussels", "grits", "oats", "series", "species", "gas", "bass",
+]);
+
+// Irregular plurals, and "-ies"/"-ves" words that the general rules would get wrong.
+const IRREGULAR = {
+  leaves: "leaf", loaves: "loaf", halves: "half", knives: "knife", calves: "calf",
+  shelves: "shelf", wolves: "wolf", lives: "life",
+  chilies: "chili", chilis: "chili", chillies: "chilli",
+  cookies: "cookie", brownies: "brownie", pies: "pie", smoothies: "smoothie",
+  veggies: "veggie", rotinis: "rotini", ties: "tie",
+  geese: "goose", mice: "mouse", teeth: "tooth", feet: "foot",
+};
+
 export function singularizeWord(word) {
-  if (word.length <= 3) return word;
-  if (word.endsWith("ies")) return word.slice(0, -3) + "y";
-  if (word.endsWith("oes")) return word.slice(0, -2);
-  if (word.endsWith("ss") || word.endsWith("us") || word.endsWith("is")) return word;
-  if (word.endsWith("s")) return word.slice(0, -1);
+  if (Object.prototype.hasOwnProperty.call(IRREGULAR, word)) return IRREGULAR[word];
+  if (word.length <= 3 || UNCHANGED.has(word)) return word;
+  if (word.endsWith("ies")) return word.slice(0, -3) + "y";          // berries -> berry
+  if (word.endsWith("oes")) return word.slice(0, -2);                // potatoes -> potato
+  if (/(ch|sh|x|z|ss)es$/.test(word)) return word.slice(0, -2);      // peaches, radishes, boxes, glasses
+  if (word.endsWith("ss") || word.endsWith("us")) return word;       // glass, hummus
+  if (word.endsWith("s")) return word.slice(0, -1);                  // onions, kiwis
   return word;
+}
+
+// True when two normalized words are the same word, allowing a trailing "s"/"es"
+// difference the rules above didn't catch. Whole words only ("pea" never matches "peanut").
+export function wordsMatch(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a + "s" === b || b + "s" === a || a + "es" === b || b + "es" === a;
 }
 
 export function normalizeName(name) {

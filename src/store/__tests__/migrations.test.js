@@ -84,3 +84,29 @@ describe("migration v3", () => {
     expect(migrations[3]({ finder: { ingredients: [], nextId: 1, recent: ["Egg"] } }).finder.recent).toEqual(["Egg"]);
   });
 });
+
+describe("migration v4", () => {
+  it("recomputes pantry and shopping list keys with the new plural rules", () => {
+    const out = migrations[4]({
+      pantry: { staples: { peache: { nameKey: "peache", name: "Peaches" }, salt: { nameKey: "salt", name: "Salt" } } },
+      shoppingList: {
+        ids: ["item-1", "item-2"],
+        entities: {
+          "item-1": { id: "item-1", name: "Bay Leaves", unit: "Leaves", nameKey: "bay leave", mergeKey: "bay leave|leave|n" },
+          "item-2": { id: "item-2", name: "Peaches", unit: "", nameKey: "peache", mergeKey: null },
+        },
+        nextId: 3,
+      },
+      _persist: { version: 3, rehydrated: true },
+    });
+    expect(Object.keys(out.pantry.staples).sort()).toEqual(["peach", "salt"]);
+    expect(out.pantry.staples.peach).toEqual({ nameKey: "peach", name: "Peaches" });
+    expect(out.shoppingList.entities["item-1"]).toMatchObject({ nameKey: "bay leaf", mergeKey: "bay leaf|leaf|n" });
+    expect(out.shoppingList.entities["item-2"]).toMatchObject({ nameKey: "peach", mergeKey: null });
+    expect(out.shoppingList.ids).toEqual(["item-1", "item-2"]);
+    expect(out.shoppingList.nextId).toBe(3);
+  });
+  it("tolerates missing slices", () => {
+    expect(migrations[4]({})).toEqual({ pantry: undefined, shoppingList: undefined });
+  });
+});

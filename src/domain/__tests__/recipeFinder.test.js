@@ -106,3 +106,16 @@ describe("findRecipes", () => {
     expect(res.otherMatches).toEqual([]);
   });
 });
+
+describe("ingredientMatches singular/plural", () => {
+  it.each([
+    ["Onion", "Onions"], ["Onions", "Onion"], ["Onion", "Yellow Onions"], ["Peach", "Fresh Peaches"],
+    ["Bay Leaf", "Bay Leaves"], ["Radish", "Radishes"], ["Chili", "Red Chilies"],
+  ])("%s matches %s", (have, recipe) => {
+    expect(ingredientMatches(have, recipe)).toBe(true);
+  });
+  it("never matches part of a word", () => {
+    expect(ingredientMatches("Pea", "Peanut Butter")).toBe(false);
+    expect(ingredientMatches("Corn", "Popcorn")).toBe(false);
+  });
+});

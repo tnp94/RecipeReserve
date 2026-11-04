@@ -1,5 +1,5 @@
 import { initialState as recipesInitialState } from "./recipesSlice";
-import { normalizeName } from "../domain/ingredientKey";
+import { normalizeName, normalizeUnit } from "../domain/ingredientKey";
 
 const numericSort = (a, b) => Number(a) - Number(b);
 
@@ -69,7 +69,8 @@ export const migrations = {
     pantry: state.pantry ?? { staples: {} },
     settings: state.settings ?? { showStapleReminder: true },
     finder: state.finder ?? { ingredients: [], nextId: 1 },
-  }),  3: (state) => ({
+  }),
+  3: (state) => ({
     ...state,
     finder: {
       ingredients: [],
@@ -78,4 +79,39 @@ export const migrations = {
       recent: state.finder?.recent ?? [],
     },
   }),
+  // v4: singularization rules improved (peaches -> peach, leaves -> leaf, ...), so
+  // recompute the stored name keys for pantry staples and shopping list items.
+  4: (state) => ({
+    ...state,
+    pantry: rekeyPantry(state.pantry),
+    shoppingList: rekeyShoppingList(state.shoppingList),
+  }),
 };
+
+function rekeyPantry(pantry) {
+  if (!pantry?.staples) return pantry;
+  const staples = {};
+  for (const staple of Object.values(pantry.staples)) {
+    const nameKey = normalizeName(staple.name ?? staple.nameKey ?? "");
+    if (nameKey) staples[nameKey] = { ...staple, nameKey };
+  }
+  return { ...pantry, staples };
+}
+
+function rekeyShoppingList(list) {
+  if (!list?.entities) return list;
+  const entities = {};
+  for (const [id, item] of Object.entries(list.entities)) {
+    const nameKey = normalizeName(item.name ?? "");
+    let mergeKey = item.mergeKey;
+    if (typeof mergeKey === "string") {
+      // mergeKey = `${nameKey}|${unitKey}|kind[|entryId|index]`
+      const parts = mergeKey.split("|");
+      parts[0] = nameKey;
+      parts[1] = normalizeUnit(item.unit ?? "");
+      mergeKey = parts.join("|");
+    }
+    entities[id] = { ...item, nameKey, mergeKey };
+  }
+  return { ...list, entities };
+}
