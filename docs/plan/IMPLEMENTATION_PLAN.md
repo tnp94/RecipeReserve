@@ -984,3 +984,50 @@ Invariant: an entry never has both `slotId` and `day` set.
    - Hint text: "Tip: hold ≡ and drag a recipe onto a day or a meal to move it, or onto another recipe to swap. Drag a day's ≡ onto another day to swap days."
    - Wide layout and narrow layout both.
 6. Verify: `npm test`; web export; Playwright (mouse 1280×800 and touch Pixel 7) — drag Unplanned entry onto Monday's card (outside any slot) → appears under Monday header with no meal; drag it into a slot → moves into slot; drag from slot back onto the day card area → day-level again; "Move to…" → "Tuesday — no specific meal" works; swap days carries day-level entries; remove a slot with entries → "Keep them on Monday" leaves them day-level; Generate list still includes day-level recipes.
+
+---
+
+## 8. Follow-up round 5: reorder meal slots within a day
+
+Owner request: "The other meals of the day should be able to be moved to change their order."
+Constraint kept from §7: Breakfast/Lunch/Dinner always display in that relative order
+(`orderDaySlots`). Every slot (including B/L/D) can be repositioned; after a move the
+display is `orderDaySlots(day's slots in slots.ids order)`, so a move that would break
+B/L/D order resolves to the nearest valid order.
+
+### Task 8A — Slot reordering
+**Files you own:** `src/store/menuSlice.js`, `src/store/__tests__/menuSlice.test.js`,
+`src/domain/menuOrder.js` (+ test), `src/screens/MenuScreen.js`, `src/components/menu/*`
+(incl. `drag/`), `CLAUDE.md` (one line in the drag section + one in Key points).
+
+1. **Reducer** `reorderSlot({ slotId, targetSlotId, position: "before" | "after" })`: no-op if
+   either is missing or they are equal. Sets `slot.day = target.day`, removes `slotId` from
+   `slots.ids`, and inserts it immediately before/after `targetSlotId`. Entries keep their slotId.
+2. **Domain helper** `canMoveSlot(daySlotsInIdOrder, slotId, direction /* "up"|"down" */)` and
+   `moveSlotTarget(...)` in `menuOrder.js`: "up" = place before the slot displayed immediately
+   above it; "down" = after the one displayed below. Return the `{ targetSlotId, position }` to
+   dispatch, or `null` when the resulting `orderDaySlots` display would be unchanged. Tests,
+   including: [Breakfast, Snack, Dinner] Snack up → [Snack, Breakfast, Dinner]; Snack down →
+   [Breakfast, Dinner, Snack]; Lunch up in [Breakfast, Lunch] → null; Brunch down in
+   [Brunch, Breakfast] → [Breakfast, Brunch].
+3. **Drag:** extend `DragProvider` so `onDrop(payload, info)` receives `info = { x, y, rect }`
+   (pointer position and the target zone's cached rect at drop time), and expose a
+   `hoverHalf` (`"before"`/`"after"`, computed from pointer y vs. the hovered rect's vertical
+   midpoint) in the state context. `MenuSlot`'s zone accepts `["entry", "slot"]`:
+   - `entry` → `moveMenuEntry` (as today).
+   - `slot` → `reorderSlot({ slotId: payload.id, targetSlotId: slot.id, position: hoverHalf from info })`.
+     Ignore if dropping onto itself.
+   - While a **slot** hovers a slot, show a 3px `colors.accentStrong` insertion line at the
+     top (before) or bottom (after) of the target instead of the full highlight. Entries
+     hovering a slot keep the existing full highlight.
+   - Day card zone still accepts `slot` (→ `moveSlot`, appends to that day) for drops on the
+     card outside any slot.
+4. **Slot "⋯" menu:** add "Move up" and "Move down" (shown only when `moveSlotTarget` returns
+   non-null), placed before "Move to another day…".
+5. Verify: `npm test`; web export; Playwright mouse (1280×800) and touch (Pixel 7): on Monday
+   add Breakfast, Dinner, Snack (displays Breakfast, Dinner, Snack); drag Snack's ≡ onto the top
+   half of Dinner → Breakfast, Snack, Dinner; drag Snack onto the top half of Breakfast →
+   Snack, Breakfast, Dinner; drag Dinner onto the top half of Breakfast → stays
+   Snack, Breakfast, Dinner (B/L/D order enforced); "⋯" → Move down on Snack → Breakfast, Snack,
+   Dinner; Move up hidden for Breakfast when it would not change the display; drag a slot onto
+   a slot on another day moves it to that day at that position; entries still drag into slots.
