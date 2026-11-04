@@ -28,7 +28,7 @@ describe("findRecipes", () => {
   ];
 
   it("returns empty groups for no ingredients", () => {
-    expect(findRecipes(recipes, [])).toEqual({ fullMatches: [], nearMatches: [] });
+    expect(findRecipes(recipes, [])).toEqual({ fullMatches: [], nearMatches: [], otherMatches: [] });
   });
 
   it("splits full and near matches and excludes unmatched / too many missing", () => {
@@ -85,5 +85,24 @@ describe("findRecipes", () => {
     const res = findRecipes([r(1, "Empty", [])], [have("egg")]);
     expect(res.fullMatches).toEqual([]);
     expect(res.nearMatches).toEqual([]);
+  });
+
+  it("puts recipes missing more than maxMissing into otherMatches", () => {
+    const many = [
+      r(10, "Stew", ["Beef", "Garlic", "A", "B", "C", "D", "E", "F", "G", "H"]),
+      r(11, "Pork", ["Pork", "Garlic", "A", "B", "C", "D", "E", "F", "G", "H"]),
+      r(12, "Salad", ["Lettuce"]),
+    ];
+    const res = findRecipes(many, [have("garlic")]);
+    expect(res.fullMatches).toEqual([]);
+    expect(res.nearMatches).toEqual([]);
+    expect(res.otherMatches.map((x) => x.recipe.id)).toEqual([11, 10]);
+    expect(res.otherMatches[0].missing).toHaveLength(9);
+  });
+
+  it("still enforces required tags for otherMatches", () => {
+    const many = [r(10, "Stew", ["Beef", "Garlic", "A", "B", "C", "D"])];
+    const res = findRecipes(many, [have("garlic"), have("rice", "required")]);
+    expect(res.otherMatches).toEqual([]);
   });
 });

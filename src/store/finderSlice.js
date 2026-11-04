@@ -1,8 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { normalizeName } from "../domain/ingredientKey";
 
-export const initialState = { ingredients: [], nextId: 1 };
+export const initialState = { ingredients: [], recent: [], nextId: 1 };
 
+const MAX_RECENT = 12;
 const TAGS = [null, "expiring", "required"];
 
 const finderSlice = createSlice({
@@ -15,7 +16,11 @@ const finderSlice = createSlice({
       for (const raw of names) {
         const name = String(raw ?? "").trim();
         const key = normalizeName(name);
-        if (!name || !key || seen.has(key)) continue;
+        if (!name || !key) continue;
+        const recent = (state.recent ?? []).filter((r) => normalizeName(r) !== key);
+        recent.unshift(name);
+        state.recent = recent.slice(0, MAX_RECENT);
+        if (seen.has(key)) continue;
         seen.add(key);
         state.ingredients.push({ id: `fi-${state.nextId}`, name, tag: null });
         state.nextId += 1;
@@ -33,6 +38,9 @@ const finderSlice = createSlice({
     clearFinderIngredients: (state) => {
       state.ingredients = [];
     },
+    clearRecentFinderIngredients: (state) => {
+      state.recent = [];
+    },
   },
 });
 
@@ -41,8 +49,10 @@ export const {
   removeFinderIngredient,
   setFinderIngredientTag,
   clearFinderIngredients,
+  clearRecentFinderIngredients,
 } = finderSlice.actions;
 
 export const selectFinderIngredients = (state) => state.finder.ingredients;
+export const selectRecentFinderIngredients = (state) => state.finder.recent ?? [];
 
 export default finderSlice.reducer;

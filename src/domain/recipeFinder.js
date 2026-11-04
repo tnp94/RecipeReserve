@@ -9,7 +9,7 @@ export function ingredientMatches(haveName, recipeIngredientName) {
 }
 
 export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
-  const result = { fullMatches: [], nearMatches: [] };
+  const result = { fullMatches: [], nearMatches: [], otherMatches: [] };
   if (!haveIngredients || haveIngredients.length === 0) return result;
 
   for (const recipe of recipes ?? []) {
@@ -33,7 +33,6 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
 
     if (matched.length === 0) continue;
     if (haveIngredients.some((h) => h.tag === "required" && !matchesAny(h))) continue;
-    if (missing.length > maxMissing) continue;
 
     const expiringCount = haveIngredients.filter(
       (h) => h.tag === "expiring" && matchesAny(h)
@@ -47,7 +46,9 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
       expiringCount,
       isFullMatch: missing.length === 0,
     };
-    (item.isFullMatch ? result.fullMatches : result.nearMatches).push(item);
+    if (item.isFullMatch) result.fullMatches.push(item);
+    else if (missing.length > maxMissing) result.otherMatches.push(item);
+    else result.nearMatches.push(item);
   }
 
   const cmp = (a, b) =>
@@ -57,5 +58,6 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
     a.recipe.name.localeCompare(b.recipe.name);
   result.fullMatches.sort(cmp);
   result.nearMatches.sort(cmp);
+  result.otherMatches.sort(cmp);
   return result;
 }

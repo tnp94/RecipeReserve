@@ -3,6 +3,7 @@ import rootReducer from "../rootReducer";
 import {
   addFinderIngredients, removeFinderIngredient, setFinderIngredientTag,
   clearFinderIngredients, selectFinderIngredients,
+  clearRecentFinderIngredients, selectRecentFinderIngredients,
 } from "../finderSlice";
 import {
   addStaple, removeStaple, toggleStaple, selectStaplesList, selectStapleKeys, selectIsStaple,
@@ -87,5 +88,21 @@ describe("recipesSlice additions", () => {
     expect(isRecipeNameTaken(s, "nope")).toBe(false);
     store.dispatch(addRecipe({ name: "Zed", ingredients: [] }));
     expect(isRecipeNameTaken(store.getState(), "zed")).toBe(true);
+  });
+});
+
+describe("finderSlice recent", () => {
+  it("tracks recent most-recent-first, de-duplicated, capped at 12", () => {
+    const store = make();
+    store.dispatch(addFinderIngredients(["Onion", "Garlic"]));
+    expect(selectRecentFinderIngredients(store.getState())).toEqual(["Garlic", "Onion"]);
+    store.dispatch(addFinderIngredients(["onions"]));
+    expect(selectRecentFinderIngredients(store.getState())).toEqual(["onions", "Garlic"]);
+    expect(selectFinderIngredients(store.getState())).toHaveLength(2);
+    store.dispatch(addFinderIngredients(Array.from({ length: 15 }, (_, i) => `item${String.fromCharCode(97 + i)}`)));
+    expect(selectRecentFinderIngredients(store.getState())).toHaveLength(12);
+    store.dispatch(clearRecentFinderIngredients());
+    expect(selectRecentFinderIngredients(store.getState())).toEqual([]);
+    expect(selectFinderIngredients(store.getState()).length).toBeGreaterThan(0);
   });
 });

@@ -65,3 +65,22 @@ describe("migration v2", () => {
     expect(out.pantry).toBe(state.pantry);
   });
 });
+
+describe("migration v3", () => {
+  it("adds finder.recent preserving existing finder data", () => {
+    const out = migrations[3]({
+      finder: { ingredients: [{ id: "fi-1", name: "Egg", tag: null }], nextId: 2 },
+      _persist: { version: 2, rehydrated: true },
+    });
+    expect(out.finder).toEqual({
+      ingredients: [{ id: "fi-1", name: "Egg", tag: null }],
+      nextId: 2,
+      recent: [],
+    });
+    expect(out._persist).toEqual({ version: 2, rehydrated: true });
+  });
+  it("creates finder when missing and keeps existing recent", () => {
+    expect(migrations[3]({}).finder).toEqual({ ingredients: [], nextId: 1, recent: [] });
+    expect(migrations[3]({ finder: { ingredients: [], nextId: 1, recent: ["Egg"] } }).finder.recent).toEqual(["Egg"]);
+  });
+});

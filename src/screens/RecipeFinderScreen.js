@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
@@ -7,6 +7,8 @@ import { useDialog } from "../components/dialog/DialogProvider";
 import useLayout from "../hooks/useLayout";
 import { colors, spacing, radius } from "../theme";
 import { findRecipes } from "../domain/recipeFinder";
+import { collectIngredientNames, suggestIngredients } from "../domain/ingredientSuggestions";
+import { normalizeName } from "../domain/ingredientKey";
 import { selectAllRecipes } from "../store/recipesSlice";
 import { selectStaplesList } from "../store/pantrySlice";
 import {
@@ -14,11 +16,13 @@ import {
   removeFinderIngredient,
   setFinderIngredientTag,
   clearFinderIngredients,
+  clearRecentFinderIngredients,
   selectFinderIngredients,
+  selectRecentFinderIngredients,
 } from "../store/finderSlice";
 import { addItemsToShoppingList } from "../store/thunks";
 
-const ResultCard = ({ result, onOpen, onAddMissing }) => {
+const ResultCard = ({ result, onOpen, onAddMissing, partial }) => {
   const { recipe, matchedCount, totalCount, missing, expiringCount, isFullMatch } = result;
   return (
     <TouchableOpacity accessibilityRole="button" onPress={onOpen} style={styles.card}>
@@ -31,7 +35,12 @@ const ResultCard = ({ result, onOpen, onAddMissing }) => {
           Uses {expiringCount} expiring {expiringCount === 1 ? "item" : "items"}
         </Text>
       )}
-      {!isFullMatch && (
+      {!isFullMatch && partial && (
+        <Text style={styles.cardText}>
+          Missing {missing.length} {missing.length === 1 ? "ingredient" : "ingredients"}
+        </Text>
+      )}
+      {!isFullMatch && !partial && (
         <>
           <Text style={styles.cardText}>Missing: {missing.map((m) => m.name).join(", ")}</Text>
           <Chip label="Add missing to shopping list" onPress={onAddMissing} style={{ alignSelf: "flex-start", marginTop: spacing.sm }} />
@@ -47,10 +56,42 @@ const RecipeFinderScreen = () => {
   const dialog = useDialog();
   const { isWide } = useLayout();
   const [text, setText] = useState("");
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
+  const blurTimer = useRef(null);
+  useEffect(() => () => clearTimeout(blurTimer.current), []);
   const recipes = useSelector(selectAllRecipes);
   const ingredients = useSelector(selectFinderIngredients);
   const staples = useSelector(selectStaplesList);
-  const { fullMatches, nearMatches } = useMemo(() => findRecipes(recipes, ingredients), [recipes, ingredients]);
+  const recent = useSelector(selectRecentFinderIngredients);
+  const { fullMatches, nearMatches, otherMatches } = useMemo(() => findRecipes(recipes, ingredients), [recipes, ingredients]);
+  const allNames = useMemo(() => collectIngredientNames(recipes), [recipes]);
+  const currentKeys = useMemo(() => new Set(ingredients.map((i) => normalizeName(i.name))), [ingredients]);
+  const suggestions = useMemo(
+    () => (text.trim() ? suggestIngredients(allNames, text, { exclude: ingredients.map((i) => i.name) }) : []),
+    [allNames, text, ingredients]
+  );
+  const recentOptions = useMemo(
+    () => recent.filter((n) => !currentKeys.has(normalizeName(n))).slice(0, 8),
+    [recent, currentKeys]
+  );
+  const showSuggestions = focused && text.trim() !== "" && suggestions.length > 0;
+  const showRecent = focused && text.trim() === "" && recentOptions.length > 0;
+
+  const onFocus = () => {
+    clearTimeout(blurTimer.current);
+    setFocused(true);
+  };
+  const onBlur = () => {
+    clearTimeout(blurTimer.current);
+    blurTimer.current = setTimeout(() => setFocused(false), 150);
+  };
+  const pick = (name) => {
+    dispatch(addFinderIngredients([name]));
+    setText("");
+    setFocused(true);
+    inputRef.current?.focus?.();
+  };
 
   const submit = () => {
     const names = text.split(",").map((s) => s.trim()).filter(Boolean);
@@ -69,7 +110,7 @@ const RecipeFinderScreen = () => {
 
   const openRecipe = (recipeId) => navigation.navigate("Recipe Details", { recipeId });
 
-  const renderGroup = (title, results) =>
+  const renderGroup = (title, results, partial = false) =>
     results.length > 0 && (
       <View>
         <Text style={styles.sectionTitle}>{title}</Text>
@@ -79,12 +120,13 @@ const RecipeFinderScreen = () => {
             result={r}
             onOpen={() => openRecipe(r.recipe.id)}
             onAddMissing={() => addMissing(r.missing)}
+            partial={partial}
           />
         ))}
       </View>
     );
 
-  const hasResults = fullMatches.length > 0 || nearMatches.length > 0;
+  const hasResults = fullMatches.length > 0 || nearMatches.length > 0 || otherMatches.length > 0;
 
   return (
     <ScrollView
@@ -94,6 +136,9 @@ const RecipeFinderScreen = () => {
     >
       <View style={styles.inputRow}>
         <TextInput
+          ref={inputRef}
+          onFocus={onFocus}
+          onBlur={onBlur}
           style={styles.input}
           value={text}
           onChangeText={setText}
@@ -103,6 +148,37 @@ const RecipeFinderScreen = () => {
         />
         <Chip label="Add" onPress={submit} />
       </View>
+      {showRecent && (
+        <View style={styles.dropdown}>
+          <View style={styles.dropdownHeader}>
+            <Text style={styles.dropdownTitle}>Recent</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => dispatch(clearRecentFinderIngredients())}
+              style={styles.dropdownAction}
+            >
+              <Text style={styles.dropdownActionText}>Clear recent</Text>
+            </TouchableOpacity>
+          </View>
+          {recentOptions.map((name) => (
+            <TouchableOpacity key={name} accessibilityRole="button" onPress={() => pick(name)} style={styles.dropdownRow}>
+              <Text style={styles.dropdownText}>{name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      {showSuggestions && (
+        <View style={styles.dropdown}>
+          <View style={styles.dropdownHeader}>
+            <Text style={styles.dropdownTitle}>From your recipes</Text>
+          </View>
+          {suggestions.map((name) => (
+            <TouchableOpacity key={name} accessibilityRole="button" onPress={() => pick(name)} style={styles.dropdownRow}>
+              <Text style={styles.dropdownText}>{name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
       <View style={styles.toolbar}>
         <Chip
           label="Add pantry staples"
@@ -137,6 +213,7 @@ const RecipeFinderScreen = () => {
 
       {renderGroup("You can make", fullMatches)}
       {renderGroup("Almost there", nearMatches)}
+      {renderGroup("Uses some of your ingredients", otherMatches, true)}
 
       {ingredients.length === 0 && (
         <Text style={styles.empty}>Add ingredients you have on hand to see what you can make.</Text>
@@ -162,6 +239,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surface,
   },
+  dropdown: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    overflow: "hidden",
+  },
+  dropdownHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingLeft: spacing.md,
+    minHeight: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dropdownTitle: { fontWeight: "bold", color: colors.muted, fontSize: 13 },
+  dropdownAction: { minHeight: 44, paddingHorizontal: spacing.md, justifyContent: "center" },
+  dropdownActionText: { color: colors.accentStrong, fontWeight: "bold" },
+  dropdownRow: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    justifyContent: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dropdownText: { fontSize: 16, color: colors.text },
   toolbar: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   hint: { color: colors.muted, fontSize: 13 },
   ingredientRow: { paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },

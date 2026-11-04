@@ -69,5 +69,13 @@ export const migrations = {
     pantry: state.pantry ?? { staples: {} },
     settings: state.settings ?? { showStapleReminder: true },
     finder: state.finder ?? { ingredients: [], nextId: 1 },
+  }),  3: (state) => ({
+    ...state,
+    finder: {
+      ingredients: [],
+      nextId: 1,
+      ...(state.finder ?? {}),
+      recent: state.finder?.recent ?? [],
+    },
   }),
 };
