@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useDispatch, useStore } from "react-redux";
 import AppModal from "../AppModal";
@@ -15,6 +15,8 @@ const AddItemModal = ({ visible, onClose }) => {
   const [quantityText, setQuantityText] = useState("");
   const [unit, setUnit] = useState("");
   const [category, setCategory] = useState("");
+  const quantityRef = useRef(null);
+  const unitRef = useRef(null);
 
   const canAdd = name.trim().length > 0;
 
@@ -59,17 +61,38 @@ const AddItemModal = ({ visible, onClose }) => {
         onChangeText={setName}
         placeholder="e.g. Paper towels"
         autoFocus
-        onSubmitEditing={add}
+        returnKeyType="next"
+        blurOnSubmit={false}
+        onSubmitEditing={() => quantityRef.current?.focus()}
         accessibilityLabel="Item name"
       />
       <View style={styles.row}>
         <View style={styles.flex}>
           <Text style={styles.label}>Quantity</Text>
-          <TextInput style={styles.input} value={quantityText} onChangeText={setQuantityText} placeholder="e.g. 2" accessibilityLabel="Item quantity" />
+          <TextInput
+            ref={quantityRef}
+            style={styles.input}
+            value={quantityText}
+            onChangeText={setQuantityText}
+            placeholder="e.g. 2"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => unitRef.current?.focus()}
+            accessibilityLabel="Item quantity"
+          />
         </View>
         <View style={styles.flex}>
           <Text style={styles.label}>Unit</Text>
-          <TextInput style={styles.input} value={unit} onChangeText={setUnit} placeholder="e.g. lb" accessibilityLabel="Item unit" />
+          <TextInput
+            ref={unitRef}
+            style={styles.input}
+            value={unit}
+            onChangeText={setUnit}
+            placeholder="e.g. lb"
+            returnKeyType="done"
+            onSubmitEditing={add}
+            accessibilityLabel="Item unit"
+          />
         </View>
       </View>
       <Text style={styles.label}>Category</Text>
