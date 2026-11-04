@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { selectRecipeById, toggleFavorite } from "../store/recipesSlice";
 import { addRecipeToMenu } from "../store/menuSlice";
 import { selectIsStaple, toggleStaple } from "../store/pantrySlice";
-import { useDialog } from "../components/dialog/DialogProvider";
+import { useToast } from "../components/toast/ToastProvider";
 import Chip from "../components/Chip";
 import useLayout from "../hooks/useLayout";
 import { colors } from "../theme";
@@ -32,7 +32,7 @@ const IngredientRow = ({ ingredient }) => {
 const RecipeDetailsScreen = ({ route }) => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const dialog = useDialog();
+  const toast = useToast();
   const { isWide } = useLayout();
   const { recipeId } = route.params;
   const recipe = useSelector((state) => selectRecipeById(state, recipeId));
@@ -61,7 +61,10 @@ const RecipeDetailsScreen = ({ route }) => {
 
   const addToMenu = () => {
     dispatch(addRecipeToMenu({ recipeId }));
-    dialog.alert("Added to menu", "Find it under Unplanned on the Menu tab.");
+    toast.show(`Added "${recipe.name}" to menu`, {
+      actionLabel: "View",
+      onAction: () => navigation.navigate("Menu"),
+    });
   };
 
   const ingredientsSection = (

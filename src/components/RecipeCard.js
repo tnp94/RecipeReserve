@@ -6,6 +6,7 @@ import { deleteRecipe, selectRecipeById, toggleFavorite } from "../store/recipes
 import { addRecipeToMenu } from "../store/menuSlice";
 import { useRef, useState } from "react";
 import { useDialog } from "./dialog/DialogProvider";
+import { useToast } from "./toast/ToastProvider";
 import { colors } from "../theme";
 
 const RecipeCard = ({ recipeId }) => {
@@ -13,6 +14,7 @@ const RecipeCard = ({ recipeId }) => {
   const recipe = useSelector((state) => selectRecipeById(state, recipeId))
   const dispatch = useDispatch()
   const dialog = useDialog()
+  const toast = useToast()
   const ref = useRef(null)
   const [swipedLeft, setSwipedLeft] = useState(false)
   const [swipedRight, setSwipedRight] = useState(false)
@@ -28,9 +30,17 @@ const RecipeCard = ({ recipeId }) => {
     ])
   }
 
+  const addToMenu = () => {
+    dispatch(addRecipeToMenu({ recipeId }))
+    toast.show(`Added "${recipe.name}" to menu`, {
+      actionLabel: "View",
+      onAction: () => navigation.navigate("Menu"),
+    })
+  }
+
   const showActions = () => {
     dialog.alert(recipe.name, undefined, [
-      { text: "Add to menu", onPress: () => dispatch(addRecipeToMenu({ recipeId })) },
+      { text: "Add to menu", onPress: addToMenu },
       { text: "Delete", style: "destructive", onPress: confirmDelete },
       { text: "Cancel", style: "cancel" },
     ])
@@ -58,7 +68,7 @@ const RecipeCard = ({ recipeId }) => {
           style={styles.swipableLeftButton}
           onPress={() => {
             closeRef()
-            dispatch(addRecipeToMenu({ recipeId }))
+            addToMenu()
           }}
         >
           <Text style={styles.swipeableButtonText}>Add to Menu</Text>
