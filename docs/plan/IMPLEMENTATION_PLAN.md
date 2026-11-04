@@ -941,3 +941,46 @@ React Native's `Animated` for the floating preview.
    touchStart/touchMove×10/touchEnd), against `npx expo export --platform web` served
    locally: entry → slot, entry → entry swap, entry → Unplanned, slot → another day, day →
    day swap; plus one auto-scroll drag in the narrow layout (Monday entry → Sunday slot).
+
+---
+
+## 7. Follow-up round 4: recipes on a day without a meal slot
+
+Owner request: "add recipes to days without having to be assigned to a meal."
+
+### Data model change
+`MenuEntry = { id, recipeId, slotId: string | null, day: 0..6 | null, scale }`
+- `slotId !== null` → in that slot (its day comes from the slot; store `day: null`).
+- `slotId === null && day !== null` → on that day, no meal ("day-level entry").
+- both null → Unplanned.
+Invariant: an entry never has both `slotId` and `day` set.
+
+### Task 7A — Day-level menu entries
+**Files you own:** `src/store/menuSlice.js`, `src/store/migrations.js`, `src/store/store.js`,
+`src/store/__tests__/*`, `src/screens/MenuScreen.js`, `src/components/menu/*` (incl. `drag/`),
+`CLAUDE.md` (menu row of the state table + persist version only).
+
+1. **Reducers** (`menuSlice.js`):
+   - `addRecipeToMenu({ recipeId, slotId = null, day = null, scale = 1 })`: if a valid `slotId` is given, `day` is stored `null`; else `day` kept only if 0–6.
+   - `moveMenuEntry({ entryId, slotId })`: unchanged behavior; also sets `day: null`.
+   - New `moveMenuEntryToDay({ entryId, day })`: `slotId: null`, `day` (0–6, else ignore), move id to end of `entries.ids`. No-op if already day-level on that day.
+   - `swapMenuEntries`: swap both `slotId` and `day` (and positions, as today).
+   - `addSlotAndMoveEntry`: sets `day: null` on the entry.
+   - `removeSlot({ slotId, removeEntries })`: when `removeEntries` is false, entries become day-level on the slot's day (`slotId: null, day: slot.day`) — no longer Unplanned.
+   - `swapDays({ dayA, dayB })`: also swaps `day` on day-level entries.
+   - `extraReducers` cascades unchanged.
+2. **Selectors:**
+   - `selectMenuWeek`: each day object gains `entries` (day-level entries with recipe, in `entries.ids` order) next to `slots`.
+   - `selectUnplannedEntries`: `slotId === null && day == null` (treat missing `day` as null).
+3. **Migration v5**: every menu entry without a `day` key gets `day: null`. Persist `version: 5`. Test it.
+4. **Tests**: every reducer change above, the invariant (never both set), selectors, migration.
+5. **UI:**
+   - `MenuDay`: render the day-level entries with `MenuEntryRow` directly under the day header, above the slots (no sub-heading). If the day has no slots and no entries, nothing extra (the quick-add chips stay).
+   - Drop zones: the **day card** zone now accepts `["slot", "entry"]`; `entry` → `moveMenuEntryToDay` (no-op if the entry is already day-level on that day). Slot zones and entry rows are smaller so they still win when the pointer is over them (innermost wins). The day header zone stays `["day"]`; an entry dropped on the header falls through to the card → day-level.
+   - `SlotPickerModal` ("Move to…"): under each day label, first row "{Day} — no specific meal" → `moveMenuEntryToDay` (marked "(current)" and disabled when it is the entry's current placement), then that day's slots, then the quick-add chips.
+   - `EntryPickerModal` ("Swap with…"): group day-level entries as "{Day}".
+   - `EntryOptionsModal` / anything that shows the entry's location: day-level reads "{Day}".
+   - `MenuScreen` remove-slot dialog: button "Move to Unplanned" becomes `Keep them on ${dayLabel}` (still `removeEntries: false`). Message unchanged.
+   - Hint text: "Tip: hold ≡ and drag a recipe onto a day or a meal to move it, or onto another recipe to swap. Drag a day's ≡ onto another day to swap days."
+   - Wide layout and narrow layout both.
+6. Verify: `npm test`; web export; Playwright (mouse 1280×800 and touch Pixel 7) — drag Unplanned entry onto Monday's card (outside any slot) → appears under Monday header with no meal; drag it into a slot → moves into slot; drag from slot back onto the day card area → day-level again; "Move to…" → "Tuesday — no specific meal" works; swap days carries day-level entries; remove a slot with entries → "Keep them on Monday" leaves them day-level; Generate list still includes day-level recipes.
