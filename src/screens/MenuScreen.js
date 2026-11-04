@@ -1,37 +1,80 @@
-import { useEffect } from "react";
-import { View, Text, FlatList, TouchableOpacity, Button } from "react-native";
-import Separator from "../components/Separator";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, ScrollView, Pressable, Button, StyleSheet } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { Swipeable } from "react-native-gesture-handler";
-import { removeMenuEntry, selectMenuEntryCount, selectUnplannedEntries, selectMenuWeek } from "../store/menuSlice";
+import {
+  addSlot,
+  addSlotAndMoveEntry,
+  clearMenu,
+  clearMenuEntries,
+  moveMenuEntry,
+  moveSlot,
+  removeMenuEntry,
+  removeSlot,
+  renameSlot,
+  selectMenuEntryCount,
+  selectMenuWeek,
+  selectUnplannedEntries,
+  setMenuEntryScale,
+  swapDays,
+  swapMenuEntries,
+} from "../store/menuSlice";
 import { generateShoppingList } from "../store/thunks";
 import { selectShoppingItemCount } from "../store/shoppingListSlice";
+import { selectShowStapleReminder, setShowStapleReminder } from "../store/settingsSlice";
 import { useDialog } from "../components/dialog/DialogProvider";
+import useLayout from "../hooks/useLayout";
+import { colors, radius, spacing } from "../theme";
+import MenuDay from "../components/menu/MenuDay";
+import MenuEntryRow from "../components/menu/MenuEntryRow";
+import EntryOptionsModal from "../components/menu/EntryOptionsModal";
+import SlotPickerModal from "../components/menu/SlotPickerModal";
+import EntryPickerModal from "../components/menu/EntryPickerModal";
+import DayPickerModal from "../components/menu/DayPickerModal";
+import StapleReminderModal from "../components/menu/StapleReminderModal";
 
+// activeModal: null | { type: "entry"|"slotPicker"|"entryPicker", entryId }
+//   | { type: "daySwap", day } | { type: "slotDay", slotId } | { type: "reminder", items }
 const MenuScreen = ({ navigation }) => {
-  const unplanned = useSelector(selectUnplannedEntries)
-  const week = useSelector(selectMenuWeek)
-  const entryCount = useSelector(selectMenuEntryCount)
-  const itemCount = useSelector(selectShoppingItemCount)
-  const dispatch = useDispatch()
-  const dialog = useDialog()
+  const unplanned = useSelector(selectUnplannedEntries);
+  const week = useSelector(selectMenuWeek);
+  const entryCount = useSelector(selectMenuEntryCount);
+  const itemCount = useSelector(selectShoppingItemCount);
+  const showReminder = useSelector(selectShowStapleReminder);
+  const dispatch = useDispatch();
+  const dialog = useDialog();
+  const { width, isWide } = useLayout();
+  const [activeModal, setActiveModal] = useState(null);
 
-  // Minimal flat list: unplanned entries followed by every planned entry.
-  const entries = [
-    ...unplanned,
-    ...week.flatMap((day) => day.slots.flatMap((slot) => slot.entries)),
-  ]
+  const slotCount = week.reduce((n, d) => n + d.slots.length, 0);
+  const close = () => setActiveModal(null);
+
+  const entryById = useMemo(() => {
+    const map = {};
+    unplanned.forEach((e) => (map[e.id] = e));
+    week.forEach((d) => d.slots.forEach((s) => s.entries.forEach((e) => (map[e.id] = e))));
+    return map;
+  }, [unplanned, week]);
+  const activeEntry = activeModal?.entryId ? entryById[activeModal.entryId] : null;
+
+  // Close entry-based modals if their entry disappears.
+  useEffect(() => {
+    if (activeModal?.entryId && !activeEntry) setActiveModal(null);
+  }, [activeModal, activeEntry]);
 
   const generate = (mode) => {
-    dispatch(generateShoppingList(mode))
-    navigation.navigate("ShoppingList")
-  }
+    const result = dispatch(generateShoppingList(mode));
+    if (result.prechecked.length > 0 && showReminder) {
+      setActiveModal({ type: "reminder", items: result.prechecked });
+    } else {
+      navigation.navigate("ShoppingList");
+    }
+  };
 
-  const onGenerateShoppingListPress = () => {
+  const onGeneratePress = () => {
     if (entryCount === 0) {
-      dialog.alert("Your menu is empty", "Add recipes from My Recipes first.")
+      dialog.alert("Your menu is empty", "Add recipes from My Recipes first.");
     } else if (itemCount === 0) {
-      generate("replace")
+      generate("replace");
     } else {
       dialog.alert(
         "You already have a shopping list",
@@ -41,53 +84,251 @@ const MenuScreen = ({ navigation }) => {
           { text: "Merge", onPress: () => generate("merge") },
           { text: "Replace", style: "destructive", onPress: () => generate("replace") },
         ]
-      )
+      );
     }
-  }
+  };
 
   useEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <Button onPress={onGenerateShoppingListPress} title="Generate List" />
-      ),
-    })
-  }, [entryCount, itemCount]);
+      headerRight: () => <Button onPress={onGeneratePress} title="Generate list" />,
+    });
+  });
 
-  const menuTableItem = ({ item, index }) => {
-    const renderRightActions = () => (
-      <View>
-        <TouchableOpacity
-          style={{ padding: 5, borderRadius: 7, flex: 1, justifyContent: "center" }}
-          onPress={() => dispatch(removeMenuEntry(item.id))}
-        >
-          <Text style={{ color: "red" }}>Delete</Text>
-        </TouchableOpacity>
+  const onNewWeek = () =>
+    dialog.alert("Start a new week?", "Your shopping list won't change.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Clear recipes, keep meal slots", onPress: () => dispatch(clearMenuEntries()) },
+      { text: "Clear everything", style: "destructive", onPress: () => dispatch(clearMenu()) },
+    ]);
+
+  const onDayMenu = (day) =>
+    dialog.alert(day.label, undefined, [
+      { text: "Swap with another day…", onPress: () => setActiveModal({ type: "daySwap", day: day.day }) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+
+  const onCustomSlot = (day) =>
+    dialog.prompt({
+      title: "New meal slot",
+      placeholder: "e.g. Brunch",
+      confirmText: "Add",
+      onSubmit: (name) => dispatch(addSlot({ day, name })),
+    });
+
+  const onSlotRename = (slot) =>
+    dialog.prompt({
+      title: "Rename meal slot",
+      defaultValue: slot.name,
+      confirmText: "Rename",
+      onSubmit: (name) => dispatch(renameSlot({ slotId: slot.id, name })),
+    });
+
+  const onSlotRemove = (slot) => {
+    const n = slot.entries.length;
+    if (n === 0) {
+      dispatch(removeSlot({ slotId: slot.id, removeEntries: false }));
+      return;
+    }
+    dialog.alert(`Remove ${slot.name}?`, `What should happen to its ${n} recipe${n === 1 ? "" : "s"}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Move to Unplanned", onPress: () => dispatch(removeSlot({ slotId: slot.id, removeEntries: false })) },
+      { text: "Remove them too", style: "destructive", onPress: () => dispatch(removeSlot({ slotId: slot.id, removeEntries: true })) },
+    ]);
+  };
+
+  const onSlotMenu = (slot) =>
+    dialog.alert(slot.name, undefined, [
+      { text: "Rename", onPress: () => onSlotRename(slot) },
+      { text: "Move to another day…", onPress: () => setActiveModal({ type: "slotDay", slotId: slot.id }) },
+      { text: "Remove", style: "destructive", onPress: () => onSlotRemove(slot) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+
+  const onEntryPress = (entry) => setActiveModal({ type: "entry", entryId: entry.id });
+  const onEntryRemove = (entry) => dispatch(removeMenuEntry(entry.id));
+  const onAddSlot = (day, name) => dispatch(addSlot({ day, name }));
+
+  const swapGroups = useMemo(() => {
+    const groups = [{ key: "unplanned", label: "Unplanned", entries: unplanned }];
+    week.forEach((d) =>
+      d.slots.forEach((s) => groups.push({ key: s.id, label: `${d.label} · ${s.name}`, entries: s.entries }))
+    );
+    return groups
+      .map((g) => ({ ...g, entries: g.entries.filter((e) => e.id !== activeModal?.entryId) }))
+      .filter((g) => g.entries.length > 0);
+  }, [unplanned, week, activeModal?.entryId]);
+
+  const renderUnplanned = () => (
+    <View style={styles.unplanned}>
+      <View style={styles.unplannedHeader}>
+        <Text style={styles.unplannedTitle}>Unplanned</Text>
       </View>
-    )
-    return (
-      <Swipeable renderRightActions={renderRightActions} overshootFriction={8}>
-        <View style={{ flexDirection: "row", padding: 5, borderWidth: 1 }}>
-          <View style={{ flex: 4, alignItems: "center" }}>
-            <Text>{item.recipe.name.toString()}</Text>
-          </View>
-          <View style={{ flex: 4, alignItems: "center" }}>
-            <Text>{index}</Text>
-          </View>
-        </View>
-      </Swipeable>
-    )
-  }
+      {unplanned.length === 0 ? (
+        <Text style={styles.hint}>Recipes you add land here. Tap one to plan it.</Text>
+      ) : (
+        unplanned.map((entry) => (
+          <MenuEntryRow key={entry.id} entry={entry} onPress={() => onEntryPress(entry)} onRemove={() => onEntryRemove(entry)} />
+        ))
+      )}
+    </View>
+  );
+
+  const renderDay = (day) => (
+    <MenuDay
+      key={day.day}
+      day={day}
+      onDayMenu={onDayMenu}
+      onAddSlot={onAddSlot}
+      onCustomSlot={onCustomSlot}
+      onSlotRename={onSlotRename}
+      onSlotMenu={onSlotMenu}
+      onEntryPress={onEntryPress}
+      onEntryRemove={onEntryRemove}
+    />
+  );
+
+  const toolbar = (
+    <View style={styles.toolbar}>
+      <Text style={styles.count}>{`${entryCount} recipe${entryCount === 1 ? "" : "s"} planned`}</Text>
+      <Pressable style={styles.newWeek} onPress={onNewWeek} accessibilityRole="button">
+        <Text style={styles.newWeekText}>New week</Text>
+      </Pressable>
+    </View>
+  );
+
+  const colWidth = Math.max(150, Math.floor((width - 48) / 8));
 
   return (
-    <View style={{ flex: 1 }}>
-      <FlatList
-        data={entries}
-        renderItem={menuTableItem}
-        keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={Separator}
+    <View style={styles.screen}>
+      {toolbar}
+      {isWide ? (
+        <ScrollView horizontal style={styles.flex} contentContainerStyle={styles.columns}>
+          <ScrollView style={{ width: colWidth }} contentContainerStyle={styles.column}>
+            {renderUnplanned()}
+          </ScrollView>
+          {week.map((day) => (
+            <ScrollView key={day.day} style={{ width: colWidth }} contentContainerStyle={styles.column}>
+              {renderDay(day)}
+            </ScrollView>
+          ))}
+        </ScrollView>
+      ) : (
+        <ScrollView style={styles.flex} contentContainerStyle={styles.narrowContent}>
+          {entryCount === 0 && slotCount === 0 ? (
+            <Text style={styles.empty}>Your menu is empty. Swipe a recipe in My Recipes and tap Add to Menu.</Text>
+          ) : null}
+          {renderUnplanned()}
+          {week.map(renderDay)}
+        </ScrollView>
+      )}
+
+      <EntryOptionsModal
+        visible={activeModal?.type === "entry" && !!activeEntry}
+        entry={activeEntry}
+        onClose={close}
+        onSetScale={(scale) => dispatch(setMenuEntryScale({ entryId: activeEntry.id, scale }))}
+        onMove={() => setActiveModal({ type: "slotPicker", entryId: activeEntry.id })}
+        onSwap={() => setActiveModal({ type: "entryPicker", entryId: activeEntry.id })}
+        onView={() => {
+          const recipeId = activeEntry.recipeId;
+          close();
+          navigation.navigate("RecipeList", { screen: "Recipe Details", params: { recipeId } });
+        }}
+        onRemove={() => {
+          dispatch(removeMenuEntry(activeEntry.id));
+          close();
+        }}
+      />
+      <SlotPickerModal
+        visible={activeModal?.type === "slotPicker" && !!activeEntry}
+        week={week}
+        currentSlotId={activeEntry ? activeEntry.slotId : null}
+        onClose={close}
+        onSelectSlot={(slotId) => {
+          dispatch(moveMenuEntry({ entryId: activeEntry.id, slotId }));
+          close();
+        }}
+        onAddSlotAndMove={(day, name) => {
+          dispatch(addSlotAndMoveEntry({ day, name, entryId: activeEntry.id }));
+          close();
+        }}
+      />
+      <EntryPickerModal
+        visible={activeModal?.type === "entryPicker" && !!activeEntry}
+        groups={swapGroups}
+        onClose={close}
+        onSelect={(other) => {
+          dispatch(swapMenuEntries({ entryIdA: activeEntry.id, entryIdB: other.id }));
+          close();
+        }}
+      />
+      <DayPickerModal
+        visible={activeModal?.type === "daySwap"}
+        title={"Swap with…"}
+        excludeDay={activeModal?.day}
+        onClose={close}
+        onSelect={(day) => {
+          dispatch(swapDays({ dayA: activeModal.day, dayB: day }));
+          close();
+        }}
+      />
+      <DayPickerModal
+        visible={activeModal?.type === "slotDay"}
+        title={"Move to…"}
+        onClose={close}
+        onSelect={(day) => {
+          dispatch(moveSlot({ slotId: activeModal.slotId, day }));
+          close();
+        }}
+      />
+      <StapleReminderModal
+        visible={activeModal?.type === "reminder"}
+        items={activeModal?.type === "reminder" ? activeModal.items : []}
+        onClose={() => {
+          close();
+          navigation.navigate("ShoppingList");
+        }}
+        onDisable={() => {
+          dispatch(setShowStapleReminder(false));
+          close();
+          navigation.navigate("ShoppingList");
+        }}
       />
     </View>
-  )
-}
+  );
+};
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
+  toolbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    minHeight: 48,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  count: { color: colors.muted, fontSize: 15 },
+  newWeek: { minHeight: 44, justifyContent: "center", paddingLeft: spacing.md },
+  newWeekText: { color: colors.accentStrong, fontSize: 16, fontWeight: "bold" },
+  narrowContent: { padding: spacing.lg },
+  columns: { flexGrow: 1, padding: spacing.sm },
+  column: { padding: spacing.sm },
+  empty: { color: colors.muted, textAlign: "center", marginBottom: spacing.lg },
+  unplanned: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  unplannedHeader: { minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.md, backgroundColor: colors.favorite },
+  unplannedTitle: { fontSize: 17, fontWeight: "bold", color: colors.text },
+  hint: { color: colors.muted, padding: spacing.md },
+});
 
 export default MenuScreen;
