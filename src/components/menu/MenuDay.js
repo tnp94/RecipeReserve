@@ -1,9 +1,10 @@
-import { useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../../theme";
 import { useDispatch } from "react-redux";
 import { SUGGESTED_SLOT_NAMES, moveSlot, swapDays } from "../../store/menuSlice";
-import { IS_WEB, dropOverStyle, useDraggable, useDropTarget } from "./useWebDrag";
+import { dropOverStyle } from "./drag/DragProvider";
+import DragHandle from "./drag/DragHandle";
+import useDropZone from "./drag/useDropZone";
 import Chip from "../Chip";
 import MenuSlot from "./MenuSlot";
 
@@ -11,32 +12,24 @@ const MenuDay = ({ day, onDayMenu, onAddSlot, onCustomSlot, onSlotRename, onSlot
   const used = new Set(day.slots.map((s) => s.name.trim().toLowerCase()));
   const suggestions = SUGGESTED_SLOT_NAMES.filter((n) => !used.has(n.toLowerCase()));
   const dispatch = useDispatch();
-  const cardRef = useRef(null);
-  const headerRef = useRef(null);
-  useDraggable(headerRef, { type: "day", id: day.day }, IS_WEB);
-  const slotOver = useDropTarget(
-    cardRef,
-    {
-      accepts: ["slot"],
-      onDrop: (p) => {
-        if (!day.slots.some((s) => s.id === p.id)) dispatch(moveSlot({ slotId: p.id, day: day.day }));
-      },
+  const { ref: cardRef, isOver: slotOver } = useDropZone({
+    key: `day:${day.day}`,
+    accepts: ["slot"],
+    onDrop: (p) => {
+      if (!day.slots.some((s) => s.id === p.id)) dispatch(moveSlot({ slotId: p.id, day: day.day }));
     },
-    IS_WEB
-  );
-  const dayOver = useDropTarget(
-    headerRef,
-    {
-      accepts: ["day"],
-      onDrop: (p) => {
-        if (p.id !== day.day) dispatch(swapDays({ dayA: p.id, dayB: day.day }));
-      },
+  });
+  const { ref: headerRef, isOver: dayOver } = useDropZone({
+    key: `dayheader:${day.day}`,
+    accepts: ["day"],
+    onDrop: (p) => {
+      if (p.id !== day.day) dispatch(swapDays({ dayA: p.id, dayB: day.day }));
     },
-    IS_WEB
-  );
+  });
   return (
-    <View ref={cardRef} style={[styles.card, dropOverStyle(slotOver)]}>
-      <View ref={headerRef} style={[styles.header, dropOverStyle(dayOver)]}>
+    <View ref={cardRef} collapsable={false} style={[styles.card, dropOverStyle(slotOver)]}>
+      <View ref={headerRef} collapsable={false} style={[styles.header, dropOverStyle(dayOver)]}>
+        <DragHandle payload={{ type: "day", id: day.day }} label={day.label} />
         <Text style={styles.title}>{day.label}</Text>
         <Pressable style={styles.more} onPress={() => onDayMenu(day)} accessibilityRole="button" accessibilityLabel={`${day.label} options`}>
           <Text style={styles.moreText}>{"⋯"}</Text>
@@ -66,7 +59,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     marginBottom: spacing.md,
     overflow: "hidden",
@@ -75,11 +68,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingLeft: spacing.md,
     minHeight: 44,
+    borderWidth: 2,
+    borderColor: "transparent",
     backgroundColor: colors.accent,
   },
-  title: { fontSize: 17, fontWeight: "bold", color: colors.text },
+  title: { flex: 1, fontSize: 17, fontWeight: "bold", color: colors.text },
   more: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
   moreText: { fontSize: 22, color: colors.text },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, padding: spacing.md },

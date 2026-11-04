@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, View, Text, ScrollView, Pressable, Button, StyleSheet } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, Pressable, Button, StyleSheet } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addSlot,
@@ -24,7 +25,8 @@ import { selectShowStapleReminder, setShowStapleReminder } from "../store/settin
 import { useDialog } from "../components/dialog/DialogProvider";
 import useLayout from "../hooks/useLayout";
 import { colors, radius, spacing } from "../theme";
-import { IS_WEB, dropOverStyle, useDropTarget } from "../components/menu/useWebDrag";
+import DragProvider, { DragScrollView, dropOverStyle, useDragState } from "../components/menu/drag/DragProvider";
+import useDropZone from "../components/menu/drag/useDropZone";
 import MenuDay from "../components/menu/MenuDay";
 import MenuEntryRow from "../components/menu/MenuEntryRow";
 import EntryOptionsModal from "../components/menu/EntryOptionsModal";
@@ -35,6 +37,41 @@ import StapleReminderModal from "../components/menu/StapleReminderModal";
 
 // activeModal: null | { type: "entry"|"slotPicker"|"entryPicker", entryId }
 //   | { type: "daySwap", day } | { type: "slotDay", slotId } | { type: "reminder", items }
+const UnplannedSection = ({ entries, onEntryPress, onEntryRemove }) => {
+  const dispatch = useDispatch();
+  const { ref, isOver } = useDropZone({
+    key: "unplanned",
+    accepts: ["entry"],
+    onDrop: (p) => {
+      if (!entries.some((e) => e.id === p.id)) dispatch(moveMenuEntry({ entryId: p.id, slotId: null }));
+    },
+  });
+  return (
+    <View ref={ref} collapsable={false} style={[styles.unplanned, dropOverStyle(isOver)]}>
+      <View style={styles.unplannedHeader}>
+        <Text style={styles.unplannedTitle}>Unplanned</Text>
+      </View>
+      {entries.length === 0 ? (
+        <Text style={styles.hint}>Recipes you add land here. Tap one to plan it.</Text>
+      ) : (
+        entries.map((entry) => (
+          <MenuEntryRow key={entry.id} entry={entry} onPress={() => onEntryPress(entry)} onRemove={() => onEntryRemove(entry)} />
+        ))
+      )}
+    </View>
+  );
+};
+
+// Vertical column scroller (wide layout) locked while dragging.
+const ColumnScroll = ({ children, style, contentContainerStyle }) => {
+  const { active } = useDragState();
+  return (
+    <ScrollView style={style} contentContainerStyle={contentContainerStyle} scrollEnabled={!active}>
+      {children}
+    </ScrollView>
+  );
+};
+
 const MenuScreen = ({ navigation }) => {
   const unplanned = useSelector(selectUnplannedEntries);
   const week = useSelector(selectMenuWeek);
@@ -159,31 +196,8 @@ const MenuScreen = ({ navigation }) => {
       .filter((g) => g.entries.length > 0);
   }, [unplanned, week, activeModal?.entryId]);
 
-  const unplannedRef = useRef(null);
-  const unplannedOver = useDropTarget(
-    unplannedRef,
-    {
-      accepts: ["entry"],
-      onDrop: (p) => {
-        if (!unplanned.some((e) => e.id === p.id)) dispatch(moveMenuEntry({ entryId: p.id, slotId: null }));
-      },
-    },
-    IS_WEB
-  );
-
   const renderUnplanned = () => (
-    <View ref={unplannedRef} style={[styles.unplanned, dropOverStyle(unplannedOver)]}>
-      <View style={styles.unplannedHeader}>
-        <Text style={styles.unplannedTitle}>Unplanned</Text>
-      </View>
-      {unplanned.length === 0 ? (
-        <Text style={styles.hint}>Recipes you add land here. Tap one to plan it.</Text>
-      ) : (
-        unplanned.map((entry) => (
-          <MenuEntryRow key={entry.id} entry={entry} onPress={() => onEntryPress(entry)} onRemove={() => onEntryRemove(entry)} />
-        ))
-      )}
-    </View>
+    <UnplannedSection entries={unplanned} onEntryPress={onEntryPress} onEntryRemove={onEntryRemove} />
   );
 
   const renderDay = (day) => (
@@ -209,11 +223,11 @@ const MenuScreen = ({ navigation }) => {
     </View>
   );
 
-  const dragHint = Platform.OS === "web" ? (
+  const dragHint = (
     <Text style={styles.dragHint}>
-      Tip: drag a recipe onto a meal to move it, or onto another recipe to swap. Drag a day's name onto another day to swap days.
+      Tip: hold ≡ and drag a recipe onto a meal to move it, or onto another recipe to swap. Drag a day's ≡ onto another day to swap days.
     </Text>
-  ) : null;
+  );
 
   const colWidth = Math.max(150, Math.floor((width - 48) / 8));
 
@@ -221,26 +235,28 @@ const MenuScreen = ({ navigation }) => {
     <View style={styles.screen}>
       {toolbar}
       {dragHint}
-      {isWide ? (
-        <ScrollView horizontal style={styles.flex} contentContainerStyle={styles.columns}>
-          <ScrollView style={{ width: colWidth }} contentContainerStyle={styles.column}>
+      <DragProvider>
+        {isWide ? (
+          <DragScrollView horizontal style={styles.flex} contentContainerStyle={styles.columns}>
+            <ColumnScroll style={{ width: colWidth }} contentContainerStyle={styles.column}>
+              {renderUnplanned()}
+            </ColumnScroll>
+            {week.map((day) => (
+              <ColumnScroll key={day.day} style={{ width: colWidth }} contentContainerStyle={styles.column}>
+                {renderDay(day)}
+              </ColumnScroll>
+            ))}
+          </DragScrollView>
+        ) : (
+          <DragScrollView style={styles.flex} contentContainerStyle={styles.narrowContent}>
+            {entryCount === 0 && slotCount === 0 ? (
+              <Text style={styles.empty}>Your menu is empty. Swipe a recipe in My Recipes and tap Add to Menu.</Text>
+            ) : null}
             {renderUnplanned()}
-          </ScrollView>
-          {week.map((day) => (
-            <ScrollView key={day.day} style={{ width: colWidth }} contentContainerStyle={styles.column}>
-              {renderDay(day)}
-            </ScrollView>
-          ))}
-        </ScrollView>
-      ) : (
-        <ScrollView style={styles.flex} contentContainerStyle={styles.narrowContent}>
-          {entryCount === 0 && slotCount === 0 ? (
-            <Text style={styles.empty}>Your menu is empty. Swipe a recipe in My Recipes and tap Add to Menu.</Text>
-          ) : null}
-          {renderUnplanned()}
-          {week.map(renderDay)}
-        </ScrollView>
-      )}
+            {week.map(renderDay)}
+          </DragScrollView>
+        )}
+      </DragProvider>
 
       <EntryOptionsModal
         visible={activeModal?.type === "entry" && !!activeEntry}
@@ -342,7 +358,7 @@ const styles = StyleSheet.create({
   unplanned: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     marginBottom: spacing.md,
     overflow: "hidden",

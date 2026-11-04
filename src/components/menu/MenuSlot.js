@@ -1,29 +1,25 @@
-import { useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, spacing } from "../../theme";
 import { useDispatch } from "react-redux";
 import { moveMenuEntry } from "../../store/menuSlice";
 import MenuEntryRow from "./MenuEntryRow";
-import { IS_WEB, dropOverStyle, useDraggable, useDropTarget } from "./useWebDrag";
+import { dropOverStyle } from "./drag/DragProvider";
+import DragHandle from "./drag/DragHandle";
+import useDropZone from "./drag/useDropZone";
 
 const MenuSlot = ({ slot, onRename, onMenu, onEntryPress, onEntryRemove }) => {
   const dispatch = useDispatch();
-  const slotRef = useRef(null);
-  const headerRef = useRef(null);
-  useDraggable(headerRef, { type: "slot", id: slot.id }, IS_WEB);
-  const isOver = useDropTarget(
-    slotRef,
-    {
-      accepts: ["entry"],
-      onDrop: (p) => {
-        if (!slot.entries.some((e) => e.id === p.id)) dispatch(moveMenuEntry({ entryId: p.id, slotId: slot.id }));
-      },
+  const { ref, isOver } = useDropZone({
+    key: `slot:${slot.id}`,
+    accepts: ["entry"],
+    onDrop: (p) => {
+      if (!slot.entries.some((e) => e.id === p.id)) dispatch(moveMenuEntry({ entryId: p.id, slotId: slot.id }));
     },
-    IS_WEB
-  );
+  });
   return (
-  <View ref={slotRef} style={[styles.slot, dropOverStyle(isOver)]}>
-    <View ref={headerRef} style={styles.header}>
+  <View ref={ref} collapsable={false} style={[styles.slot, dropOverStyle(isOver)]}>
+    <View style={styles.header}>
+      <DragHandle payload={{ type: "slot", id: slot.id }} label={slot.name} />
       <Pressable style={styles.nameButton} onPress={onRename} accessibilityRole="button" accessibilityLabel={`Rename ${slot.name}`}>
         <Text style={styles.name} numberOfLines={1}>{slot.name}</Text>
       </Pressable>
@@ -48,9 +44,9 @@ const MenuSlot = ({ slot, onRename, onMenu, onEntryPress, onEntryRemove }) => {
 };
 
 const styles = StyleSheet.create({
-  slot: { marginTop: spacing.sm },
+  slot: { marginTop: spacing.sm, borderWidth: 2, borderColor: "transparent" },
   header: { flexDirection: "row", alignItems: "center", minHeight: 44 },
-  nameButton: { flex: 1, minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.md },
+  nameButton: { flex: 1, minHeight: 44, justifyContent: "center", paddingRight: spacing.md },
   name: { fontSize: 15, fontWeight: "bold", color: colors.muted, textTransform: "uppercase" },
   more: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
   moreText: { fontSize: 22, color: colors.muted },

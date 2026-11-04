@@ -1,25 +1,23 @@
-import { useRef } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useDispatch } from "react-redux";
 import { colors, radius, spacing } from "../../theme";
 import { swapMenuEntries } from "../../store/menuSlice";
-import { IS_WEB, dropOverStyle, useDraggable, useDropTarget } from "./useWebDrag";
+import { dropOverStyle } from "./drag/DragProvider";
+import DragHandle from "./drag/DragHandle";
+import useDropZone from "./drag/useDropZone";
+
+const IS_WEB = Platform.OS === "web";
 
 const MenuEntryRow = ({ entry, onPress, onRemove }) => {
   const dispatch = useDispatch();
-  const dragRef = useRef(null);
-  useDraggable(dragRef, { type: "entry", id: entry.id }, IS_WEB);
-  const isOver = useDropTarget(
-    dragRef,
-    {
-      accepts: ["entry"],
-      onDrop: (p) => {
-        if (p.id !== entry.id) dispatch(swapMenuEntries({ entryIdA: p.id, entryIdB: entry.id }));
-      },
+  const { ref, isOver } = useDropZone({
+    key: `entry:${entry.id}`,
+    accepts: ["entry"],
+    onDrop: (p) => {
+      if (p.id !== entry.id) dispatch(swapMenuEntries({ entryIdA: p.id, entryIdB: entry.id }));
     },
-    IS_WEB
-  );
+  });
   const renderRightActions = () => (
     <Pressable
       style={styles.removeAction}
@@ -31,41 +29,52 @@ const MenuEntryRow = ({ entry, onPress, onRemove }) => {
     </Pressable>
   );
   const content = (
-    <Pressable
-      style={styles.row}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Options for ${entry.recipe.name}`}
-    >
-      <Text style={styles.name} numberOfLines={2}>{entry.recipe.name}</Text>
-      {entry.scale !== 1 ? (
-        <View style={styles.badge}><Text style={styles.badgeText}>{`×${entry.scale}`}</Text></View>
-      ) : null}
-      {IS_WEB ? <Text style={styles.more}>{"⋯"}</Text> : null}
-    </Pressable>
+    <View style={styles.rowWrap}>
+      <DragHandle payload={{ type: "entry", id: entry.id }} label={entry.recipe.name} />
+      <Pressable
+        style={styles.row}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Options for ${entry.recipe.name}`}
+      >
+        <Text style={styles.name} numberOfLines={2}>{entry.recipe.name}</Text>
+        {entry.scale !== 1 ? (
+          <View style={styles.badge}><Text style={styles.badgeText}>{`×${entry.scale}`}</Text></View>
+        ) : null}
+        {IS_WEB ? <Text style={styles.more}>{"⋯"}</Text> : null}
+      </Pressable>
+    </View>
   );
-  // On web the row is a plain draggable View (no Swipeable: it fights HTML5 drag);
-  // the "⋯" affordance opens the same options on tap.
-  if (IS_WEB) {
-    return <View ref={dragRef} style={dropOverStyle(isOver)}>{content}</View>;
-  }
+  // Web renders without Swipeable (the "⋯" affordance opens the same options on tap).
   return (
-    <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
-      {content}
-    </Swipeable>
+    <View ref={ref} collapsable={false} style={[styles.zone, dropOverStyle(isOver)]}>
+      {IS_WEB ? (
+        content
+      ) : (
+        <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
+          {content}
+        </Swipeable>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  row: {
-    minHeight: 44,
+  zone: { borderWidth: 2, borderColor: "transparent" },
+  rowWrap: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  row: {
+    flex: 1,
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: spacing.md,
+    paddingVertical: spacing.sm,
   },
   name: { flex: 1, fontSize: 16, color: colors.text },
   badge: {

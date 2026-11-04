@@ -51,12 +51,16 @@ Every swipe / long-press action also has a visible "⋯" button on web.
 For brief confirmations use `useToast().show(message, { actionLabel, onAction })` from
 `src/components/toast/ToastProvider.js`. Tab icons use `Ionicons` from `@expo/vector-icons`.
 
-### Menu drag-and-drop (web only)
+### Menu drag-and-drop (all platforms)
 
-`src/components/menu/useWebDrag.js` (`useDraggable`, `useDropTarget`) attaches HTML5 drag
-events to the DOM nodes behind react-native-web Views. Entry → entry swaps, entry → slot or
-Unplanned moves, slot header → day moves the slot, day header → day header swaps days. On
-web, entry rows render without `Swipeable` so dragging works; native is unchanged.
+Built on `react-native-gesture-handler` (no reanimated: gestures use `.runOnJS(true)`), in
+`src/components/menu/drag/`: `DragProvider` (active drag, zone registry measured with
+`measureInWindow`, smallest-zone hit test, floating preview, edge auto-scroll: 56px zone,
+300 ms dwell, speed scales with depth), `DragHandle` (≡ grip with a Pan gesture), and
+`useDropZone` (callback ref, so re-mounted Views re-register). Drags start only from ≡ handles
+so tap and native swipe-to-remove keep working. Entry → entry swaps, entry → slot or Unplanned
+moves, slot → day moves the slot, day → day swaps. Menu scroll views come from
+gesture-handler. Web entry rows render without `Swipeable`.
 
 ### State (Redux + redux-persist)
 
