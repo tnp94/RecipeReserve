@@ -4,21 +4,38 @@ import Chip from "../Chip";
 import { colors, spacing } from "../../theme";
 import { SUGGESTED_SLOT_NAMES } from "../../store/menuSlice";
 
-const SlotPickerModal = ({ visible, week, currentSlotId, onSelectSlot, onAddSlotAndMove, onClose }) => (
+const SlotPickerModal = ({ visible, week, currentSlotId, currentDay, onSelectSlot, onSelectDay, onAddSlotAndMove, onClose }) => {
+  const unplannedCurrent = currentSlotId === null && currentDay == null;
+  return (
   <AppModal visible={visible} onClose={onClose} title={"Move to…"}>
     <Pressable
-      style={[styles.row, currentSlotId === null && styles.disabled]}
-      disabled={currentSlotId === null}
+      style={[styles.row, unplannedCurrent && styles.disabled]}
+      disabled={unplannedCurrent}
       onPress={() => onSelectSlot(null)}
       accessibilityRole="button"
     >
-      <Text style={styles.text}>{currentSlotId === null ? "Unplanned (current)" : "Unplanned"}</Text>
+      <Text style={styles.text}>{unplannedCurrent ? "Unplanned (current)" : "Unplanned"}</Text>
     </Pressable>
     {week.map((day) => {
       const used = new Set(day.slots.map((s) => s.name.trim().toLowerCase()));
       return (
         <View key={day.day}>
           <Text style={styles.group}>{day.label}</Text>
+          {(() => {
+            const current = currentSlotId === null && currentDay === day.day;
+            return (
+              <Pressable
+                style={[styles.row, current && styles.disabled]}
+                disabled={current}
+                onPress={() => onSelectDay(day.day)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.text}>
+                  {current ? `${day.label} — no specific meal (current)` : `${day.label} — no specific meal`}
+                </Text>
+              </Pressable>
+            );
+          })()}
           {day.slots.map((slot) => {
             const current = slot.id === currentSlotId;
             return (
@@ -42,7 +59,8 @@ const SlotPickerModal = ({ visible, week, currentSlotId, onSelectSlot, onAddSlot
       );
     })}
   </AppModal>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   group: { fontSize: 13, fontWeight: "bold", color: colors.muted, textTransform: "uppercase", marginTop: spacing.md },

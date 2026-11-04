@@ -2,7 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import rootReducer from "../rootReducer";
 import {
   addRecipeToMenu, removeMenuEntry, moveMenuEntry, swapMenuEntries, setMenuEntryScale,
-  addSlot, addSlotAndMoveEntry, renameSlot, removeSlot, moveSlot, swapDays,
+  moveMenuEntryToDay, addSlot, addSlotAndMoveEntry, renameSlot, removeSlot, moveSlot, swapDays,
   clearMenuEntries, clearMenu, selectMenuEntries, selectMenuWeek, selectUnplannedEntries,
   selectMenuEntryCount, WEEK_DAYS, SUGGESTED_SLOT_NAMES,
 } from "../menuSlice";
@@ -23,7 +23,7 @@ describe("menuSlice", () => {
     store.dispatch(addRecipeToMenu({ recipeId: 2 }));
     const s = store.getState();
     expect(s.menu.slots.ids).toEqual(["slot-1"]);
-    expect(s.menu.entries.entities["entry-2"]).toEqual({ id: "entry-2", recipeId: 2, slotId: null, scale: 1 });
+    expect(s.menu.entries.entities["entry-2"]).toEqual({ id: "entry-2", recipeId: 2, slotId: null, day: null, scale: 1 });
     expect(s.menu.nextId).toBe(3);
   });
 
@@ -106,6 +106,7 @@ describe("menuSlice", () => {
     expect(s.menu.slots.ids).toEqual([]);
     expect(entryIds(s)).toEqual(["entry-3"]);
     expect(s.menu.entries.entities["entry-3"].slotId).toBeNull();
+    expect(s.menu.entries.entities["entry-3"].day).toBe(0); // kept on the slot's day
   });
 
   it("moveSlot changes day and goes to end", () => {
@@ -154,6 +155,125 @@ describe("menuSlice", () => {
     store.dispatch(addRecipeToMenu({ recipeId: 9999 }));
     store.dispatch(loadRecipeList());
     expect(selectMenuEntries(store.getState()).map((e) => e.recipeId)).toEqual([2]);
+  });
+
+  describe("day-level entries", () => {
+    const e = (store, id) => store.getState().menu.entries.entities[id];
+    const invariant = (store) =>
+      selectMenuEntries(store.getState()).forEach((x) => expect(x.slotId !== null && x.day != null).toBe(false));
+
+    it("addRecipeToMenu stores day only without a valid slot and for 0-6", () => {
+      const store = make();
+      store.dispatch(addSlot({ day: 2, name: "Lunch" })); // slot-1
+      store.dispatch(addRecipeToMenu({ recipeId: 2, slotId: "slot-1", day: 4 })); // entry-2
+      store.dispatch(addRecipeToMenu({ recipeId: 2, day: 4 })); // entry-3
+      store.dispatch(addRecipeToMenu({ recipeId: 2, slotId: "nope", day: 1 })); // entry-4
+      store.dispatch(addRecipeToMenu({ recipeId: 2, day: 9 })); // entry-5
+      expect([e(store, "entry-2").slotId, e(store, "entry-2").day]).toEqual(["slot-1", null]);
+      expect([e(store, "entry-3").slotId, e(store, "entry-3").day]).toEqual([null, 4]);
+      expect([e(store, "entry-4").slotId, e(store, "entry-4").day]).toEqual([null, 1]);
+      expect(e(store, "entry-5").day).toBeNull();
+      invariant(store);
+    });
+
+    it("moveMenuEntryToDay clears slot, moves to end, ignores bad day and no-ops", () => {
+      const store = make();
+      store.dispatch(addSlot({ day: 0, name: "A" }));
+      store.dispatch(addRecipeToMenu({ recipeId: 2, slotId: "slot-1" })); // entry-2
+      store.dispatch(addRecipeToMenu({ recipeId: 3 })); // entry-3
+      store.dispatch(moveMenuEntryToDay({ entryId: "entry-2", day: 0 }));
+      expect([e(store, "entry-2").slotId, e(store, "entry-2").day]).toEqual([null, 0]);
+      expect(entryIds(store.getState())).toEqual(["entry-3", "entry-2"]);
+      store.dispatch(moveMenuEntryToDay({ entryId: "entry-3", day: 0 }));
+      expect(entryIds(store.getState())).toEqual(["entry-2", "entry-3"]);
+      store.dispatch(moveMenuEntryToDay({ entryId: "entry-2", day: 0 })); // no-op: stays first
+      expect(entryIds(store.getState())).toEqual(["entry-2", "entry-3"]);
+      store.dispatch(moveMenuEntryToDay({ entryId: "entry-2", day: 7 }));
+      store.dispatch(moveMenuEntryToDay({ entryId: "missing", day: 1 }));
+      expect(e(store, "entry-2").day).toBe(0);
+      invariant(store);
+    });
+
+    it("moveMenuEntry and addSlotAndMoveEntry clear day", () => {
+      const store = make();
+      store.dispatch(addSlot({ day: 0, name: "A" })); // slot-1
+      store.dispatch(addRecipeToMenu({ recipeId: 2, day: 3 })); // entry-2
+      store.dispatch(moveMenuEntry({ entryId: "entry-2", slotId: "slot-1" }));
+      expect([e(store, "entry-2").slotId, e(store, "entry-2").day]).toEqual(["slot-1", null]);
+      store.dispatch(addRecipeToMenu({ recipeId: 3, day: 3 })); // entry-3
+      store.dispatch(addSlotAndMoveEntry({ day: 5, name: "B", entryId: "entry-3" }));
+      expect([e(store, "entry-3").slotId, e(store, "entry-3").day]).toEqual(["slot-4", null]);
+      store.dispatch(moveMenuEntry({ entryId: "entry-3", slotId: null }));
+      expect([e(store, "entry-3").slotId, e(store, "entry-3").day]).toEqual([null, null]);
+      invariant(store);
+    });
+
+    it("swapMenuEntries swaps slotId and day", () => {
+      const store = make();
+      store.dispatch(addSlot({ day: 0, name: "A" })); // slot-1
+      store.dispatch(addRecipeToMenu({ recipeId: 2, slotId: "slot-1" })); // entry-2
+      store.dispatch(addRecipeToMenu({ recipeId: 3, day: 4 })); // entry-3
+      store.dispatch(swapMenuEntries({ entryIdA: "entry-2", entryIdB: "entry-3" }));
+      expect([e(store, "entry-2").slotId, e(store, "entry-2").day]).toEqual([null, 4]);
+      expect([e(store, "entry-3").slotId, e(store, "entry-3").day]).toEqual(["slot-1", null]);
+      invariant(store);
+    });
+
+    it("removeSlot keeps entries day-level on the slot's day", () => {
+      const store = make();
+      store.dispatch(addSlot({ day: 3, name: "A" }));
+      store.dispatch(addRecipeToMenu({ recipeId: 2, slotId: "slot-1" }));
+      store.dispatch(removeSlot({ slotId: "slot-1", removeEntries: false }));
+      expect([e(store, "entry-2").slotId, e(store, "entry-2").day]).toEqual([null, 3]);
+      expect(selectUnplannedEntries(store.getState())).toHaveLength(0);
+      invariant(store);
+    });
+
+    it("swapDays swaps day-level entries too and leaves others alone", () => {
+      const store = make();
+      store.dispatch(addSlot({ day: 0, name: "A" })); // slot-1
+      store.dispatch(addRecipeToMenu({ recipeId: 2, day: 0 })); // entry-2
+      store.dispatch(addRecipeToMenu({ recipeId: 3, day: 2 })); // entry-3
+      store.dispatch(addRecipeToMenu({ recipeId: 4, day: 5 })); // entry-4
+      store.dispatch(addRecipeToMenu({ recipeId: 5 })); // entry-5 unplanned
+      store.dispatch(addRecipeToMenu({ recipeId: 6, slotId: "slot-1" })); // entry-6
+      store.dispatch(swapDays({ dayA: 0, dayB: 2 }));
+      expect([2, 3, 4, 5].map((n) => e(store, `entry-${n}`).day)).toEqual([2, 0, 5, null]);
+      expect(e(store, "entry-6")).toMatchObject({ slotId: "slot-1", day: null });
+      invariant(store);
+    });
+
+    it("selectors split day-level, slot and unplanned entries", () => {
+      const store = make();
+      store.dispatch(addSlot({ day: 1, name: "Dinner" }));
+      store.dispatch(addRecipeToMenu({ recipeId: 2, slotId: "slot-1" }));
+      store.dispatch(addRecipeToMenu({ recipeId: 3, day: 1 }));
+      store.dispatch(addRecipeToMenu({ recipeId: 1, day: 1 }));
+      store.dispatch(addRecipeToMenu({ recipeId: 3 }));
+      const s = store.getState();
+      const week = selectMenuWeek(s);
+      expect(week[1].entries.map((x) => x.recipeId)).toEqual([3, 1]);
+      expect(week[1].entries[0].recipe.id).toBe(3);
+      expect(week[1].slots[0].entries.map((x) => x.recipeId)).toEqual([2]);
+      expect(week[0].entries).toEqual([]);
+      expect(selectUnplannedEntries(s).map((x) => x.recipeId)).toEqual([3]);
+      expect(selectMenuEntryCount(s)).toBe(4);
+    });
+
+    it("selectMenuWeek orders breakfast/lunch/dinner within a day", () => {
+      const store = make();
+      ["Dinner", "Snack", "Breakfast"].forEach((name) => store.dispatch(addSlot({ day: 0, name })));
+      expect(selectMenuWeek(store.getState())[0].slots.map((x) => x.name)).toEqual(["Breakfast", "Snack", "Dinner"]);
+      expect(store.getState().menu.slots.ids).toEqual(["slot-1", "slot-2", "slot-3"]);
+    });
+
+    it("treats a missing day (legacy entry) as unplanned", () => {
+      const store = make();
+      store.dispatch(addRecipeToMenu({ recipeId: 2 }));
+      const legacy = { ...store.getState(), menu: JSON.parse(JSON.stringify(store.getState().menu)) };
+      delete legacy.menu.entries.entities["entry-1"].day;
+      expect(selectUnplannedEntries(legacy)).toHaveLength(1);
+    });
   });
 
   describe("selectors", () => {

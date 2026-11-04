@@ -1,12 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../../theme";
 import { useDispatch } from "react-redux";
-import { SUGGESTED_SLOT_NAMES, moveSlot, swapDays } from "../../store/menuSlice";
+import { SUGGESTED_SLOT_NAMES, moveMenuEntryToDay, moveSlot, swapDays } from "../../store/menuSlice";
 import { dropOverStyle } from "./drag/DragProvider";
 import DragHandle from "./drag/DragHandle";
 import useDropZone from "./drag/useDropZone";
 import Chip from "../Chip";
 import MenuSlot from "./MenuSlot";
+import MenuEntryRow from "./MenuEntryRow";
 
 const MenuDay = ({ day, onDayMenu, onAddSlot, onCustomSlot, onSlotRename, onSlotMenu, onEntryPress, onEntryRemove }) => {
   const used = new Set(day.slots.map((s) => s.name.trim().toLowerCase()));
@@ -14,9 +15,14 @@ const MenuDay = ({ day, onDayMenu, onAddSlot, onCustomSlot, onSlotRename, onSlot
   const dispatch = useDispatch();
   const { ref: cardRef, isOver: slotOver } = useDropZone({
     key: `day:${day.day}`,
-    accepts: ["slot"],
+    accepts: ["slot", "entry"],
     onDrop: (p) => {
-      if (!day.slots.some((s) => s.id === p.id)) dispatch(moveSlot({ slotId: p.id, day: day.day }));
+      if (p.type === "entry") {
+        // moveMenuEntryToDay is a no-op for an entry already day-level on this day.
+        dispatch(moveMenuEntryToDay({ entryId: p.id, day: day.day }));
+      } else if (!day.slots.some((s) => s.id === p.id)) {
+        dispatch(moveSlot({ slotId: p.id, day: day.day }));
+      }
     },
   });
   const { ref: headerRef, isOver: dayOver } = useDropZone({
@@ -35,6 +41,14 @@ const MenuDay = ({ day, onDayMenu, onAddSlot, onCustomSlot, onSlotRename, onSlot
           <Text style={styles.moreText}>{"⋯"}</Text>
         </Pressable>
       </View>
+      {day.entries.map((entry) => (
+        <MenuEntryRow
+          key={entry.id}
+          entry={entry}
+          onPress={() => onEntryPress(entry)}
+          onRemove={() => onEntryRemove(entry)}
+        />
+      ))}
       {day.slots.map((slot) => (
         <MenuSlot
           key={slot.id}

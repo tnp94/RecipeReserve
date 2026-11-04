@@ -1,6 +1,7 @@
 import { createSlice, createEntityAdapter, createSelector } from "@reduxjs/toolkit";
 import { deleteRecipe, loadRecipeList } from "./recipesSlice";
 import { recipeList } from "../Recipes";
+import { orderDaySlots } from "../domain/menuOrder";
 
 export const WEEK_DAYS = [
   "Monday",
@@ -32,8 +33,12 @@ function createSlot(state, day, name) {
   return id;
 }
 
-function moveEntryToEnd(state, entryId, slotId) {
-  state.entries.entities[entryId].slotId = slotId;
+// Places the entry in a slot (day null), on a day without a slot, or in Unplanned
+// (both null). An entry never has both slotId and day set.
+function moveEntryToEnd(state, entryId, slotId, day = null) {
+  const entry = state.entries.entities[entryId];
+  entry.slotId = slotId;
+  entry.day = slotId ? null : day;
   state.entries.ids = state.entries.ids.filter((id) => id !== entryId);
   state.entries.ids.push(entryId);
 }
@@ -43,13 +48,15 @@ const menuSlice = createSlice({
   initialState,
   reducers: {
     addRecipeToMenu: (state, action) => {
-      const { recipeId, slotId = null, scale = 1 } = action.payload;
+      const { recipeId, slotId = null, day = null, scale = 1 } = action.payload;
       const id = `entry-${state.nextId}`;
       state.nextId += 1;
+      const validSlot = slotId && state.slots.entities[slotId] ? slotId : null;
       entriesAdapter.addOne(state.entries, {
         id,
         recipeId,
-        slotId: slotId && state.slots.entities[slotId] ? slotId : null,
+        slotId: validSlot,
+        day: validSlot === null && isValidDay(day) ? day : null,
         scale,
       });
     },
@@ -62,14 +69,24 @@ const menuSlice = createSlice({
       if (slotId !== null && !state.slots.entities[slotId]) return;
       moveEntryToEnd(state, entryId, slotId);
     },
+    moveMenuEntryToDay: (state, action) => {
+      const { entryId, day } = action.payload;
+      const entry = state.entries.entities[entryId];
+      if (!entry || !isValidDay(day)) return;
+      if (entry.slotId === null && entry.day === day) return;
+      moveEntryToEnd(state, entryId, null, day);
+    },
     swapMenuEntries: (state, action) => {
       const { entryIdA, entryIdB } = action.payload;
       const a = state.entries.entities[entryIdA];
       const b = state.entries.entities[entryIdB];
       if (!a || !b || entryIdA === entryIdB) return;
       const slotA = a.slotId;
+      const dayA = a.day ?? null;
       a.slotId = b.slotId;
+      a.day = b.day ?? null;
       b.slotId = slotA;
+      b.day = dayA;
       const ids = state.entries.ids;
       const ia = ids.indexOf(entryIdA);
       const ib = ids.indexOf(entryIdB);
@@ -109,7 +126,14 @@ const menuSlice = createSlice({
         (id) => state.entries.entities[id].slotId === slotId
       );
       if (removeEntries) entriesAdapter.removeMany(state.entries, inSlot);
-      else inSlot.forEach((id) => (state.entries.entities[id].slotId = null));
+      else {
+        const day = state.slots.entities[slotId].day;
+        inSlot.forEach((id) => {
+          const entry = state.entries.entities[id];
+          entry.slotId = null;
+          entry.day = day;
+        });
+      }
       slotsAdapter.removeOne(state.slots, slotId);
     },
     moveSlot: (state, action) => {
@@ -127,6 +151,12 @@ const menuSlice = createSlice({
         const slot = state.slots.entities[id];
         if (slot.day === dayA) slot.day = dayB;
         else if (slot.day === dayB) slot.day = dayA;
+      });
+      state.entries.ids.forEach((id) => {
+        const entry = state.entries.entities[id];
+        if (entry.slotId !== null) return;
+        if (entry.day === dayA) entry.day = dayB;
+        else if (entry.day === dayB) entry.day = dayA;
       });
     },
     clearMenuEntries: (state) => {
@@ -156,6 +186,7 @@ export const {
   addRecipeToMenu,
   removeMenuEntry,
   moveMenuEntry,
+  moveMenuEntryToDay,
   swapMenuEntries,
   setMenuEntryScale,
   addSlot,
@@ -185,7 +216,7 @@ const selectEntriesWithRecipe = createSelector(
 
 export const selectUnplannedEntries = createSelector(
   [selectEntriesWithRecipe],
-  (entries) => entries.filter((entry) => entry.slotId === null)
+  (entries) => entries.filter((entry) => entry.slotId === null && entry.day == null)
 );
 
 export const selectMenuWeek = createSelector(
@@ -194,12 +225,11 @@ export const selectMenuWeek = createSelector(
     WEEK_DAYS.map((label, day) => ({
       day,
       label,
-      slots: slots
-        .filter((slot) => slot.day === day)
-        .map((slot) => ({
-          ...slot,
-          entries: entries.filter((entry) => entry.slotId === slot.id),
-        })),
+      entries: entries.filter((entry) => entry.slotId === null && entry.day === day),
+      slots: orderDaySlots(slots.filter((slot) => slot.day === day)).map((slot) => ({
+        ...slot,
+        entries: entries.filter((entry) => entry.slotId === slot.id),
+      })),
     }))
 );
 

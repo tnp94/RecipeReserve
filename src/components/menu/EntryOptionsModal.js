@@ -13,13 +13,14 @@ const ActionRow = ({ label, onPress, danger }) => (
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
-const EntryOptionsModal = ({ visible, entry, onClose, onSetScale, onMove, onSwap, onView, onRemove }) => {
+const EntryOptionsModal = ({ visible, entry, location, onClose, onSetScale, onMove, onSwap, onView, onRemove }) => {
   if (!entry) return null;
   const { recipe, scale } = entry;
   const label = recipe.yield > 0 ? `Serves ${round1(recipe.yield * scale)}` : `Scale ×${scale}`;
   const step = (delta) => onSetScale(Math.min(20, Math.max(0.5, scale + delta)));
   return (
     <AppModal visible={visible} onClose={onClose} title={recipe.name}>
+      {location ? <Text style={styles.location}>{location}</Text> : null}
       <Text style={styles.label}>{label}</Text>
       <View style={styles.scaleRow}>
         <Chip label={"−"} onPress={() => step(-0.5)} disabled={scale <= 0.5} style={styles.stepper} />
@@ -38,6 +39,7 @@ const EntryOptionsModal = ({ visible, entry, onClose, onSetScale, onMove, onSwap
 
 const styles = StyleSheet.create({
   label: { fontSize: 16, color: colors.text, marginBottom: spacing.sm },
+  location: { fontSize: 14, color: colors.muted, marginBottom: spacing.xs },
   scaleRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm, marginBottom: spacing.md },
   stepper: { minWidth: 40 },
   action: { minHeight: 48, justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.border },

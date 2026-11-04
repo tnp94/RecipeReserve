@@ -8,6 +8,7 @@ import {
   clearMenu,
   clearMenuEntries,
   moveMenuEntry,
+  moveMenuEntryToDay,
   moveSlot,
   removeMenuEntry,
   removeSlot,
@@ -89,7 +90,10 @@ const MenuScreen = ({ navigation }) => {
   const entryById = useMemo(() => {
     const map = {};
     unplanned.forEach((e) => (map[e.id] = e));
-    week.forEach((d) => d.slots.forEach((s) => s.entries.forEach((e) => (map[e.id] = e))));
+    week.forEach((d) => {
+      d.entries.forEach((e) => (map[e.id] = e));
+      d.slots.forEach((s) => s.entries.forEach((e) => (map[e.id] = e)));
+    });
     return map;
   }, [unplanned, week]);
   const activeEntry = activeModal?.entryId ? entryById[activeModal.entryId] : null;
@@ -161,7 +165,7 @@ const MenuScreen = ({ navigation }) => {
       onSubmit: (name) => dispatch(renameSlot({ slotId: slot.id, name })),
     });
 
-  const onSlotRemove = (slot) => {
+  const onSlotRemove = (slot, dayLabel) => {
     const n = slot.entries.length;
     if (n === 0) {
       dispatch(removeSlot({ slotId: slot.id, removeEntries: false }));
@@ -169,16 +173,17 @@ const MenuScreen = ({ navigation }) => {
     }
     dialog.alert(`Remove ${slot.name}?`, `What should happen to its ${n} recipe${n === 1 ? "" : "s"}?`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Move to Unplanned", onPress: () => dispatch(removeSlot({ slotId: slot.id, removeEntries: false })) },
+      { text: `Keep them on ${dayLabel}`, onPress: () => dispatch(removeSlot({ slotId: slot.id, removeEntries: false })) },
       { text: "Remove them too", style: "destructive", onPress: () => dispatch(removeSlot({ slotId: slot.id, removeEntries: true })) },
     ]);
   };
 
+  const dayLabelOf = (day) => week[day]?.label ?? "";
   const onSlotMenu = (slot) =>
     dialog.alert(slot.name, undefined, [
       { text: "Rename", onPress: () => onSlotRename(slot) },
       { text: "Move to another day…", onPress: () => setActiveModal({ type: "slotDay", slotId: slot.id }) },
-      { text: "Remove", style: "destructive", onPress: () => onSlotRemove(slot) },
+      { text: "Remove", style: "destructive", onPress: () => onSlotRemove(slot, dayLabelOf(slot.day)) },
       { text: "Cancel", style: "cancel" },
     ]);
 
@@ -188,13 +193,26 @@ const MenuScreen = ({ navigation }) => {
 
   const swapGroups = useMemo(() => {
     const groups = [{ key: "unplanned", label: "Unplanned", entries: unplanned }];
-    week.forEach((d) =>
-      d.slots.forEach((s) => groups.push({ key: s.id, label: `${d.label} · ${s.name}`, entries: s.entries }))
-    );
+    week.forEach((d) => {
+      groups.push({ key: `day-${d.day}`, label: d.label, entries: d.entries });
+      d.slots.forEach((s) => groups.push({ key: s.id, label: `${d.label} · ${s.name}`, entries: s.entries }));
+    });
     return groups
       .map((g) => ({ ...g, entries: g.entries.filter((e) => e.id !== activeModal?.entryId) }))
       .filter((g) => g.entries.length > 0);
   }, [unplanned, week, activeModal?.entryId]);
+
+  const entryLocation = useMemo(() => {
+    if (!activeEntry) return null;
+    if (activeEntry.slotId !== null) {
+      for (const d of week) {
+        const slot = d.slots.find((s) => s.id === activeEntry.slotId);
+        if (slot) return `${d.label} · ${slot.name}`;
+      }
+      return null;
+    }
+    return activeEntry.day != null ? week[activeEntry.day].label : "Unplanned";
+  }, [activeEntry, week]);
 
   const renderUnplanned = () => (
     <UnplannedSection entries={unplanned} onEntryPress={onEntryPress} onEntryRemove={onEntryRemove} />
@@ -225,7 +243,7 @@ const MenuScreen = ({ navigation }) => {
 
   const dragHint = (
     <Text style={styles.dragHint}>
-      Tip: hold ≡ and drag a recipe onto a meal to move it, or onto another recipe to swap. Drag a day's ≡ onto another day to swap days.
+      Tip: hold ≡ and drag a recipe onto a day or a meal to move it, or onto another recipe to swap. Drag a day's ≡ onto another day to swap days.
     </Text>
   );
 
@@ -261,6 +279,7 @@ const MenuScreen = ({ navigation }) => {
       <EntryOptionsModal
         visible={activeModal?.type === "entry" && !!activeEntry}
         entry={activeEntry}
+        location={entryLocation}
         onClose={close}
         onSetScale={(scale) => dispatch(setMenuEntryScale({ entryId: activeEntry.id, scale }))}
         onMove={() => setActiveModal({ type: "slotPicker", entryId: activeEntry.id })}
@@ -279,9 +298,14 @@ const MenuScreen = ({ navigation }) => {
         visible={activeModal?.type === "slotPicker" && !!activeEntry}
         week={week}
         currentSlotId={activeEntry ? activeEntry.slotId : null}
+        currentDay={activeEntry ? activeEntry.day ?? null : null}
         onClose={close}
         onSelectSlot={(slotId) => {
           dispatch(moveMenuEntry({ entryId: activeEntry.id, slotId }));
+          close();
+        }}
+        onSelectDay={(day) => {
+          dispatch(moveMenuEntryToDay({ entryId: activeEntry.id, day }));
           close();
         }}
         onAddSlotAndMove={(day, name) => {

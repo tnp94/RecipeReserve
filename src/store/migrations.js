@@ -86,6 +86,16 @@ export const migrations = {
     pantry: rekeyPantry(state.pantry),
     shoppingList: rekeyShoppingList(state.shoppingList),
   }),
+  // v5: menu entries gain `day` (null unless the entry sits on a day without a meal slot).
+  5: (state) => {
+    const entries = state.menu?.entries;
+    if (!entries?.entities) return state;
+    const entities = {};
+    for (const [id, entry] of Object.entries(entries.entities)) {
+      entities[id] = "day" in entry ? entry : { ...entry, day: null };
+    }
+    return { ...state, menu: { ...state.menu, entries: { ...entries, entities } } };
+  },
 };
 
 function rekeyPantry(pantry) {

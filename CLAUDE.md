@@ -65,20 +65,20 @@ gesture-handler. Web entry rows render without `Swipeable`.
 ### State (Redux + redux-persist)
 
 The whole root reducer (`src/store/rootReducer.js`) is persisted to AsyncStorage. Persist
-`version: 4`; migrations live in `src/store/migrations.js` — bump the version and add a
+`version: 5`; migrations live in `src/store/migrations.js` — bump the version and add a
 migration (with a test) whenever a persisted shape changes.
 
 | Slice | Shape |
 |---|---|
 | `recipes` | entity adapter `{ ids, entities, nextId }`, numeric ids |
-| `menu` | `{ slots: {ids, entities}, entries: {ids, entities}, nextId }` — Slot `{ id, day: 0–6 (Mon-first), name }`, MenuEntry `{ id, recipeId, slotId \| null, scale }` |
+| `menu` | `{ slots: {ids, entities}, entries: {ids, entities}, nextId }` — Slot `{ id, day: 0–6 (Mon-first), name }`, MenuEntry `{ id, recipeId, slotId \| null, day \| null, scale }` (`slotId` set → in that slot, `day` null; `slotId` null + `day` 0–6 → on that day with no meal; both null → Unplanned) |
 | `shoppingList` | entity adapter `{ ids, entities, nextId }` — items with `mergeKey, nameKey, name, unit, category, quantityText, checked, isStaple, source: "menu"\|"manual", contributions[]` |
 | `pantry` | `{ staples: { [nameKey]: { nameKey, name } } }` |
 | `settings` | `{ showStapleReminder }` |
 | `finder` | `{ ingredients: [{ id, name, tag: null\|"expiring"\|"required" }], recent: string[], nextId }` |
 
 Key points:
-- Menu entries reference recipes by `recipeId` (no copies). Deleting a recipe or "Reset recipes" removes orphaned entries via `extraReducers`. Entry `slotId: null` = Unplanned. Order within a slot = order of `entries.ids`.
+- Menu entries reference recipes by `recipeId` (no copies). Deleting a recipe or "Reset recipes" removes orphaned entries via `extraReducers`. Placement: `slotId` set = in that meal slot (`day: null`); `slotId: null` + `day` 0–6 = on that day with no meal; both null = Unplanned (never both set). Order = order of `entries.ids`. Breakfast/Lunch/Dinner slots always display in that order within a day (`orderDaySlots` in `src/domain/menuOrder.js`, display-only); other slots keep their position.
 - `generateShoppingList(mode)` thunk (`src/store/thunks.js`, mode `"replace"`/`"merge"`) uses `buildShoppingItems` and returns `{ itemCount, prechecked }` for the staple reminder.
 - Combining: same `normalizeName` + `normalizeUnit` and both numeric (or both blank) → one item with per-recipe `contributions`. Text quantities ("a pinch") never combine. No unit conversion. Merge is idempotent per menu entry.
 - Plurals: `singularizeWord` (`src/domain/ingredientKey.js`) handles -ies/-oes/-ches/-shes/-xes/-sses/-s plus `IRREGULAR` (leaves→leaf, chilies→chili, cookies→cookie…) and `UNCHANGED` (asparagus, hummus…) lists. The finder also uses `wordsMatch` (whole words differing only by a trailing s/es). Changing these rules changes stored keys — add a migration that re-keys pantry and shopping list (see v4).

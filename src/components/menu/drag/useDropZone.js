@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import { useDragApi, useDragState } from "./DragProvider";
 
 // Registers a View as a drop target. `ref` is a callback ref so a re-mounted View
-// re-registers itself. Keys: unplanned, slot:<id>, entry:<id>, day:<n>, dayheader:<n>.
+// re-registers itself. Keys: unplanned, slot:<id>, entry:<id>, day:<n> (card: slot|entry), dayheader:<n>.
 export default function useDropZone({ key, accepts, onDrop }) {
   const api = useDragApi();
   const { hoverKey } = useDragState();

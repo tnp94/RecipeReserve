@@ -110,3 +110,31 @@ describe("migration v4", () => {
     expect(migrations[4]({})).toEqual({ pantry: undefined, shoppingList: undefined });
   });
 });
+
+describe("migration v5", () => {
+  it("adds day: null to entries without one and keeps the rest", () => {
+    const out = migrations[5]({
+      menu: {
+        slots: { ids: ["slot-1"], entities: { "slot-1": { id: "slot-1", day: 0, name: "A" } } },
+        entries: {
+          ids: ["entry-2", "entry-3"],
+          entities: {
+            "entry-2": { id: "entry-2", recipeId: 1, slotId: "slot-1", scale: 2 },
+            "entry-3": { id: "entry-3", recipeId: 2, slotId: null, day: 4, scale: 1 },
+          },
+        },
+        nextId: 4,
+      },
+      other: 1,
+    });
+    expect(out.menu.entries.entities["entry-2"]).toEqual({ id: "entry-2", recipeId: 1, slotId: "slot-1", day: null, scale: 2 });
+    expect(out.menu.entries.entities["entry-3"].day).toBe(4);
+    expect(out.menu.entries.ids).toEqual(["entry-2", "entry-3"]);
+    expect(out.menu.nextId).toBe(4);
+    expect(out.menu.slots.ids).toEqual(["slot-1"]);
+    expect(out.other).toBe(1);
+  });
+  it("tolerates a missing menu", () => {
+    expect(migrations[5]({})).toEqual({});
+  });
+});
