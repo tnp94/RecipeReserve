@@ -1,15 +1,17 @@
-import { StyleSheet, View, Text, Image, FlatList, Alert, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { deleteRecipe, selectRecipeById } from "../store/recipesSlice";
 import { addRecipeToMenu } from "../store/menuSlice";
 import { useRef, useState } from "react";
+import { useDialog } from "./dialog/DialogProvider";
 
 const RecipeCard = ({ recipeId, index }) => {
   const navigation = useNavigation()
   const recipe = useSelector((state) => selectRecipeById(state, recipeId))
   const dispatch = useDispatch()
+  const dialog = useDialog()
   const ref = useRef(null)
   const [swipedLeft, setSwipedLeft] = useState(false)
   const [swipedRight, setSwipedRight] = useState(false)
@@ -19,7 +21,7 @@ const RecipeCard = ({ recipeId, index }) => {
   }
   
   function recipeLongPress(index) {
-    Alert.alert('Recipe actions', 'My Alert Msg', [
+    dialog.alert('Recipe actions', undefined, [
     {
       text: 'Cancel',
       onPress: () => console.log('Cancel Pressed'),

@@ -3,12 +3,13 @@ import WelcomeScreen from "./src/screens/WelcomeScreen"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import RecipeListNavigator from "./src/screens/RecipeListNavigator";
 import ShoppingListScreen from "./src/screens/ShoppingListScreen";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import { persistor, store } from "./src/store/store";
 import { PersistGate } from "redux-persist/integration/react";
 import MenuScreen from "./src/screens/MenuScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { DialogProvider } from "./src/components/dialog/DialogProvider";
 
 const Tab = createBottomTabNavigator()
 export default function App() {
@@ -16,7 +17,9 @@ export default function App() {
     <Provider store={store}>
       <PersistGate persistor={persistor}>
         <GestureHandlerRootView style={{flex: 1}}>
+          <SafeAreaProvider>
           <SafeAreaView style={{flex: 1}}>
+            <DialogProvider>
             <NavigationContainer>
               <Tab.Navigator>
                 <Tab.Screen name="Welcome" component={WelcomeScreen} />
@@ -25,7 +28,9 @@ export default function App() {
                 <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
               </Tab.Navigator>
             </NavigationContainer>
+            </DialogProvider>
           </SafeAreaView>
+          </SafeAreaProvider>
         </GestureHandlerRootView>
       </PersistGate>
     </Provider>

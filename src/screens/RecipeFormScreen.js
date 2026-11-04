@@ -1,9 +1,10 @@
-import { View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Alert, Platform } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useEffect, useState } from "react";
 import { ingredientTemplate } from "../Models/Ingredient";
 import { useDispatch, useSelector } from "react-redux";
 import { addRecipe, editRecipe, selectRecipeById } from "../store/recipesSlice";
 import Separator from "../components/Separator";
+import { useDialog } from "../components/dialog/DialogProvider";
 
 const emptyRecipe = {
   id: 0,
@@ -26,6 +27,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
 
   const existingRecipe = useSelector((state) => isEditing ? selectRecipeById(state, recipeId) : null);
   const dispatch = useDispatch();
+  const dialog = useDialog();
 
   const [data, setData] = useState(isEditing ? { ...emptyRecipe, ...existingRecipe } : emptyRecipe);
 
@@ -39,7 +41,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
 
   const onSaveButtonPress = (recipe) => {
     if (isEditing) {
-      Alert.alert("Save edits", "Do you want to create this as a new recipe?", [
+      dialog.alert("Save edits", "Do you want to create this as a new recipe?", [
         {
           text: "Save edits",
           onPress: () => {
@@ -50,16 +52,16 @@ const RecipeFormScreen = ({ navigation, route }) => {
         {
           text: "Create as new recipe",
           onPress: () => {
-            Alert.prompt(
-              "New Recipe Name",
-              "Please enter the new recipe name",
-              (text) => {
+            dialog.prompt({
+              title: "New Recipe Name",
+              message: "Please enter the new recipe name",
+              defaultValue: recipe.name,
+              confirmText: "Create",
+              onSubmit: (text) => {
                 dispatch(addRecipe({ ...recipe, name: text }));
                 navigation.popToTop();
               },
-              undefined,
-              recipe.name
-            );
+            });
           },
         },
         { text: "Cancel", style: "cancel" },
@@ -98,7 +100,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
             {isEditing ? (
               <Text
                 style={{ backgroundColor: "#fff", padding: 5 }}
-                onPress={() => Alert.alert("To alter the name, save it as a new recipe")}
+                onPress={() => dialog.alert("To alter the name, save it as a new recipe")}
               >
                 {data.name}
               </Text>

@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button, Alert } from "react-native";
+import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button } from "react-native";
 import Separator from "../components/Separator";
 import { useDispatch, useSelector } from "react-redux";
 import { clearShoppingList, generateShoppingList } from "../store/shoppingListSlice";
 import { Swipeable } from "react-native-gesture-handler";
 import { deleteRecipeFromMenu } from "../store/menuSlice";
+import { useDialog } from "../components/dialog/DialogProvider";
 
 const MenuScreen = ({ navigation }) => {
   const menu = useSelector((state) =>  state.menu.menu)
   const dispatch = useDispatch()
+  const dialog = useDialog()
   useEffect(() => {
       navigation.setOptions(
         {
@@ -26,7 +28,7 @@ const MenuScreen = ({ navigation }) => {
     }, [ menu ]);
     
   const onGenerateShoppingListPress = (menu) => {
-    Alert.alert('Generate Shopping List?', 'This will clear the current shopping list', [
+    dialog.alert('Generate Shopping List?', 'This will clear the current shopping list', [
       {text: 'Generate', onPress: () => {
         dispatch(clearShoppingList());
         dispatch(generateShoppingList(menu))
