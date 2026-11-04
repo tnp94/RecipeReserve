@@ -10,6 +10,7 @@ import {
   moveMenuEntry,
   moveMenuEntryToDay,
   moveSlot,
+  reorderSlot,
   removeMenuEntry,
   removeSlot,
   renameSlot,
@@ -20,6 +21,7 @@ import {
   swapDays,
   swapMenuEntries,
 } from "../store/menuSlice";
+import { moveSlotTarget } from "../domain/menuOrder";
 import { generateShoppingList } from "../store/thunks";
 import { selectShoppingItemCount } from "../store/shoppingListSlice";
 import { selectShowStapleReminder, setShowStapleReminder } from "../store/settingsSlice";
@@ -76,6 +78,7 @@ const ColumnScroll = ({ children, style, contentContainerStyle }) => {
 const MenuScreen = ({ navigation }) => {
   const unplanned = useSelector(selectUnplannedEntries);
   const week = useSelector(selectMenuWeek);
+  const slotsState = useSelector((state) => state.menu.slots);
   const entryCount = useSelector(selectMenuEntryCount);
   const itemCount = useSelector(selectShoppingItemCount);
   const showReminder = useSelector(selectShowStapleReminder);
@@ -179,13 +182,21 @@ const MenuScreen = ({ navigation }) => {
   };
 
   const dayLabelOf = (day) => week[day]?.label ?? "";
-  const onSlotMenu = (slot) =>
-    dialog.alert(slot.name, undefined, [
+  const onSlotMenu = (slot) => {
+    const inIdOrder = slotsState.ids.map((id) => slotsState.entities[id]).filter((s) => s.day === slot.day);
+    const nudge = (direction, text) => {
+      const t = moveSlotTarget(inIdOrder, slot.id, direction);
+      return t ? [{ text, onPress: () => dispatch(reorderSlot({ slotId: slot.id, ...t })) }] : [];
+    };
+    return dialog.alert(slot.name, undefined, [
       { text: "Rename", onPress: () => onSlotRename(slot) },
+      ...nudge("up", "Move up"),
+      ...nudge("down", "Move down"),
       { text: "Move to another day…", onPress: () => setActiveModal({ type: "slotDay", slotId: slot.id }) },
       { text: "Remove", style: "destructive", onPress: () => onSlotRemove(slot, dayLabelOf(slot.day)) },
       { text: "Cancel", style: "cancel" },
     ]);
+  };
 
   const onEntryPress = (entry) => setActiveModal({ type: "entry", entryId: entry.id });
   const onEntryRemove = (entry) => dispatch(removeMenuEntry(entry.id));

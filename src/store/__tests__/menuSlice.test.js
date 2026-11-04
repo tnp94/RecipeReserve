@@ -2,7 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import rootReducer from "../rootReducer";
 import {
   addRecipeToMenu, removeMenuEntry, moveMenuEntry, swapMenuEntries, setMenuEntryScale,
-  moveMenuEntryToDay, addSlot, addSlotAndMoveEntry, renameSlot, removeSlot, moveSlot, swapDays,
+  moveMenuEntryToDay, addSlot, addSlotAndMoveEntry, renameSlot, removeSlot, moveSlot, reorderSlot, swapDays,
   clearMenuEntries, clearMenu, selectMenuEntries, selectMenuWeek, selectUnplannedEntries,
   selectMenuEntryCount, WEEK_DAYS, SUGGESTED_SLOT_NAMES,
 } from "../menuSlice";
@@ -117,6 +117,34 @@ describe("menuSlice", () => {
     const s = store.getState();
     expect(s.menu.slots.ids).toEqual(["slot-2", "slot-1"]);
     expect(s.menu.slots.entities["slot-1"].day).toBe(4);
+  });
+
+  it("reorderSlot inserts before/after the target and adopts its day", () => {
+    const store = make();
+    ["A", "B", "C"].forEach((name) => store.dispatch(addSlot({ day: 0, name })));
+    store.dispatch(addSlot({ day: 3, name: "D" })); // slot-4
+    store.dispatch(addRecipeToMenu({ recipeId: 2, slotId: "slot-3" }));
+    store.dispatch(reorderSlot({ slotId: "slot-3", targetSlotId: "slot-1", position: "before" }));
+    expect(store.getState().menu.slots.ids).toEqual(["slot-3", "slot-1", "slot-2", "slot-4"]);
+    store.dispatch(reorderSlot({ slotId: "slot-3", targetSlotId: "slot-2", position: "after" }));
+    expect(store.getState().menu.slots.ids).toEqual(["slot-1", "slot-2", "slot-3", "slot-4"]);
+    store.dispatch(reorderSlot({ slotId: "slot-1", targetSlotId: "slot-4", position: "before" }));
+    const s = store.getState();
+    expect(s.menu.slots.ids).toEqual(["slot-2", "slot-3", "slot-1", "slot-4"]);
+    expect(s.menu.slots.entities["slot-1"].day).toBe(3);
+    expect(s.menu.entries.entities["entry-5"].slotId).toBe("slot-3");
+    expect(selectMenuWeek(s)[3].slots.map((x) => x.name)).toEqual(["A", "D"]);
+  });
+
+  it("reorderSlot ignores missing or identical slots", () => {
+    const store = make();
+    store.dispatch(addSlot({ day: 0, name: "A" }));
+    store.dispatch(addSlot({ day: 1, name: "B" }));
+    const before = store.getState().menu;
+    store.dispatch(reorderSlot({ slotId: "slot-1", targetSlotId: "slot-1", position: "after" }));
+    store.dispatch(reorderSlot({ slotId: "slot-1", targetSlotId: "nope", position: "after" }));
+    store.dispatch(reorderSlot({ slotId: "nope", targetSlotId: "slot-2", position: "after" }));
+    expect(store.getState().menu).toEqual(before);
   });
 
   it("swapDays swaps all slots", () => {
@@ -301,5 +329,15 @@ describe("menuSlice", () => {
       expect(selectMenuWeek(store.getState())).toBe(a);
       expect(selectUnplannedEntries(store.getState())).toBe(u);
     });
+  });
+});
+
+describe("reorderSlot keeps ids in displayed order", () => {
+  it("dropping Dinner above Breakfast leaves Snack, Breakfast, Dinner in ids", () => {
+    const store = configureStore({ reducer: rootReducer });
+    ["Breakfast", "Dinner", "Snack"].forEach((name) => store.dispatch(addSlot({ day: 0, name })));
+    store.dispatch(reorderSlot({ slotId: "slot-3", targetSlotId: "slot-1", position: "before" })); // Snack first
+    store.dispatch(reorderSlot({ slotId: "slot-2", targetSlotId: "slot-1", position: "before" })); // Dinner above Breakfast
+    expect(store.getState().menu.slots.ids).toEqual(["slot-3", "slot-1", "slot-2"]);
   });
 });

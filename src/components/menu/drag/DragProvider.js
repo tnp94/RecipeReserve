@@ -8,7 +8,7 @@ import { colors, radius } from "../../../theme";
 // coordinates (viewport coordinates on web); the preview is placed relative to the
 // provider's own container by subtracting its measured window offset.
 const ApiContext = createContext(null);
-const StateContext = createContext({ active: null, hoverKey: null });
+const StateContext = createContext({ active: null, hoverKey: null, hoverHalf: null });
 
 export const useDragApi = () => useContext(ApiContext);
 export const useDragState = () => useContext(StateContext);
@@ -57,6 +57,7 @@ const PREVIEW_H = 40;
 const DragProvider = ({ children, style }) => {
   const [active, setActive] = useState(null);
   const [hoverKey, setHoverKey] = useState(null);
+  const [hoverHalf, setHoverHalf] = useState(null);
   const activeRef = useRef(null);
   const hoverRef = useRef(null);
   const zones = useRef(new Map());
@@ -90,11 +91,24 @@ const DragProvider = ({ children, style }) => {
     }
   }, []);
 
-  const setHover = (key) => {
+  const halfRef = useRef(null);
+  const setHover = (key, y) => {
     if (hoverRef.current !== key) {
       hoverRef.current = key;
       setHoverKey(key);
     }
+    const half = key && y !== undefined ? halfOf(key, y) : null;
+    if (halfRef.current !== half) {
+      halfRef.current = half;
+      setHoverHalf(half);
+    }
+  };
+
+  // "before" when the pointer is in the top half of the zone's cached rect, else "after".
+  const halfOf = (key, y) => {
+    const r = rects.current.get(key);
+    if (!r) return null;
+    return y < r.y + r.h / 2 ? "before" : "after";
   };
 
   const hitTest = (x, y) => {
@@ -162,7 +176,7 @@ const DragProvider = ({ children, style }) => {
       if (s.horizontal) r.x -= applied;
       else r.y -= applied;
     });
-    setHover(hitTest(x, y));
+    setHover(hitTest(x, y), y);
     if (Date.now() - lastMeasure.current > 100) measureZones();
   };
 
@@ -195,7 +209,9 @@ const DragProvider = ({ children, style }) => {
         activeRef.current = payload;
         lastPos.current = { x, y };
         hoverRef.current = null;
+        halfRef.current = null;
         setHoverKey(null);
+        setHoverHalf(null);
         setActive(payload);
         rects.current = new Map();
         measureContainer();
@@ -215,7 +231,7 @@ const DragProvider = ({ children, style }) => {
         if (!activeRef.current) return;
         place(x, y);
         autoScroll(x, y);
-        setHover(hitTest(x, y));
+        setHover(hitTest(x, y), y);
       },
       end() {
         const payload = activeRef.current;
@@ -225,26 +241,31 @@ const DragProvider = ({ children, style }) => {
         const { x, y } = lastPos.current;
         const dropKey = hitTest(x, y);
         const zone = dropKey ? zones.current.get(dropKey) : null;
+        const rect = dropKey ? rects.current.get(dropKey) : null;
         activeRef.current = null;
         hoverRef.current = null;
+        halfRef.current = null;
         setActive(null);
         setHoverKey(null);
-        if (zone) zone.onDrop(payload);
+        setHoverHalf(null);
+        if (zone) zone.onDrop(payload, { x, y, rect });
       },
       cancel() {
         stopTimer();
         if (!activeRef.current) return;
         activeRef.current = null;
         hoverRef.current = null;
+        halfRef.current = null;
         setActive(null);
         setHoverKey(null);
+        setHoverHalf(null);
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [measureContainer, measureZones]
   );
 
-  const state = useMemo(() => ({ active, hoverKey }), [active, hoverKey]);
+  const state = useMemo(() => ({ active, hoverKey, hoverHalf }), [active, hoverKey, hoverHalf]);
 
   return (
     <ApiContext.Provider value={api}>

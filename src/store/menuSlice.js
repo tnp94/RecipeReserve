@@ -144,6 +144,28 @@ const menuSlice = createSlice({
       state.slots.ids = state.slots.ids.filter((id) => id !== slotId);
       state.slots.ids.push(slotId);
     },
+    reorderSlot: (state, action) => {
+      const { slotId, targetSlotId, position } = action.payload;
+      const slot = state.slots.entities[slotId];
+      const target = state.slots.entities[targetSlotId];
+      if (!slot || !target || slotId === targetSlotId) return;
+      slot.day = target.day;
+      const ids = state.slots.ids.filter((id) => id !== slotId);
+      const at = ids.indexOf(targetSlotId);
+      ids.splice(position === "before" ? at : at + 1, 0, slotId);
+      // Keep the day's ids in displayed order so later moves are relative to what the
+      // user sees (B/L/D resolve to the nearest valid order).
+      const positions = [];
+      const daySlots = [];
+      ids.forEach((id, i) => {
+        if (state.slots.entities[id].day === target.day) {
+          positions.push(i);
+          daySlots.push(state.slots.entities[id]);
+        }
+      });
+      orderDaySlots(daySlots).forEach((s, k) => (ids[positions[k]] = s.id));
+      state.slots.ids = ids;
+    },
     swapDays: (state, action) => {
       const { dayA, dayB } = action.payload;
       if (!isValidDay(dayA) || !isValidDay(dayB) || dayA === dayB) return;
@@ -194,6 +216,7 @@ export const {
   renameSlot,
   removeSlot,
   moveSlot,
+  reorderSlot,
   swapDays,
   clearMenuEntries,
   clearMenu,

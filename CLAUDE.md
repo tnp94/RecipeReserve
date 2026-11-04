@@ -59,7 +59,7 @@ Built on `react-native-gesture-handler` (no reanimated: gestures use `.runOnJS(t
 300 ms dwell, speed scales with depth), `DragHandle` (≡ grip with a Pan gesture), and
 `useDropZone` (callback ref, so re-mounted Views re-register). Drags start only from ≡ handles
 so tap and native swipe-to-remove keep working. Entry → entry swaps, entry → slot or Unplanned
-moves, slot → day moves the slot, day → day swaps. Menu scroll views come from
+moves, slot → day moves the slot, day → day swaps. Slot → slot reorders (`reorderSlot`; `onDrop(payload, {x,y,rect})` + `hoverHalf` pick before/after, shown as an insertion line). Menu scroll views come from
 gesture-handler. Web entry rows render without `Swipeable`.
 
 ### State (Redux + redux-persist)
@@ -82,6 +82,7 @@ Key points:
 - `generateShoppingList(mode)` thunk (`src/store/thunks.js`, mode `"replace"`/`"merge"`) uses `buildShoppingItems` and returns `{ itemCount, prechecked }` for the staple reminder.
 - Combining: same `normalizeName` + `normalizeUnit` and both numeric (or both blank) → one item with per-recipe `contributions`. Text quantities ("a pinch") never combine. No unit conversion. Merge is idempotent per menu entry.
 - Plurals: `singularizeWord` (`src/domain/ingredientKey.js`) handles -ies/-oes/-ches/-shes/-xes/-sses/-s plus `IRREGULAR` (leaves→leaf, chilies→chili, cookies→cookie…) and `UNCHANGED` (asparagus, hummus…) lists. The finder also uses `wordsMatch` (whole words differing only by a trailing s/es). Changing these rules changes stored keys — add a migration that re-keys pantry and shopping list (see v4).
+- Slot order: `reorderSlot` edits `slots.ids`; display is always `orderDaySlots` (Breakfast/Lunch/Dinner keep relative order). "Move up/down" in the slot menu uses `moveSlotTarget` (`src/domain/menuOrder.js`).
 - `toggleStaple(name)` is a thunk that dispatches `addStaple`/`removeStaple`; the shopping list mirrors `isStaple` from those.
 - Ids for slots/entries/items/finder ingredients are strings (`slot-3`, `entry-7`, `item-12`, `fi-2`).
 
