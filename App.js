@@ -9,6 +9,7 @@ import { persistor, store } from "./src/store/store";
 import { PersistGate } from "redux-persist/integration/react";
 import MenuScreen from "./src/screens/MenuScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import SettingsNavigator from "./src/screens/SettingsNavigator";
 import { DialogProvider } from "./src/components/dialog/DialogProvider";
 
 const Tab = createBottomTabNavigator()
@@ -22,10 +23,11 @@ export default function App() {
             <DialogProvider>
             <NavigationContainer>
               <Tab.Navigator>
-                <Tab.Screen name="Welcome" component={WelcomeScreen} />
-                <Tab.Screen name="RecipeList" component={RecipeListNavigator} />
-                <Tab.Screen name="Menu" component={MenuScreen} />
-                <Tab.Screen name="ShoppingList" component={ShoppingListScreen} />
+                <Tab.Screen name="Welcome" component={WelcomeScreen} options={{ title: "Home" }} />
+                <Tab.Screen name="RecipeList" component={RecipeListNavigator} options={{ title: "Recipes", headerShown: false }} />
+                <Tab.Screen name="Menu" component={MenuScreen} options={{ title: "Menu" }} />
+                <Tab.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: "Shopping List" }} />
+                <Tab.Screen name="Settings" component={SettingsNavigator} options={{ title: "Settings", headerShown: false }} />
               </Tab.Navigator>
             </NavigationContainer>
             </DialogProvider>

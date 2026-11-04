@@ -1,11 +1,6 @@
-import { StyleSheet, View, Text, Image, Button } from "react-native";
-import { useDispatch } from "react-redux";
-import { loadRecipeList } from "../store/recipesSlice";
-import { clearMenu } from "../store/menuSlice";
-import { clearShoppingList } from "../store/shoppingListSlice";
+import { View, Text, Image, Button } from "react-native";
 
 const WelcomeScreen = ({ navigation }) => {
-    const dispatch = useDispatch()
     return (
         <View style={{ flex: 1, alignItems: "center" }}>
             <Image style={{
@@ -23,27 +18,9 @@ const WelcomeScreen = ({ navigation }) => {
             </Text>
 
             <Button
-                title="letsgo"
+                title="Let's go!"
                 onPress={() => navigation.navigate("RecipeList") }
-            >
-                Let's go!
-            </Button>
-            <Button
-                title="Reset RecipeList data"
-                onPress={() => dispatch(loadRecipeList()) }
-            >
-            </Button>
-            <Button
-                title="Reset menu data"
-                onPress={() => dispatch(clearMenu()) }
-            >
-            </Button>
-            <Button
-                title="Reset shopping list"
-                onPress={() => dispatch(clearShoppingList()) }
-            >
-            </Button>
-
+            />
         </View>
     )
 }
