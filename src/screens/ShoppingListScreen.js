@@ -2,18 +2,18 @@ import { useMemo } from "react";
 import { View, Text, SectionList, TouchableOpacity, Pressable } from "react-native";
 import Separator from "../components/Separator";
 import { useDispatch, useSelector } from "react-redux";
-import { checkOffShoppingItem, deleteItem } from "../store/shoppingListSlice";
+import { toggleItemChecked, deleteItem, selectShoppingItems } from "../store/shoppingListSlice";
 import { INGREDIENTCATEGORIES } from "../Models/Ingredient";
 import { Swipeable } from "react-native-gesture-handler";
 
 const CATEGORIES = Object.values(INGREDIENTCATEGORIES);
 
 const ShoppingListScreen = ({ navigation }) => {
-  const shoppingList = useSelector((state) => state.shoppingList.shoppingList);
+  const shoppingList = useSelector(selectShoppingItems);
   const dispatch = useDispatch();
 
   const sections = useMemo(() => {
-    const items = Object.values(shoppingList);
+    const items = shoppingList;
     return CATEGORIES
       .map((category) => {
         const data = items
@@ -43,13 +43,13 @@ const ShoppingListScreen = ({ navigation }) => {
       <Swipeable renderRightActions={renderRightActions} overshootFriction={8}>
         <View style={{ flexDirection: "row", padding: 5 }}>
           <View style={{ flex: 4, alignItems: "center" }}>
-            <Text>{item.name?.toString()} {item.note ? `(${item.note})` : ""}</Text>
+            <Text>{item.name?.toString()}</Text>
           </View>
           <View style={{ flex: 4, alignItems: "center" }}>
-            <Text>{item.quantityUnit?.toString()} {item.unit}</Text>
+            <Text>{item.quantityText} {item.unit}</Text>
           </View>
           <Pressable
-            onPress={() => dispatch(checkOffShoppingItem(item.id))}
+            onPress={() => dispatch(toggleItemChecked(item.id))}
             style={{
               width: 22, height: 22, borderWidth: 2, borderColor: "#555",
               borderRadius: 3, alignItems: "center", justifyContent: "center"

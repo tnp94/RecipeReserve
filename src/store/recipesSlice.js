@@ -33,6 +33,10 @@ const recipesSlice = createSlice({
     deleteRecipe: (state, action) => {
       recipesAdapter.removeOne(state, action.payload);
     },
+    toggleFavorite: (state, action) => {
+      const recipe = state.entities[action.payload];
+      if (recipe) recipe.favorite = !recipe.favorite;
+    },
     editRecipe: (state, action) => {
       const { id, changes } = action.payload;
       recipesAdapter.updateOne(state, { id, changes });
@@ -40,7 +44,17 @@ const recipesSlice = createSlice({
   },
 });
 
-export const { addRecipe, deleteRecipe, loadRecipeList, editRecipe } = recipesSlice.actions;
+export const { addRecipe, deleteRecipe, loadRecipeList, editRecipe, toggleFavorite } =
+  recipesSlice.actions;
+
+export function isRecipeNameTaken(state, name, excludeId) {
+  const wanted = String(name ?? "").trim().toLowerCase();
+  return state.recipes.ids.some(
+    (id) =>
+      id !== excludeId &&
+      String(state.recipes.entities[id].name ?? "").trim().toLowerCase() === wanted
+  );
+}
 
 export const { selectAll: selectAllRecipes, selectById: selectRecipeById } =
   recipesAdapter.getSelectors((state) => state.recipes);

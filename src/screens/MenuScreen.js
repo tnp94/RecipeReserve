@@ -1,107 +1,77 @@
-import { useEffect, useState } from "react";
-import { StyleSheet, View, Text, Image, FlatList, TouchableOpacity, Button } from "react-native";
+import { useEffect } from "react";
+import { View, Text, FlatList, TouchableOpacity, Button } from "react-native";
 import Separator from "../components/Separator";
 import { useDispatch, useSelector } from "react-redux";
-import { clearShoppingList, generateShoppingList } from "../store/shoppingListSlice";
 import { Swipeable } from "react-native-gesture-handler";
-import { deleteRecipeFromMenu } from "../store/menuSlice";
+import { removeMenuEntry, selectMenuEntryCount, selectUnplannedEntries, selectMenuWeek } from "../store/menuSlice";
+import { generateShoppingList } from "../store/thunks";
+import { selectShoppingItemCount } from "../store/shoppingListSlice";
 import { useDialog } from "../components/dialog/DialogProvider";
 
 const MenuScreen = ({ navigation }) => {
-  const menu = useSelector((state) =>  state.menu.menu)
+  const unplanned = useSelector(selectUnplannedEntries)
+  const week = useSelector(selectMenuWeek)
+  const entryCount = useSelector(selectMenuEntryCount)
+  const itemCount = useSelector(selectShoppingItemCount)
   const dispatch = useDispatch()
   const dialog = useDialog()
-  useEffect(() => {
-      navigation.setOptions(
-        {
-          headerRight: () => (
-            <Button
-              onPress={() => {
-                console.log('This is a button!')
-                onGenerateShoppingListPress(menu)
-              }}
-              title="Generate List"
-            />
-          ),
-        }
-      )
-    }, [ menu ]);
-    
-  const onGenerateShoppingListPress = (menu) => {
-    dialog.alert('Generate Shopping List?', 'This will clear the current shopping list', [
-      {text: 'Generate', onPress: () => {
-        dispatch(clearShoppingList());
-        dispatch(generateShoppingList(menu))
-      }},
-      {
-        text: 'Cancel',
-        onPress: () => console.log('Cancel Pressed'),
-        style: 'cancel',
-      },
-    ]);
+
+  // Minimal flat list: unplanned entries followed by every planned entry.
+  const entries = [
+    ...unplanned,
+    ...week.flatMap((day) => day.slots.flatMap((slot) => slot.entries)),
+  ]
+
+  const generate = (mode) => {
+    dispatch(generateShoppingList(mode))
+    navigation.navigate("ShoppingList")
   }
 
-  const menuTableItem = ({ item, index }) => {
-    const recipeID = item[0]
-    const recipe = item[1]
-
-    const deleteMenuItem = () => {
-      dispatch(deleteRecipeFromMenu(recipeID))
-    }
-    const renderRightActions = () => {
-      return (
-        <View
-        style= {{
-        }}
-        >
-          <TouchableOpacity
-          style={{
-            padding: 5,
-            borderRadius: 7,
-            flex: 1,
-            justifyContent: "center",
-          }}
-          onPress={() => deleteMenuItem(recipeID)}
-          >
-            <Text
-              style={{
-                color: "red"
-              }}
-            >Delete</Text>
-          </TouchableOpacity>
-          {/* <Button
-            title="Delete"
-            color={"red"}
-            style= {{
-              flex: 1,
-              margin: 0,
-              padding: 0,
-            }}
-            onPress={() => deleteMenuItem(index)}
-          >
-          </Button> */}
-        </View>
+  const onGenerateShoppingListPress = () => {
+    if (entryCount === 0) {
+      dialog.alert("Your menu is empty", "Add recipes from My Recipes first.")
+    } else if (itemCount === 0) {
+      generate("replace")
+    } else {
+      dialog.alert(
+        "You already have a shopping list",
+        "Replace it with a new list from this menu, or merge this menu's ingredients into it?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Merge", onPress: () => generate("merge") },
+          { text: "Replace", style: "destructive", onPress: () => generate("replace") },
+        ]
       )
     }
+  }
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Button onPress={onGenerateShoppingListPress} title="Generate List" />
+      ),
+    })
+  }, [entryCount, itemCount]);
+
+  const menuTableItem = ({ item, index }) => {
+    const renderRightActions = () => (
+      <View>
+        <TouchableOpacity
+          style={{ padding: 5, borderRadius: 7, flex: 1, justifyContent: "center" }}
+          onPress={() => dispatch(removeMenuEntry(item.id))}
+        >
+          <Text style={{ color: "red" }}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    )
     return (
-      <Swipeable
-        renderRightActions={renderRightActions}
-        overshootFriction={8}
-      >
-        <View style={{
-          flexDirection: "row",
-          padding: 5,
-          borderWidth: 1
-        }}>
-          <View style={{flex: 4, alignItems: "center"}}>
-            <Text>{recipe.name.toString()}</Text>
+      <Swipeable renderRightActions={renderRightActions} overshootFriction={8}>
+        <View style={{ flexDirection: "row", padding: 5, borderWidth: 1 }}>
+          <View style={{ flex: 4, alignItems: "center" }}>
+            <Text>{item.recipe.name.toString()}</Text>
           </View>
-          <View style={{flex: 4, alignItems: "center"}}>
+          <View style={{ flex: 4, alignItems: "center" }}>
             <Text>{index}</Text>
-          </View>
-          <View 
-          style={{
-          }}>
           </View>
         </View>
       </Swipeable>
@@ -109,20 +79,13 @@ const MenuScreen = ({ navigation }) => {
   }
 
   return (
-    <View
-    style={{
-      flex: 1
-    }}
-    >
-        <FlatList 
-        data={Object.entries(menu)} 
-        renderItem={menuTableItem} 
-        keyExtractor={(item, index) => 
-        {
-          return item[0]
-        }}
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={entries}
+        renderItem={menuTableItem}
+        keyExtractor={(item) => item.id}
         ItemSeparatorComponent={Separator}
-        />
+      />
     </View>
   )
 }

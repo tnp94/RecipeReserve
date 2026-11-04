@@ -27,7 +27,7 @@ const RecipeCard = ({ recipeId, index }) => {
       onPress: () => console.log('Cancel Pressed'),
       style: 'cancel',
     },
-    {text: 'Add to menu', onPress: () => dispatch(addRecipeToMenu(recipe))},
+    {text: 'Add to menu', onPress: () => dispatch(addRecipeToMenu({ recipeId }))},
     {text: 'Delete', onPress: () => dispatch(deleteRecipe(recipeId))},
     ]);
   }
@@ -59,7 +59,7 @@ const RecipeCard = ({ recipeId, index }) => {
         style={styles.swipableLeftButton}
         onPress={() => {
           closeRef()
-          dispatch(addRecipeToMenu(recipe))
+          dispatch(addRecipeToMenu({ recipeId }))
         }}
         >
           <Text
