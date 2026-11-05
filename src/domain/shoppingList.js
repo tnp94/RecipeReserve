@@ -24,6 +24,26 @@ export function computeQuantityText(contributions) {
     .join(" + ");
 }
 
+// Merge key shared by everything that should combine into one line: same normalized
+// name + unit and a numeric (or blank) quantity. Text quantities ("a pinch") have no
+// shared key (null) and never combine.
+export function mergeKeyFor(nameKey, unitKey, quantity) {
+  if (quantity.kind === "number") return `${nameKey}|${unitKey}|n`;
+  if (quantity.kind === "blank") return `${nameKey}|${unitKey}|b`;
+  return null;
+}
+
+// `built` without contributions from the given menu entries (portions the user removed
+// from the list), or null when nothing is left.
+export function withoutEntries(built, removedEntryIds) {
+  if (!removedEntryIds || removedEntryIds.length === 0) return built;
+  const removed = new Set(removedEntryIds);
+  const contributions = built.contributions.filter((c) => !removed.has(c.menuEntryId));
+  if (contributions.length === 0) return null;
+  if (contributions.length === built.contributions.length) return built;
+  return { ...built, contributions, quantityText: computeQuantityText(contributions) };
+}
+
 export function buildShoppingItems({ entries, recipesById, stapleKeys }) {
   const groups = new Map();
   for (const entry of entries ?? []) {
@@ -37,10 +57,7 @@ export function buildShoppingItems({ entries, recipesById, stapleKeys }) {
       const q = scaleQuantity(parseQuantity(ingredient.quantityUnit), scale);
       const nameKey = normalizeName(name);
       const unitKey = normalizeUnit(unit);
-      let mergeKey;
-      if (q.kind === "number") mergeKey = `${nameKey}|${unitKey}|n`;
-      else if (q.kind === "blank") mergeKey = `${nameKey}|${unitKey}|b`;
-      else mergeKey = `${nameKey}|${unitKey}|t|${entry.id}|${index}`;
+      const mergeKey = mergeKeyFor(nameKey, unitKey, q) ?? `${nameKey}|${unitKey}|t|${entry.id}|${index}`;
       const contribution = {
         menuEntryId: entry.id,
         recipeId: recipe.id,

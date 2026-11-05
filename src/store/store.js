@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const persistConfig = {
   key: 'root',
-  version: 6,
+  version: 7,
   storage: AsyncStorage,
   migrate: createMigrate(migrations, { debug: false }),
 };

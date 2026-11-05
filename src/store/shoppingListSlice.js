@@ -1,11 +1,21 @@
 import { createSlice, createEntityAdapter } from "@reduxjs/toolkit";
-import { computeQuantityText, mergeItem } from "../domain/shoppingList";
+import { computeQuantityText, mergeItem, withoutEntries } from "../domain/shoppingList";
 import { normalizeName } from "../domain/ingredientKey";
 import { addStaple, removeStaple } from "./pantrySlice";
 
 const itemsAdapter = createEntityAdapter();
 
-export const initialState = itemsAdapter.getInitialState({ nextId: 1 });
+// `removed[mergeKey]` = menu entries whose portion the user removed (or whose line they
+// deleted), so a later Merge doesn't silently add them back. Cleared by Replace/Clear.
+export const initialState = itemsAdapter.getInitialState({ nextId: 1, removed: {} });
+
+function rememberRemoved(state, mergeKey, entryIds) {
+  if (!mergeKey || entryIds.length === 0) return;
+  if (!state.removed) state.removed = {};
+  const list = state.removed[mergeKey] ?? [];
+  for (const id of entryIds) if (!list.includes(id)) list.push(id);
+  state.removed[mergeKey] = list;
+}
 
 function addWithNewId(state, item) {
   const id = `item-${state.nextId}`;
@@ -30,11 +40,15 @@ const shoppingListSlice = createSlice({
         unit = "",
         category = "",
         isStaple = false,
+        // "finder" items (from "Add missing") carry a merge key so that putting the recipe
+        // on the menu later turns them into that menu line instead of a duplicate.
+        source = "manual",
+        mergeKey = null,
       } = action.payload;
       const trimmed = String(name ?? "").trim();
       if (!trimmed) return;
       addWithNewId(state, {
-        mergeKey: null,
+        mergeKey: source === "finder" ? mergeKey : null,
         nameKey: normalizeName(trimmed),
         name: trimmed,
         unit,
@@ -42,11 +56,13 @@ const shoppingListSlice = createSlice({
         quantityText,
         checked: false,
         isStaple: Boolean(isStaple),
-        source: "manual",
+        source: source === "finder" ? "finder" : "manual",
         contributions: [],
       });
     },
     deleteItem: (state, action) => {
+      const item = state.entities[action.payload];
+      if (item && item.source === "menu") rememberRemoved(state, item.mergeKey, item.contributions.map((c) => c.menuEntryId));
       itemsAdapter.removeOne(state, action.payload);
     },
     toggleItemChecked: (state, action) => {
@@ -56,16 +72,19 @@ const shoppingListSlice = createSlice({
     clearShoppingList: () => initialState,
     replaceMenuItems: (state, action) => {
       itemsAdapter.removeAll(state);
+      state.removed = {};
       action.payload.forEach((built) => addWithNewId(state, built));
     },
     mergeMenuItems: (state, action) => {
-      action.payload.forEach((built) => {
+      action.payload.forEach((rawBuilt) => {
+        const built = withoutEntries(rawBuilt, state.removed?.[rawBuilt.mergeKey]);
+        if (!built) return; // every portion of this line was removed by the user
         const existingId = state.ids.find((id) => {
           const item = state.entities[id];
-          return item.source === "menu" && item.mergeKey === built.mergeKey;
+          return (item.source === "menu" || item.source === "finder") && item.mergeKey === built.mergeKey;
         });
         if (existingId !== undefined) {
-          state.entities[existingId] = mergeItem(state.entities[existingId], built);
+          state.entities[existingId] = { ...mergeItem(state.entities[existingId], built), source: "menu" };
         } else {
           addWithNewId(state, built);
         }
@@ -75,6 +94,8 @@ const shoppingListSlice = createSlice({
       const { itemId, menuEntryId } = action.payload;
       const item = state.entities[itemId];
       if (!item) return;
+      if (!item.contributions.some((c) => c.menuEntryId === menuEntryId)) return;
+      rememberRemoved(state, item.mergeKey, [menuEntryId]);
       item.contributions = item.contributions.filter((c) => c.menuEntryId !== menuEntryId);
       if (item.contributions.length === 0) {
         itemsAdapter.removeOne(state, itemId);

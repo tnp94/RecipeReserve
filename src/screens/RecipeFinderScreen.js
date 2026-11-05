@@ -105,8 +105,12 @@ const RecipeFinderScreen = () => {
   };
 
   const addMissing = (missing) => {
-    const n = dispatch(addItemsToShoppingList(missing));
-    dialog.alert("Added to shopping list", `${n} ${n === 1 ? "item" : "items"} added.`);
+    const { added, skipped } = dispatch(addItemsToShoppingList(missing));
+    const items = (n) => `${n} ${n === 1 ? "item" : "items"}`;
+    const parts = [];
+    if (added > 0) parts.push(`${items(added)} added.`);
+    if (skipped > 0) parts.push(`${items(skipped)} already on your list.`);
+    dialog.alert(added > 0 ? "Added to shopping list" : "Already on your list", parts.join(" "));
   };
 
   const openRecipe = (recipeId) => navigation.navigate("Recipe Details", { recipeId });
@@ -192,7 +196,7 @@ const RecipeFinderScreen = () => {
         <Chip
           label="Add pantry staples"
           disabled={staples.length === 0}
-          onPress={() => dispatch(addFinderIngredients(staples.map((s) => s.name)))}
+          onPress={() => dispatch(addFinderIngredients({ names: staples.map((s) => s.name), remember: false }))}
         />
         <Chip label="Clear all" disabled={ingredients.length === 0} onPress={() => dispatch(clearFinderIngredients())} />
       </View>

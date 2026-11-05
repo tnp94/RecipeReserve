@@ -105,6 +105,11 @@ export const migrations = {
     pantry: rekeyPantry(state.pantry),
     shoppingList: rekeyShoppingList(state.shoppingList),
   }),
+  // v7: the shopping list remembers removed per-recipe portions (`removed`).
+  7: (state) =>
+    state.shoppingList
+      ? { ...state, shoppingList: { removed: {}, ...state.shoppingList } }
+      : state,
 };
 
 function rekeyPantry(pantry) {

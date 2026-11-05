@@ -10,16 +10,22 @@ const finderSlice = createSlice({
   name: "finder",
   initialState,
   reducers: {
+    // Payload: names[] or { names, remember }. `remember: false` (e.g. "Add pantry
+    // staples") adds to the search without pushing everything into Recent.
     addFinderIngredients: (state, action) => {
-      const names = Array.isArray(action.payload) ? action.payload : [];
+      const p = action.payload;
+      const names = Array.isArray(p) ? p : Array.isArray(p?.names) ? p.names : [];
+      const remember = Array.isArray(p) ? true : p?.remember !== false;
       const seen = new Set(state.ingredients.map((i) => normalizeName(i.name)));
       for (const raw of names) {
         const name = String(raw ?? "").trim();
         const key = normalizeName(name);
         if (!name || !key) continue;
-        const recent = (state.recent ?? []).filter((r) => normalizeName(r) !== key);
-        recent.unshift(name);
-        state.recent = recent.slice(0, MAX_RECENT);
+        if (remember) {
+          const recent = (state.recent ?? []).filter((r) => normalizeName(r) !== key);
+          recent.unshift(name);
+          state.recent = recent.slice(0, MAX_RECENT);
+        }
         if (seen.has(key)) continue;
         seen.add(key);
         state.ingredients.push({ id: `fi-${state.nextId}`, name, tag: null });

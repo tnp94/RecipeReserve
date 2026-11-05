@@ -106,3 +106,16 @@ describe("finderSlice recent", () => {
     expect(selectFinderIngredients(store.getState()).length).toBeGreaterThan(0);
   });
 });
+
+describe("finder Recent with remember: false", () => {
+  const { configureStore } = require("@reduxjs/toolkit");
+  const rootReducer = require("../rootReducer").default;
+  const { addFinderIngredients, selectRecentFinderIngredients, selectFinderIngredients } = require("../finderSlice");
+  it("adds staples to the search without pushing them into Recent", () => {
+    const store = configureStore({ reducer: rootReducer });
+    store.dispatch(addFinderIngredients(["Garlic"]));
+    store.dispatch(addFinderIngredients({ names: ["Salt", "Oil"], remember: false }));
+    expect(selectFinderIngredients(store.getState()).map((i) => i.name)).toEqual(["Garlic", "Salt", "Oil"]);
+    expect(selectRecentFinderIngredients(store.getState())).toEqual(["Garlic"]);
+  });
+});

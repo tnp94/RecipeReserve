@@ -12,6 +12,12 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
   const result = { fullMatches: [], nearMatches: [], otherMatches: [] };
   if (!haveIngredients || haveIngredients.length === 0) return result;
 
+  // Normalize each entered ingredient once, not once per recipe ingredient.
+  const haves = haveIngredients.map((h) => ({ tag: h.tag, words: words(h.name) })).filter((h) => h.words.length > 0);
+  const matches = (have, recipeWords) => have.words.every((w) => recipeWords.some((r) => wordsMatch(w, r)));
+  // A "Must use" ingredient that normalizes to nothing (e.g. "!!") can never match.
+  if (haveIngredients.some((h) => h.tag === "required" && words(h.name).length === 0)) return result;
+
   for (const recipe of recipes ?? []) {
     const seen = new Set();
     const candidates = [];
@@ -20,24 +26,20 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
       const key = normalizeName(ing.name);
       if (seen.has(key)) continue;
       seen.add(key);
-      candidates.push(ing);
+      candidates.push({ ing, words: key.split(" ").filter(Boolean) });
     }
     if (candidates.length === 0) continue;
 
-    const matchesAny = (have) =>
-      candidates.some((c) => ingredientMatches(have.name, c.name));
-    const matched = candidates.filter((c) =>
-      haveIngredients.some((h) => ingredientMatches(h.name, c.name))
-    );
-    const missing = candidates.filter((c) => !matched.includes(c));
+    // hit[i][j]: entered ingredient i matches recipe ingredient j.
+    const hit = haves.map((h) => candidates.map((c) => matches(h, c.words)));
+    const matched = candidates.filter((_, j) => hit.some((row) => row[j]));
+    const missing = candidates.filter((_, j) => !hit.some((row) => row[j])).map((c) => c.ing);
+    const matchesAny = (i) => hit[i].some(Boolean);
 
     if (matched.length === 0) continue;
-    if (haveIngredients.some((h) => h.tag === "required" && !matchesAny(h))) continue;
+    if (haves.some((h, i) => h.tag === "required" && !matchesAny(i))) continue;
 
-    const expiringCount = haveIngredients.filter(
-      (h) => h.tag === "expiring" && matchesAny(h)
-    ).length;
-
+    const expiringCount = haves.filter((h, i) => h.tag === "expiring" && matchesAny(i)).length;
     const item = {
       recipe,
       matchedCount: matched.length,
@@ -47,8 +49,8 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
       isFullMatch: missing.length === 0,
     };
     if (item.isFullMatch) result.fullMatches.push(item);
-    else if (missing.length > maxMissing) result.otherMatches.push(item);
-    else result.nearMatches.push(item);
+    else if (missing.length <= maxMissing) result.nearMatches.push(item);
+    else result.otherMatches.push(item);
   }
 
   const cmp = (a, b) =>

@@ -192,3 +192,14 @@ describe("migration v6", () => {
     expect(migrations[6]({})).toEqual({ pantry: undefined, shoppingList: undefined });
   });
 });
+
+describe("migration v7", () => {
+  it("adds shoppingList.removed and keeps existing data", () => {
+    const out = migrations[7]({ shoppingList: { ids: ["item-1"], entities: { "item-1": { id: "item-1" } }, nextId: 2 } });
+    expect(out.shoppingList).toEqual({ removed: {}, ids: ["item-1"], entities: { "item-1": { id: "item-1" } }, nextId: 2 });
+  });
+  it("keeps an existing removed map and tolerates a missing list", () => {
+    expect(migrations[7]({ shoppingList: { ids: [], entities: {}, nextId: 1, removed: { "a|b|n": ["entry-1"] } } }).shoppingList.removed).toEqual({ "a|b|n": ["entry-1"] });
+    expect(migrations[7]({})).toEqual({});
+  });
+});

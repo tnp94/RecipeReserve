@@ -67,14 +67,14 @@ gesture-handler. Web entry rows render without `Swipeable`.
 ### State (Redux + redux-persist)
 
 The whole root reducer (`src/store/rootReducer.js`) is persisted to AsyncStorage. Persist
-`version: 6`; migrations live in `src/store/migrations.js` — bump the version and add a
+`version: 7`; migrations live in `src/store/migrations.js` — bump the version and add a
 migration (with a test) whenever a persisted shape changes.
 
 | Slice | Shape |
 |---|---|
 | `recipes` | entity adapter `{ ids, entities, nextId }`, numeric ids |
 | `menu` | `{ slots: {ids, entities}, entries: {ids, entities}, nextId }` — Slot `{ id, day: 0–6 (Mon-first), name }`, MenuEntry `{ id, recipeId, slotId \| null, day \| null, scale }` (`slotId` set → in that slot, `day` null; `slotId` null + `day` 0–6 → on that day with no meal; both null → Unplanned) |
-| `shoppingList` | entity adapter `{ ids, entities, nextId }` — items with `mergeKey, nameKey, name, unit, category, quantityText, checked, isStaple, source: "menu"\|"manual", contributions[]` |
+| `shoppingList` | entity adapter `{ ids, entities, nextId, removed }` — items with `mergeKey, nameKey, name, unit, category, quantityText, checked, isStaple, source: "menu"\|"manual"\|"finder", contributions[]`; `removed[mergeKey]` = menu entries whose portion the user removed/deleted (Merge skips them; Replace/Clear reset it) |
 | `pantry` | `{ staples: { [nameKey]: { nameKey, name } } }` |
 | `settings` | `{ showStapleReminder }` |
 | `finder` | `{ ingredients: [{ id, name, tag: null\|"expiring"\|"required" }], recent: string[], nextId }` |
@@ -89,7 +89,8 @@ Key points:
 - Ids for slots/entries/items/finder ingredients are strings (`slot-3`, `entry-7`, `item-12`, `fi-2`). Never reset `menu.nextId` (even `clearMenu` keeps it): shopping-list contributions remember `menuEntryId`, and a reused id would make Merge overwrite last week's amount.
 - Merge unchecks an item when it gains a recipe or its total grows; one contribution per menu entry per item (a recipe listing an ingredient twice is summed).
 - Units: one-letter `T` = tbsp and `t` = tsp are the only case-sensitive units (`normalizeUnit`).
-- iOS can't present a `Modal` while another is dismissing: switch sheets via `AppModal`'s `onDismiss` (see `switchModal` in `MenuScreen`), not in the same render.
+- iOS can't present a `Modal` while another is dismissing. `DialogProvider` runs a button's `onPress` only after its Modal's `onDismiss` on iOS (timer fallback), so a dialog button may safely open a sheet; sheet → sheet switches use `switchModal` in `MenuScreen`.
+- Finder "Add missing" adds `source: "finder"` items with a merge key (skipping names already on the list); a later Merge turns a matching finder item into the menu line instead of duplicating it.
 
 ### Data Model
 

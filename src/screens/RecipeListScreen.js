@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Button } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
@@ -14,7 +14,7 @@ const RecipeListScreen = () => {
   const [query, setQuery] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const allRecipes = useSelector(selectAllRecipes);
-  const recipes = filterRecipes(allRecipes, { query, favoritesOnly });
+  const recipes = useMemo(() => filterRecipes(allRecipes, { query, favoritesOnly }), [allRecipes, query, favoritesOnly]);
 
   useEffect(() => {
     navigation.setOptions({

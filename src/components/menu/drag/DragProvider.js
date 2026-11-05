@@ -183,7 +183,10 @@ const DragProvider = ({ children, style }) => {
       else z.y -= applied;
     };
     rects.current.forEach(shift);
-    scrollers.current.forEach((other) => other !== s && other.rect && shift(other.rect));
+    // Nested scrollers move with it (columns inside the board), but never an enclosing
+    // one: the board scroller is wider than a column and must stay where it is.
+    const nested = (o) => (s.horizontal ? o.y >= r.y && o.y + o.h <= r.y + r.h : o.x >= r.x && o.x + o.w <= r.x + r.w);
+    scrollers.current.forEach((other) => other !== s && other.rect && nested(other.rect) && shift(other.rect));
   };
 
   // One tick of the auto-scroll loop, using the last known pointer position.
