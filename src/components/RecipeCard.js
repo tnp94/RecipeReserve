@@ -1,117 +1,162 @@
-import { StyleSheet, View, Text, Image, FlatList, Alert, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Text, Image, TouchableOpacity, Platform } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
-import { deleteRecipe, selectRecipeById } from "../store/recipesSlice";
+import { deleteRecipe, selectRecipeById, toggleFavorite } from "../store/recipesSlice";
 import { addRecipeToMenu } from "../store/menuSlice";
 import { useRef, useState } from "react";
+import { useDialog } from "./dialog/DialogProvider";
+import { useToast } from "./toast/ToastProvider";
+import { colors } from "../theme";
 
-const RecipeCard = ({ recipeId, index }) => {
+const RecipeCard = ({ recipeId }) => {
   const navigation = useNavigation()
   const recipe = useSelector((state) => selectRecipeById(state, recipeId))
   const dispatch = useDispatch()
+  const dialog = useDialog()
+  const toast = useToast()
   const ref = useRef(null)
   const [swipedLeft, setSwipedLeft] = useState(false)
   const [swipedRight, setSwipedRight] = useState(false)
 
   const closeRef = () => {
-    ref.current.close()
+    ref.current?.close()
   }
-  
-  function recipeLongPress(index) {
-    Alert.alert('Recipe actions', 'My Alert Msg', [
-    {
-      text: 'Cancel',
-      onPress: () => console.log('Cancel Pressed'),
-      style: 'cancel',
-    },
-    {text: 'Add to menu', onPress: () => dispatch(addRecipeToMenu(recipe))},
-    {text: 'Delete', onPress: () => dispatch(deleteRecipe(recipeId))},
-    ]);
+
+  const confirmDelete = () => {
+    dialog.alert(`Delete "${recipe.name}"?`, "It will also be removed from your menu.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => dispatch(deleteRecipe(recipeId)) },
+    ])
   }
+
+  const addToMenu = () => {
+    dispatch(addRecipeToMenu({ recipeId }))
+    toast.show(`Added "${recipe.name}" to menu`, {
+      actionLabel: "View",
+      onAction: () => navigation.navigate("Menu"),
+    })
+  }
+
+  const showActions = () => {
+    dialog.alert(recipe.name, undefined, [
+      { text: "Add to menu", onPress: addToMenu },
+      { text: "Delete", style: "destructive", onPress: confirmDelete },
+      { text: "Cancel", style: "cancel" },
+    ])
+  }
+
   const renderRightActions = () => {
     return (
-      <View
-      style={styles.swipeableButtoncontainer}
-      >
+      <View style={styles.swipeableButtoncontainer}>
         <TouchableOpacity
-        style={styles.swipableRightButton}
-        onPress={() => {
-          closeRef()
-          dispatch(deleteRecipe(recipeId))
-        }}
+          style={styles.swipableRightButton}
+          onPress={() => {
+            closeRef()
+            confirmDelete()
+          }}
         >
-          <Text
-            style={styles.swipeableButtonText}
-          >Delete</Text>
+          <Text style={styles.swipeableButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     )
   }
   const renderLeftActions = () => {
     return (
-      <View
-      style={styles.swipeableButtoncontainer}
-      >
+      <View style={styles.swipeableButtoncontainer}>
         <TouchableOpacity
-        style={styles.swipableLeftButton}
-        onPress={() => {
-          closeRef()
-          dispatch(addRecipeToMenu(recipe))
-        }}
+          style={styles.swipableLeftButton}
+          onPress={() => {
+            closeRef()
+            addToMenu()
+          }}
         >
-          <Text
-            style={styles.swipeableButtonText}
-          >Add to Menu</Text>
+          <Text style={styles.swipeableButtonText}>Add to Menu</Text>
         </TouchableOpacity>
       </View>
     )
   }
 
-  if (recipe) 
-    return (
-      <View
-        style={styles.cardContainer}
+  if (!recipe) return null
+  const totalTime = (Number(recipe.time?.prep) || 0) + (Number(recipe.time?.active) || 0)
+  return (
+    <View style={styles.cardContainer}>
+      <Swipeable
+        ref={ref}
+        renderRightActions={renderRightActions}
+        renderLeftActions={renderLeftActions}
+        overshootFriction={8}
+        onSwipeableWillOpen={(direction) => {
+          setSwipedLeft(direction == "left")
+          setSwipedRight(direction == "right")
+        }}
+        onSwipeableWillClose={() => {
+          setSwipedLeft(false)
+          setSwipedRight(false)
+        }}
       >
-        <Swipeable
-          ref={ref}
-          renderRightActions={renderRightActions}
-          renderLeftActions={renderLeftActions}
-          overshootFriction={8}
-          key={recipeId}
-          onSwipeableWillOpen={(direction) => {
-            setSwipedLeft(direction == "left")
-            setSwipedRight(direction == "right")
-          }}
-          onSwipeableWillClose={(direction) => {
-            setSwipedLeft(false)
-            setSwipedRight(false)
-          }}
-        >
-          <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.navigate("Recipe Details", { recipeId })}
-          onLongPress={() => {recipeLongPress(index)}}
-          key={index}
+          onLongPress={showActions}
           style={[styles.cardButton, (swipedLeft && styles.flattenLeft), (swipedRight && styles.flattenRight)]}
-          >
-            <Image
+        >
+          <Image
             style={styles.recipeImage}
             source={require("../../assets/images/ForkAndSpoon.png")} />
-            <View style={styles.recipeDetailsContainer}>
-              <Text style={styles.recipeTitle}>{recipe.name}</Text>
-              <Text 
-              style={styles.recipeSubtitle}>
-                Time: {(recipe.time.prep + recipe.time.active) !== 0 ? ( + (recipe.time.prep + recipe.time.active) + " minutes") : "?"}
-                {recipe.difficulty !== "" && (" | Difficulty: " + recipe.difficulty)}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </Swipeable>
-      </View>
-    )
+          <View style={styles.recipeDetailsContainer}>
+            <Text style={styles.recipeTitle}>{recipe.name}</Text>
+            <Text style={styles.recipeSubtitle}>
+              Time: {totalTime !== 0 ? totalTime + " minutes" : "?"}
+              {recipe.difficulty !== "" && (" | Difficulty: " + recipe.difficulty)}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
+      <TouchableOpacity
+        style={styles.star}
+        accessibilityRole="button"
+        accessibilityLabel={recipe.favorite ? "Remove from favorites" : "Add to favorites"}
+        onPress={() => dispatch(toggleFavorite(recipeId))}
+      >
+        <Text style={{ fontSize: 24, color: recipe.favorite ? colors.favorite : colors.muted }}>
+          {recipe.favorite ? "★" : "☆"}
+        </Text>
+      </TouchableOpacity>
+      {Platform.OS === "web" && (
+        <TouchableOpacity
+          style={styles.more}
+          accessibilityRole="button"
+          accessibilityLabel="Recipe actions"
+          onPress={showActions}
+        >
+          <Text style={{ fontSize: 20, color: colors.muted }}>⋯</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
+  star: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.8)",
+  },
+  more: {
+    position: "absolute",
+    bottom: 2,
+    right: 6,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   swipableLeftButton: {
     backgroundColor: "#99ccff",
     borderTopLeftRadius: 16,
@@ -149,7 +194,8 @@ const styles = StyleSheet.create({
   },
   recipeImage: {
     width: "100%",
-    flex: 2,
+    height: 90,
+    resizeMode: "contain",
     overflow: "hidden"
     // borderTopLeftRadius: 16,
     // borderTopRightRadius: 16,

@@ -1,22 +1,23 @@
 import { useNavigation } from "@react-navigation/native";
-import { StyleSheet, View, Text, Image } from "react-native";
-import { TouchableOpacity } from "react-native-gesture-handler";
+import { Text, TouchableOpacity } from "react-native";
 
-const NewRecipeButton = ( ) => {
-  const navigation = useNavigation()
+const NewRecipeButton = () => {
+  const navigation = useNavigation();
   return (
-      <TouchableOpacity
+    <TouchableOpacity
+      accessibilityRole="button"
       style={{
         backgroundColor: "skyblue",
-        padding: 5,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         borderRadius: 7,
-        flex: 1,
-        justifyContent: "center"
+        justifyContent: "center",
       }}
-      onPress={() => (navigation.navigate("Recipe Form"))}>
-        <Text>New Recipe</Text>
-      </TouchableOpacity>
-  )
-}
+      onPress={() => navigation.navigate("Recipe Form")}
+    >
+      <Text>New Recipe</Text>
+    </TouchableOpacity>
+  );
+};
 
 export default NewRecipeButton;

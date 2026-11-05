@@ -1,9 +1,12 @@
-import { View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Alert, Platform } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useEffect, useState } from "react";
 import { ingredientTemplate } from "../Models/Ingredient";
-import { useDispatch, useSelector } from "react-redux";
-import { addRecipe, editRecipe, selectRecipeById } from "../store/recipesSlice";
+import { useDispatch, useSelector, useStore } from "react-redux";
+import { addRecipe, editRecipe, selectRecipeById, isRecipeNameTaken } from "../store/recipesSlice";
 import Separator from "../components/Separator";
+import { useDialog } from "../components/dialog/DialogProvider";
+import CategoryPicker from "../components/CategoryPicker";
+import useLayout from "../hooks/useLayout";
 
 const emptyRecipe = {
   id: 0,
@@ -11,7 +14,7 @@ const emptyRecipe = {
   image: "",
   count: 0,
   ingredients: [],
-  time: {},
+  time: { prep: 0, active: 0 },
   difficulty: "",
   calories: 0,
   favorite: false,
@@ -26,6 +29,9 @@ const RecipeFormScreen = ({ navigation, route }) => {
 
   const existingRecipe = useSelector((state) => isEditing ? selectRecipeById(state, recipeId) : null);
   const dispatch = useDispatch();
+  const dialog = useDialog();
+  const store = useStore();
+  const { isWide } = useLayout();
 
   const [data, setData] = useState(isEditing ? { ...emptyRecipe, ...existingRecipe } : emptyRecipe);
 
@@ -38,36 +44,43 @@ const RecipeFormScreen = ({ navigation, route }) => {
   }, [data]);
 
   const onSaveButtonPress = (recipe) => {
-    if (isEditing) {
-      Alert.alert("Save edits", "Do you want to create this as a new recipe?", [
-        {
-          text: "Save edits",
-          onPress: () => {
-            dispatch(editRecipe({ id: recipeId, changes: recipe }));
-            navigation.pop();
-          },
-        },
-        {
-          text: "Create as new recipe",
-          onPress: () => {
-            Alert.prompt(
-              "New Recipe Name",
-              "Please enter the new recipe name",
-              (text) => {
-                dispatch(addRecipe({ ...recipe, name: text }));
-                navigation.popToTop();
-              },
-              undefined,
-              recipe.name
-            );
-          },
-        },
-        { text: "Cancel", style: "cancel" },
-      ]);
-    } else {
-      dispatch(addRecipe(recipe));
-      navigation.popToTop();
+    const name = (recipe.name ?? "").trim();
+    if (!name) {
+      dialog.alert("Recipe needs a name");
+      return;
     }
+    const toMinutes = (v) => (v === "" || v == null ? 0 : v);
+    const cleaned = {
+      ...recipe,
+      name,
+      time: { ...recipe.time, prep: toMinutes(recipe.time?.prep), active: toMinutes(recipe.time?.active) },
+    };
+    if (!isEditing) {
+      dispatch(addRecipe(cleaned));
+      navigation.popToTop();
+      return;
+    }
+    dialog.alert("Save changes", undefined, [
+      {
+        text: "Save changes",
+        onPress: () => {
+          if (isRecipeNameTaken(store.getState(), name, recipeId)) {
+            dialog.alert("Name already used", `Another recipe is already named "${name}".`);
+            return;
+          }
+          dispatch(editRecipe({ id: recipeId, changes: cleaned }));
+          navigation.pop();
+        },
+      },
+      {
+        text: "Save as new recipe",
+        onPress: () => {
+          dispatch(addRecipe(cleaned));
+          navigation.popToTop();
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const updateIngredient = (field, text, index) => {
@@ -88,28 +101,23 @@ const RecipeFormScreen = ({ navigation, route }) => {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <ScrollView nestedScrollEnabled={true} style={{ padding: 5 }}>
+        <ScrollView
+          nestedScrollEnabled={true}
+          style={{ padding: 5 }}
+          contentContainerStyle={isWide ? { maxWidth: 800, width: "100%", alignSelf: "center" } : undefined}
+        >
           <Text style={{ fontSize: 32, alignSelf: "center", marginBottom: 10 }}>
             {isEditing ? "Edit Recipe" : "Let's add a new Recipe!"}
           </Text>
 
           <View style={{ marginBottom: 10 }}>
             <Text style={{ fontSize: 24 }}>Recipe Name</Text>
-            {isEditing ? (
-              <Text
-                style={{ backgroundColor: "#fff", padding: 5 }}
-                onPress={() => Alert.alert("To alter the name, save it as a new recipe")}
-              >
-                {data.name}
-              </Text>
-            ) : (
-              <TextInput
-                style={{ backgroundColor: "#fff", padding: 5 }}
-                placeholder="Recipe Name"
-                value={data.name}
-                onChangeText={(text) => setData({ ...data, name: text })}
-              />
-            )}
+            <TextInput
+              style={{ backgroundColor: "#fff", padding: 5 }}
+              placeholder="Recipe Name"
+              value={data.name}
+              onChangeText={(text) => setData({ ...data, name: text })}
+            />
           </View>
 
           <View style={{ marginBottom: 10 }}>
@@ -205,12 +213,6 @@ const RecipeFormScreen = ({ navigation, route }) => {
                       value={item.note}
                       onChangeText={(text) => updateIngredient("note", text, index)}
                     />
-                    <TextInput
-                      style={{ paddingHorizontal: 10, backgroundColor: "#fff", flex: 1 }}
-                      placeholder="Category"
-                      value={item.category}
-                      onChangeText={(text) => updateIngredient("category", text, index)}
-                    />
                     <TouchableOpacity
                       style={{ backgroundColor: "#fff", padding: 5, borderRadius: 7, flex: 1, justifyContent: "center" }}
                       onPress={() => {
@@ -221,6 +223,12 @@ const RecipeFormScreen = ({ navigation, route }) => {
                     >
                       <Text style={{ color: "red" }}>Delete</Text>
                     </TouchableOpacity>
+                  </View>
+                  <View style={{ backgroundColor: "#fff", paddingHorizontal: 10 }}>
+                    <CategoryPicker
+                      value={item.category}
+                      onChange={(category) => updateIngredient("category", category, index)}
+                    />
                   </View>
                 </View>
               )}
