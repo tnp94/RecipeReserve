@@ -19,7 +19,7 @@ const ShoppingListScreen = ({ navigation }) => {
         const data = items
           .filter((item) =>
             category === INGREDIENTCATEGORIES.UNCATEGORIZED
-              ? !CATEGORIES.includes(item.category) || item.category === ""
+              ? item.category === INGREDIENTCATEGORIES.UNCATEGORIZED || !CATEGORIES.includes(item.category)
               : item.category === category
           )
           .sort((a, b) => a.name.localeCompare(b.name));
