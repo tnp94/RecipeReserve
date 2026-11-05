@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm start          # Start Expo dev server (scan QR code with Expo Go)
+npm start          # Start Expo dev server (Expo Go works, except recipe scanning, which needs a development build)
 npm run android    # Run on Android emulator/device
 npm run ios        # Run on iOS simulator/device
 npm run web        # Run in browser
@@ -25,6 +25,8 @@ src/domain/      pure logic, no React/Redux — quantity parsing, ingredient key
                  shopping-list build/merge, recipe search, recipe finder, category guessing,
                  pasted-text parsing, display formatting, week helpers (+ __tests__)
 src/store/       Redux Toolkit slices, thunks, persist migrations (+ __tests__)
+src/services/    device and network work: recipeFetch.js downloads a recipe page; recipeScan.js picks
+                 a photo and reads it with on-device OCR (+ __tests__)
 src/components/  ui/ (shared kit), dialog/, toast/, AppModal, Chip, CategoryPicker,
                  menu/, recipeForm/, shopping/
 src/screens/     screens and stack navigators
@@ -38,6 +40,7 @@ Keep business logic in `src/domain/` with tests; keep screens thin.
 Domain modules added for the recipe form and shopping list:
 - `categoryGuess.js`: `guessCategory(name, memory)` returns a category or `""`. `memory` comes from `buildCategoryMemory(recipes)` (the most common real category per ingredient in the user's recipes) and wins over the built-in word lists.
 - `ingredientParse.js`: `parseIngredientLine`, `parseIngredientList`, `parseDirections` turn pasted text into form rows. The output is a first draft that the user reviews in the form.
+- `recipeImport.js`: `parseRecipeText` (a pasted block of text) and `parseRecipeHtml` (schema.org JSON-LD in a web page; null if none) both return the same draft, `{ name, ingredients, directions, time, yield, calories }`. Any new import route should produce this draft too.
 - `format.js`: `formatMinutes`, `totalMinutes`, `plural`. `week.js`: `todayIndex`, `SHORT_DAYS` (Monday-first, matching menu days).
 
 ### Theme
@@ -145,7 +148,7 @@ Recipe objects (`src/Recipes.js` seed data) have the shape:
 `difficulty` is `"Easy"`, `"Medium"`, `"Hard"` or `""` (`DIFFICULTIES` in `RecipeFormScreen.js`). Older recipes can hold free text, which the form keeps as an extra option rather than dropping it.
 Ingredient categories: `INGREDIENTCATEGORIES` in `src/Models/Ingredient.js` (pick with `CategoryPicker`, or leave to `guessCategory`).
 
-The recipe form (`RecipeFormScreen.js`, `components/recipeForm/`) guesses a category for a row until the user picks one (`_autoCategory`). `PasteModal` adds whole ingredient lists or directions. A `beforeRemove` listener warns about unsaved changes. Save overwrites the recipe; "Save as a new recipe" and "Delete recipe" are at the bottom of the form.
+The recipe form (`RecipeFormScreen.js`, `components/recipeForm/`) guesses a category for a row until the user picks one (`_autoCategory`). `PasteModal` adds whole ingredient lists or directions. `ImportRecipeModal` (new recipes only) fills the whole form from a link, pasted text or a photo, and the form is the review step; there's no server, so on web a site that blocks cross-site requests falls back to paste. Scanning (`scanRecipe(photoUri)`, returning `{ draft, text }`) uses ML Kit, so it needs a development or store build: `isScanAvailable()` hides the Scan tab on web and in Expo Go. When a scan can't find both ingredients and directions, its text opens in the paste tab to fix. Adding native code means bumping `version` and `android.runtimeVersion` in `app.json`, so an over-the-air update can't reach builds without that code. A `beforeRemove` listener warns about unsaved changes. Save overwrites the recipe; "Save as a new recipe" and "Delete recipe" are at the bottom of the form.
 Quantities are parsed/scaled/formatted with `src/domain/quantity.js`.
 
 ### Seed data

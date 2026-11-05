@@ -2,7 +2,7 @@
   "expo": {
     "name": "RecipeReserve",
     "slug": "recipereserve",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -27,7 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "io.thomaspollard.recipereserve",
-      "runtimeVersion": "1.0.0"
+      "runtimeVersion": "1.1.0"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,6 +40,24 @@
     "owner": "thomaspollard_projects",
     "updates": {
       "url": "https://u.expo.dev/60d3d1d1-a98e-4bdb-97a1-2e3b0f3d5706"
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.5"
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RecipeReserve reads the recipe in the photo you choose. Photos stay on your device.",
+          "cameraPermission": "RecipeReserve uses the camera to read recipes from printed pages. Photos stay on your device.",
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }

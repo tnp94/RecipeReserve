@@ -16,9 +16,12 @@ import { useDialog } from "../components/dialog/DialogProvider";
 import AppModal from "../components/AppModal";
 import CategoryPicker from "../components/CategoryPicker";
 import IngredientEditor from "../components/recipeForm/IngredientEditor";
+import ImportRecipeModal from "../components/recipeForm/ImportRecipeModal";
 import PasteModal from "../components/recipeForm/PasteModal";
 import { AppText, Button, Card, HeaderButton, IconButton, SegmentedControl, TextField } from "../components/ui";
 import { buildCategoryMemory, guessCategory } from "../domain/categoryGuess";
+import { missingParts } from "../domain/recipeImport";
+import { isScanAvailable } from "../services/recipeScan";
 import useLayout from "../hooks/useLayout";
 import { makeStyles, radius, spacing } from "../theme";
 
@@ -119,6 +122,9 @@ const RecipeFormScreen = ({ navigation, route }) => {
   const focusKey = focus.key;
   const [categoryFor, setCategoryFor] = useState(null);
   const [pasting, setPasting] = useState(null); // "ingredients" | "directions" | null
+  const [importing, setImporting] = useState(false);
+  const [importedMissing, setImportedMissing] = useState(null); // null until a recipe is imported
+  const [importedScan, setImportedScan] = useState(false);
 
   // Unsaved-changes guard: compare against the form as first shown.
   const initial = useRef(JSON.stringify(toSaved(data)));
@@ -285,6 +291,35 @@ const RecipeFormScreen = ({ navigation, route }) => {
     setPasting(null);
   };
 
+  // ----- import -----
+  const applyDraft = (draft, scanned) => {
+    // A name the user typed survives a draft with no name; one from an earlier import doesn't.
+    const name = draft.name || (importedMissing ? "" : data.name);
+    setNameError("");
+    setImportedMissing(missingParts({ ...draft, name }));
+    setImportedScan(!!scanned);
+    setData((d) => ({
+      ...d,
+      name,
+      time: { ...d.time, prep: draft.time.prep, active: draft.time.active },
+      yield: draft.yield,
+      calories: draft.calories,
+      ingredients: draft.ingredients.map((r) => ({ ...ingredientTemplate(), ...r, category: guessCategory(r.name, memory), _key: nextKey(), _autoCategory: true })),
+      directions: draft.directions.map((text) => ({ _key: nextKey(), text })),
+    }));
+  };
+  const onImported = (draft, { scanned = false } = {}) => {
+    setImporting(false);
+    if (!dirty) {
+      applyDraft(draft, scanned);
+      return;
+    }
+    dialog.alert("Replace what you've entered?", "The imported recipe will replace the details, ingredients and directions in this form.", [
+      { text: "Keep mine", style: "cancel" },
+      { text: "Replace", style: "destructive", onPress: () => applyDraft(draft, scanned) },
+    ]);
+  };
+
   const difficultyOptions = DIFFICULTIES.map((v) => ({ value: v, label: v }));
   const difficultyValue = DIFFICULTIES.find((v) => v.toLowerCase() === String(data.difficulty ?? "").trim().toLowerCase()) ?? data.difficulty;
   // Keep an older free-text difficulty selectable instead of silently dropping it.
@@ -299,6 +334,33 @@ const RecipeFormScreen = ({ navigation, route }) => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       >
+        {!isEditing ? (
+          <Card style={styles.section}>
+            {importedMissing ? (
+              <>
+                <AppText variant="bodyStrong" accessibilityLiveRegion="polite">Recipe imported. Check it over, then save.</AppText>
+                {importedMissing.length > 0 ? (
+                  <AppText variant="small" tone="muted">{`We couldn't find: ${importedMissing.join(", ")}.`}</AppText>
+                ) : null}
+                {importedScan ? (
+                  <AppText variant="small" tone="muted">Scans can misread amounts, so compare them with the page.</AppText>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <AppText variant="bodyStrong">Already have this recipe somewhere?</AppText>
+                <AppText variant="small" tone="muted">Bring it in from a web link or pasted text {`instead of typing it${isScanAvailable() ? ", or scan a printed page" : ""}.`}</AppText>
+              </>
+            )}
+            <Button
+              label={importedMissing ? "Import a different recipe" : "Import a recipe"}
+              icon="download-outline"
+              variant={importedMissing ? "ghost" : "tonal"}
+              onPress={() => setImporting(true)}
+              style={styles.addButton}
+            />
+          </Card>
+        ) : null}
         <Card style={styles.section}>
           <AppText variant="heading" style={styles.sectionTitle} accessibilityRole="header">Basics</AppText>
           <TextField
@@ -435,6 +497,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
         onClose={() => setPasting(null)}
         onAdd={pasting === "directions" ? addPastedSteps : addPastedIngredients}
       />
+      <ImportRecipeModal visible={importing} onClose={() => setImporting(false)} onImport={onImported} />
     </KeyboardAvoidingView>
   );
 };
