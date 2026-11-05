@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, Button, StyleSheet } from "react-native";
+import { View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addSlot,
@@ -21,13 +21,13 @@ import {
   swapMenuEntries,
 } from "../store/menuSlice";
 import { moveSlotTarget } from "../domain/menuOrder";
-import { generateShoppingList } from "../store/thunks";
-import { selectShoppingItemCount } from "../store/shoppingListSlice";
-import { selectShowStapleReminder, setShowStapleReminder } from "../store/settingsSlice";
+import { todayIndex } from "../domain/week";
+import { selectHideMenuTip, setHideMenuTip } from "../store/settingsSlice";
 import { useDialog } from "../components/dialog/DialogProvider";
 import useLayout from "../hooks/useLayout";
-import { colors, radius, spacing } from "../theme";
-import DragProvider, { DragScrollView, dropOverStyle } from "../components/menu/drag/DragProvider";
+import useGenerateList from "../hooks/useGenerateList";
+import { elevation, makeStyles, radius, spacing, useTheme } from "../theme";
+import DragProvider, { DragScrollView, useDropOverStyle } from "../components/menu/drag/DragProvider";
 import useDropZone from "../components/menu/drag/useDropZone";
 import MenuDay from "../components/menu/MenuDay";
 import MenuEntryRow from "../components/menu/MenuEntryRow";
@@ -35,12 +35,16 @@ import EntryOptionsModal from "../components/menu/EntryOptionsModal";
 import SlotPickerModal from "../components/menu/SlotPickerModal";
 import EntryPickerModal from "../components/menu/EntryPickerModal";
 import DayPickerModal from "../components/menu/DayPickerModal";
-import StapleReminderModal from "../components/menu/StapleReminderModal";
+import { AppText, Button, HeaderButton, IconButton } from "../components/ui";
+import { Ionicons } from "@expo/vector-icons";
 
 // activeModal: null | { type: "entry"|"slotPicker"|"entryPicker", entryId }
-//   | { type: "daySwap", day } | { type: "slotDay", slotId } | { type: "reminder", items }
+//   | { type: "daySwap", day } | { type: "slotDay", slotId }
 const UnplannedSection = ({ entries, onEntryPress, onEntryRemove }) => {
   const dispatch = useDispatch();
+  const theme = useTheme();
+  const styles = useStyles();
+  const dropOverStyle = useDropOverStyle();
   const { ref, isOver } = useDropZone({
     key: "unplanned",
     accepts: ["entry"],
@@ -51,10 +55,14 @@ const UnplannedSection = ({ entries, onEntryPress, onEntryRemove }) => {
   return (
     <View ref={ref} collapsable={false} style={[styles.unplanned, dropOverStyle(isOver)]}>
       <View style={styles.unplannedHeader}>
-        <Text style={styles.unplannedTitle}>Unplanned</Text>
+        <Ionicons name="time-outline" size={18} color={theme.colors.onAccentSoft} />
+        <AppText variant="subheading" style={{ color: theme.colors.onAccentSoft, flex: 1 }}>Unplanned</AppText>
+        {entries.length > 0 ? <AppText variant="small" style={{ color: theme.colors.onAccentSoft }}>{entries.length}</AppText> : null}
       </View>
       {entries.length === 0 ? (
-        <Text style={styles.hint}>Recipes you add land here. Tap one to plan it.</Text>
+        <AppText variant="small" tone="muted" style={styles.hint}>
+          Recipes added with "Not sure yet" wait here. Tap one to give it a day.
+        </AppText>
       ) : (
         entries.map((entry) => (
           <MenuEntryRow key={entry.id} entry={entry} onPress={() => onEntryPress(entry)} onRemove={() => onEntryRemove(entry)} />
@@ -69,12 +77,15 @@ const MenuScreen = ({ navigation }) => {
   const week = useSelector(selectMenuWeek);
   const slotsState = useSelector((state) => state.menu.slots);
   const entryCount = useSelector(selectMenuEntryCount);
-  const itemCount = useSelector(selectShoppingItemCount);
-  const showReminder = useSelector(selectShowStapleReminder);
+  const hideTip = useSelector(selectHideMenuTip);
   const dispatch = useDispatch();
   const dialog = useDialog();
+  const styles = useStyles();
+  const theme = useTheme();
   const { width, isWide } = useLayout();
   const [activeModal, setActiveModal] = useState(null);
+  const { onGenerate, reminderModal } = useGenerateList(navigation);
+  const today = todayIndex();
 
   const slotCount = week.reduce((n, d) => n + d.slots.length, 0);
   const close = () => setActiveModal(null);
@@ -96,40 +107,15 @@ const MenuScreen = ({ navigation }) => {
     if (activeModal?.entryId && !activeEntry) setActiveModal(null);
   }, [activeModal, activeEntry]);
 
-  const generate = (mode) => {
-    const result = dispatch(generateShoppingList(mode));
-    if (result.prechecked.length > 0 && showReminder) {
-      setActiveModal({ type: "reminder", items: result.prechecked });
-    } else {
-      navigation.navigate("ShoppingList");
-    }
-  };
-
-  const onGeneratePress = () => {
-    if (entryCount === 0) {
-      dialog.alert("Your menu is empty", "Add recipes from My Recipes first.");
-    } else if (itemCount === 0) {
-      generate("replace");
-    } else {
-      dialog.alert(
-        "You already have a shopping list",
-        "Replace it with a new list from this menu, or merge this menu's ingredients into it?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Merge", onPress: () => generate("merge") },
-          { text: "Replace", style: "destructive", onPress: () => generate("replace") },
-        ]
-      );
-    }
-  };
-
-  // Re-set the header only when what the Generate flow reads changes.
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => <Button onPress={onGeneratePress} title="Generate list" />,
+      headerRight: () => (
+        <View style={{ marginRight: spacing.md }}>
+          <HeaderButton label="Generate list" icon="cart-outline" filled onPress={onGenerate} />
+        </View>
+      ),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, entryCount, itemCount, showReminder]);
+  }, [navigation, onGenerate]);
 
   const onNewWeek = () =>
     dialog.alert("Start a new week?", "Your shopping list won't change.", [
@@ -225,6 +211,7 @@ const MenuScreen = ({ navigation }) => {
     <MenuDay
       key={day.day}
       day={day}
+      isToday={day.day === today}
       onDayMenu={onDayMenu}
       onAddSlot={onAddSlot}
       onCustomSlot={onCustomSlot}
@@ -237,20 +224,24 @@ const MenuScreen = ({ navigation }) => {
 
   const toolbar = (
     <View style={styles.toolbar}>
-      <Text style={styles.count}>{`${entryCount} recipe${entryCount === 1 ? "" : "s"} planned`}</Text>
-      <Pressable style={styles.newWeek} onPress={onNewWeek} accessibilityRole="button">
-        <Text style={styles.newWeekText}>New week</Text>
-      </Pressable>
+      <AppText variant="small" tone="muted" style={styles.flex}>
+        {entryCount === 0 ? "No recipes planned yet" : `${entryCount} recipe${entryCount === 1 ? "" : "s"} planned this week`}
+      </AppText>
+      <Button label="New week" icon="refresh-outline" variant="ghost" size="sm" onPress={onNewWeek} />
     </View>
   );
 
-  const dragHint = (
-    <Text style={styles.dragHint}>
-      Tip: hold ≡ and drag a recipe onto a day or a meal to move it, or onto another recipe to swap. Drag a day's ≡ onto another day to swap days.
-    </Text>
+  const dragHint = hideTip ? null : (
+    <View style={styles.tip}>
+      <Ionicons name="bulb-outline" size={18} color={theme.colors.warning} />
+      <AppText variant="small" tone="muted" style={styles.flex}>
+        Tap a recipe to move, swap or scale it. Or drag it by its handle onto a day, a meal or another recipe.
+      </AppText>
+      <IconButton icon="close" size={18} accessibilityLabel="Hide tip" onPress={() => dispatch(setHideMenuTip(true))} />
+    </View>
   );
 
-  const colWidth = Math.max(150, Math.floor((width - 48) / 8));
+  const colWidth = Math.max(230, Math.floor((width - 48) / 8));
 
   return (
     <View style={styles.screen}>
@@ -272,7 +263,20 @@ const MenuScreen = ({ navigation }) => {
         ) : (
           <DragScrollView style={styles.flex} contentContainerStyle={styles.narrowContent}>
             {entryCount === 0 && slotCount === 0 ? (
-              <Text style={styles.empty}>Your menu is empty. Swipe a recipe in My Recipes and tap Add to Menu.</Text>
+              <View style={styles.emptyCard}>
+                <AppText variant="subheading">Plan your week</AppText>
+                <AppText variant="small" tone="muted">
+                  Add recipes from the Recipes tab with the + button. They'll show up on the day you pick.
+                </AppText>
+                <Button
+                  label="Browse recipes"
+                  variant="tonal"
+                  size="sm"
+                  icon="book-outline"
+                  style={styles.emptyButton}
+                  onPress={() => navigation.navigate("RecipeList", { screen: "My Recipes" })}
+                />
+              </View>
             ) : null}
             {renderUnplanned()}
             {week.map(renderDay)}
@@ -347,55 +351,61 @@ const MenuScreen = ({ navigation }) => {
           close();
         }}
       />
-      <StapleReminderModal
-        visible={activeModal?.type === "reminder"}
-        items={activeModal?.type === "reminder" ? activeModal.items : []}
-        onClose={() => {
-          close();
-          navigation.navigate("ShoppingList");
-        }}
-        onDisable={() => {
-          dispatch(setShowStapleReminder(false));
-          close();
-          navigation.navigate("ShoppingList");
-        }}
-      />
+      {reminderModal}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+const useStyles = makeStyles((t) => ({
+  screen: { flex: 1, backgroundColor: t.colors.background },
   flex: { flex: 1 },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    minHeight: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
+    gap: spacing.sm,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.sm,
+    minHeight: 44,
   },
-  count: { color: colors.muted, fontSize: 15 },
-  newWeek: { minHeight: 44, justifyContent: "center", paddingLeft: spacing.md },
-  newWeekText: { color: colors.accentStrong, fontSize: 16, fontWeight: "bold" },
-  dragHint: { color: colors.muted, fontSize: 13, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  narrowContent: { padding: spacing.lg },
+  tip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingLeft: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: t.colors.surfaceAlt,
+  },
+  narrowContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   columns: { flexGrow: 1, padding: spacing.sm },
   column: { padding: spacing.sm },
-  empty: { color: colors.muted, textAlign: "center", marginBottom: spacing.lg },
+  emptyCard: {
+    backgroundColor: t.colors.primarySoft,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  emptyButton: { alignSelf: "flex-start", marginTop: spacing.sm },
   unplanned: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    backgroundColor: t.colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     marginBottom: spacing.md,
     overflow: "hidden",
+    ...elevation(t, 1),
   },
-  unplannedHeader: { minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.md, backgroundColor: colors.favorite },
-  unplannedTitle: { fontSize: 17, fontWeight: "bold", color: colors.text },
-  hint: { color: colors.muted, padding: spacing.md },
-});
+  unplannedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    backgroundColor: t.colors.accentSoft,
+  },
+  hint: { padding: spacing.md },
+}));
 
 export default MenuScreen;

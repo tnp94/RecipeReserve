@@ -8,7 +8,16 @@ import {
 import {
   addStaple, removeStaple, toggleStaple, selectStaplesList, selectStapleKeys, selectIsStaple,
 } from "../pantrySlice";
-import { setShowStapleReminder, selectShowStapleReminder } from "../settingsSlice";
+import {
+  setShowStapleReminder,
+  selectShowStapleReminder,
+  setThemeName,
+  selectThemeName,
+  setHideMenuTip,
+  selectHideMenuTip,
+  setHideGettingStarted,
+  selectHideGettingStarted,
+} from "../settingsSlice";
 import {
   addRecipe, toggleFavorite, isRecipeNameTaken, selectRecipeById,
 } from "../recipesSlice";
@@ -64,6 +73,26 @@ describe("pantrySlice", () => {
 });
 
 describe("settingsSlice", () => {
+  it("falls back to defaults for settings saved before themeName / tips existed", () => {
+    const old = { settings: { showStapleReminder: true } };
+    expect(selectThemeName(old)).toBe("freshWarm");
+    expect(selectHideMenuTip(old)).toBe(false);
+    expect(selectHideGettingStarted(old)).toBe(false);
+  });
+
+  it("stores theme name and tip flags", () => {
+    const store = make();
+    expect(selectThemeName(store.getState())).toBe("freshWarm");
+    store.dispatch(setThemeName("  "));
+    expect(selectThemeName(store.getState())).toBe("freshWarm");
+    store.dispatch(setThemeName("other"));
+    expect(selectThemeName(store.getState())).toBe("other");
+    store.dispatch(setHideMenuTip(true));
+    store.dispatch(setHideGettingStarted(true));
+    expect(selectHideMenuTip(store.getState())).toBe(true);
+    expect(selectHideGettingStarted(store.getState())).toBe(true);
+  });
+
   it("defaults true and toggles", () => {
     const store = make();
     expect(selectShowStapleReminder(store.getState())).toBe(true);

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import { colors, radius } from "../../../theme";
+import { elevation, makeStyles, radius, useTheme } from "../../../theme";
 
 // Gesture-based drag-and-drop shared by iOS, Android and web (mouse + touch).
 // Coordinates: gesture absoluteX/absoluteY and measureInWindow are both window
@@ -20,8 +20,14 @@ export function useDragActive() {
   return useSyncExternalStore(api.subscribe, () => api.getState().active !== null);
 }
 
-export const dropOverStyle = (isOver) =>
-  isOver ? { borderColor: colors.accentStrong, backgroundColor: "rgba(47,128,237,0.12)" } : null;
+// Highlight for the drop target under the pointer.
+export function useDropOverStyle() {
+  const theme = useTheme();
+  return useCallback(
+    (isOver) => (isOver ? { borderColor: theme.colors.dropTargetBorder, backgroundColor: theme.colors.dropTarget } : null),
+    [theme]
+  );
+}
 
 // ScrollView that registers itself as an auto-scroll target and is locked
 // (scrollEnabled=false) during a drag. Any number may be mounted (e.g. the wide layout's
@@ -69,6 +75,7 @@ const measure = (node, cb) => {
 const IDLE = { active: null, hoverKey: null, hoverHalf: null };
 
 const DragProvider = ({ children, style }) => {
+  const styles = useStyles();
   // The preview needs `active` as React state; everything else reads the store.
   const [preview, setPreview] = useState(null);
   const stateRef = useRef(IDLE);
@@ -301,22 +308,18 @@ const DragProvider = ({ children, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((t) => ({
   container: { flex: 1 },
   preview: { position: "absolute", left: 0, top: 0, width: PREVIEW_W, height: PREVIEW_H, alignItems: "center", justifyContent: "center", zIndex: 1000 },
   pill: {
     maxWidth: PREVIEW_W,
-    backgroundColor: colors.accentStrong,
+    backgroundColor: t.colors.primary,
     borderRadius: radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    ...elevation(t, 2),
   },
-  pillText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
-});
+  pillText: { color: t.colors.onPrimary, fontWeight: "bold", fontSize: 14 },
+}));
 
 export default DragProvider;

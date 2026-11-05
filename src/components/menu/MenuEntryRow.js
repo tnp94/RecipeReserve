@@ -1,16 +1,24 @@
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useDispatch } from "react-redux";
-import { colors, radius, spacing } from "../../theme";
+import { Ionicons } from "@expo/vector-icons";
+import { makeStyles, radius, spacing, useTheme } from "../../theme";
 import { swapMenuEntries } from "../../store/menuSlice";
-import { dropOverStyle } from "./drag/DragProvider";
+import { useDropOverStyle } from "./drag/DragProvider";
 import DragHandle from "./drag/DragHandle";
 import useDropZone from "./drag/useDropZone";
+import useLayout from "../../hooks/useLayout";
+import { AppText, Badge, RecipeThumb } from "../ui";
 
 const IS_WEB = Platform.OS === "web";
 
 const MenuEntryRow = ({ entry, onPress, onRemove }) => {
   const dispatch = useDispatch();
+  const theme = useTheme();
+  const styles = useStyles();
+  const dropOverStyle = useDropOverStyle();
+  // The wide layout's day columns are narrow: leave the room to the recipe name.
+  const { isWide } = useLayout();
   const { ref, isOver } = useDropZone({
     key: `entry:${entry.id}`,
     accepts: ["entry"],
@@ -25,27 +33,27 @@ const MenuEntryRow = ({ entry, onPress, onRemove }) => {
       accessibilityRole="button"
       accessibilityLabel={`Remove ${entry.recipe.name}`}
     >
-      <Text style={styles.removeText}>Remove</Text>
+      <Ionicons name="trash-outline" size={18} color={theme.colors.onDanger} />
+      <AppText variant="smallStrong" style={{ color: theme.colors.onDanger }}>Remove</AppText>
     </Pressable>
   );
   const content = (
     <View style={styles.rowWrap}>
       <DragHandle payload={{ type: "entry", id: entry.id }} label={entry.recipe.name} />
       <Pressable
-        style={styles.row}
+        style={({ hovered }) => [styles.row, hovered && styles.hovered]}
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={`Options for ${entry.recipe.name}`}
       >
-        <Text style={styles.name} numberOfLines={2}>{entry.recipe.name}</Text>
-        {entry.scale !== 1 ? (
-          <View style={styles.badge}><Text style={styles.badgeText}>{`×${entry.scale}`}</Text></View>
-        ) : null}
-        {IS_WEB ? <Text style={styles.more}>{"⋯"}</Text> : null}
+        {isWide ? null : <RecipeThumb recipe={entry.recipe} size={32} rounded={radius.sm} />}
+        <AppText variant="body" style={styles.name} numberOfLines={2}>{entry.recipe.name}</AppText>
+        {entry.scale !== 1 ? <Badge label={`×${entry.scale}`} tone="accent" /> : null}
+        <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textSubtle} />
       </Pressable>
     </View>
   );
-  // Web renders without Swipeable (the "⋯" affordance opens the same options on tap).
+  // Web renders without Swipeable (tapping the row opens the same options, incl. Remove).
   return (
     <View ref={ref} collapsable={false} style={[styles.zone, dropOverStyle(isOver)]}>
       {IS_WEB ? (
@@ -59,40 +67,33 @@ const MenuEntryRow = ({ entry, onPress, onRemove }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  zone: { borderWidth: 2, borderColor: "transparent" },
+const useStyles = makeStyles((t) => ({
+  zone: { borderWidth: 2, borderColor: "transparent", borderRadius: radius.md },
   rowWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: t.colors.surface,
   },
   row: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
     paddingRight: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    ...(Platform.OS === "web" ? { cursor: "pointer" } : null),
   },
-  name: { flex: 1, fontSize: 16, color: colors.text },
-  badge: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: spacing.sm,
-  },
-  badgeText: { fontSize: 13, fontWeight: "bold", color: colors.text },
-  more: { fontSize: 22, color: colors.muted, paddingHorizontal: spacing.sm },
+  hovered: { backgroundColor: t.colors.surfaceAlt },
+  name: { flex: 1 },
   removeAction: {
-    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.danger,
-    justifyContent: "center",
+    backgroundColor: t.colors.danger,
   },
-  removeText: { color: "#fff", fontWeight: "bold" },
-});
+}));
 
 export default MenuEntryRow;

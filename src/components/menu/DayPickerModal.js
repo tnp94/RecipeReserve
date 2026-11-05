@@ -1,23 +1,13 @@
-import { Pressable, StyleSheet, Text } from "react-native";
 import AppModal from "../AppModal";
-import { colors, spacing } from "../../theme";
 import { WEEK_DAYS } from "../../store/menuSlice";
+import { PickerRow } from "./PickerRow";
 
 const DayPickerModal = ({ visible, title, excludeDay, onSelect, onClose }) => (
   <AppModal visible={visible} onClose={onClose} title={title}>
-    {WEEK_DAYS.map((label, day) =>
-      day === excludeDay ? null : (
-        <Pressable key={day} style={styles.row} onPress={() => onSelect(day)} accessibilityRole="button">
-          <Text style={styles.text}>{label}</Text>
-        </Pressable>
-      )
-    )}
+    {WEEK_DAYS.map((label, day) => (
+      <PickerRow key={day} label={label} current={day === excludeDay} onPress={() => onSelect(day)} />
+    ))}
   </AppModal>
 );
-
-const styles = StyleSheet.create({
-  row: { minHeight: 44, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: spacing.sm },
-  text: { fontSize: 16, color: colors.text },
-});
 
 export default DayPickerModal;

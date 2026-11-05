@@ -1,35 +1,45 @@
-import { View, Text } from "react-native";
+import { View } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
 import RecipeCard from "./RecipeCard";
 import useLayout from "../hooks/useLayout";
-import { colors } from "../theme";
+import { makeStyles, spacing } from "../theme";
 
-const RecipeCards = ({ recipes, hasAnyRecipes = true }) => {
+// Recipe library: a list of rows on phones, a grid of cards on wider screens.
+const RecipeCards = ({ recipes, onAddToMenu, ListHeaderComponent, ListEmptyComponent }) => {
   const { width } = useLayout();
-  const numColumns = width < 600 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 5;
+  const styles = useStyles();
+  const numColumns = width < 600 ? 1 : width < 900 ? 3 : width < 1200 ? 4 : 5;
+  const grid = numColumns > 1;
 
   return (
-    <View style={{ flex: 1 }}>
-      <FlatList
-        key={numColumns}
-        data={recipes}
-        numColumns={numColumns}
-        renderItem={({ item }) => (
+    <FlatList
+      key={numColumns}
+      data={recipes}
+      numColumns={numColumns}
+      contentContainerStyle={grid ? styles.gridContent : styles.listContent}
+      renderItem={({ item }) =>
+        grid ? (
           <View style={{ width: `${100 / numColumns}%` }}>
-            <RecipeCard recipeId={item.id} />
+            <RecipeCard recipeId={item.id} layout="grid" onAddToMenu={onAddToMenu} />
           </View>
-        )}
-        keyExtractor={(item) => item.id.toString()}
-        ListEmptyComponent={
-          <Text style={{ textAlign: "center", color: colors.muted, padding: 24 }}>
-            {hasAnyRecipes
-              ? "No recipes match your search."
-              : "No recipes yet. Tap New Recipe to add one."}
-          </Text>
-        }
-      />
-    </View>
+        ) : (
+          <RecipeCard recipeId={item.id} layout="row" onAddToMenu={onAddToMenu} />
+        )
+      }
+      ItemSeparatorComponent={grid ? null : () => <View style={styles.separator} />}
+      keyExtractor={(item) => item.id.toString()}
+      ListHeaderComponent={ListHeaderComponent}
+      ListEmptyComponent={ListEmptyComponent}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    />
   );
 };
+
+const useStyles = makeStyles((t) => ({
+  listContent: { paddingBottom: spacing.xxl },
+  gridContent: { paddingHorizontal: spacing.sm, paddingBottom: spacing.xxl },
+  separator: { height: 1, backgroundColor: t.colors.border, marginLeft: spacing.lg + 64 + spacing.md },
+}));
 
 export default RecipeCards;

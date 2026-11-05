@@ -1,12 +1,28 @@
-import { View, Text, TouchableOpacity, FlatList, TextInput, Button, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
-import { useEffect, useState } from "react";
-import { ingredientTemplate } from "../Models/Ingredient";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { StackActions } from "@react-navigation/native";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { useDispatch, useSelector, useStore } from "react-redux";
-import { addRecipe, editRecipe, selectRecipeById, isRecipeNameTaken } from "../store/recipesSlice";
-import Separator from "../components/Separator";
+import { ingredientTemplate } from "../Models/Ingredient";
+import {
+  addRecipe,
+  deleteRecipe,
+  editRecipe,
+  isRecipeNameTaken,
+  selectAllRecipes,
+  selectRecipeById,
+} from "../store/recipesSlice";
 import { useDialog } from "../components/dialog/DialogProvider";
+import AppModal from "../components/AppModal";
 import CategoryPicker from "../components/CategoryPicker";
+import IngredientEditor from "../components/recipeForm/IngredientEditor";
+import PasteModal from "../components/recipeForm/PasteModal";
+import { AppText, Button, Card, HeaderButton, IconButton, SegmentedControl, TextField } from "../components/ui";
+import { buildCategoryMemory, guessCategory } from "../domain/categoryGuess";
 import useLayout from "../hooks/useLayout";
+import { makeStyles, radius, spacing } from "../theme";
+
+export const DIFFICULTIES = ["Easy", "Medium", "Hard"];
 
 const emptyRecipe = {
   id: 0,
@@ -23,268 +39,431 @@ const emptyRecipe = {
   directions: [],
 };
 
+// Form-only fields on ingredients and steps (stripped before saving):
+//   _key           stable React key / identity while editing
+//   _autoCategory  true while the category is ours to guess (the user hasn't picked one)
+let keySeq = 0;
+const nextKey = () => `k${++keySeq}`;
+
+const isBlankIngredient = (i) => !["name", "quantityUnit", "unit", "note"].some((f) => String(i[f] ?? "").trim());
+
+function toSaved(data) {
+  const num = (v) => (v === "" || v == null || !Number.isFinite(Number(v)) ? 0 : Number(v));
+  return {
+    ...data,
+    name: String(data.name ?? "").trim(),
+    time: { ...data.time, prep: num(data.time?.prep), active: num(data.time?.active) },
+    yield: num(data.yield),
+    calories: num(data.calories),
+    ingredients: data.ingredients
+      .filter((i) => !isBlankIngredient(i))
+      .map(({ _key, _autoCategory, ...rest }) => ({
+        ...rest,
+        name: String(rest.name ?? "").trim(),
+        quantityUnit: String(rest.quantityUnit ?? "").trim(),
+        unit: String(rest.unit ?? "").trim(),
+        note: String(rest.note ?? "").trim(),
+      })),
+    directions: data.directions.map((d) => String(d.text ?? "").trim()).filter(Boolean),
+  };
+}
+
+// Numeric field that keeps "" while typing (so the field can be cleared) and digits only.
+const NumberField = ({ label, value, onChange, placeholder, suffix, style }) => (
+  <TextField
+    style={style}
+    label={label}
+    value={value === 0 || value == null ? "" : String(value)}
+    onChangeText={(t) => {
+      const digits = t.replace(/[^0-9]/g, "");
+      onChange(digits === "" ? "" : Number(digits));
+    }}
+    inputMode="numeric"
+    keyboardType="number-pad"
+    placeholder={placeholder}
+    right={suffix ? <AppText variant="small" tone="subtle" style={{ paddingRight: spacing.md }}>{suffix}</AppText> : null}
+  />
+);
+
 const RecipeFormScreen = ({ navigation, route }) => {
   const recipeId = route.params?.recipeId;
   const isEditing = !!recipeId;
-
-  const existingRecipe = useSelector((state) => isEditing ? selectRecipeById(state, recipeId) : null);
+  const existingRecipe = useSelector((state) => (isEditing ? selectRecipeById(state, recipeId) : null));
+  const allRecipes = useSelector(selectAllRecipes);
   const dispatch = useDispatch();
   const dialog = useDialog();
   const store = useStore();
-  const { isWide } = useLayout();
+  const styles = useStyles();
+  const { isWide, width } = useLayout();
+  const compact = width < 600;
+  const headerHeight = useHeaderHeight();
 
-  const [data, setData] = useState(isEditing ? { ...emptyRecipe, ...existingRecipe } : emptyRecipe);
+  // Learned once per form: what category the user gave each ingredient before.
+  const memory = useMemo(() => buildCategoryMemory(allRecipes), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
+  const [data, setData] = useState(() => {
+    const base = isEditing ? { ...emptyRecipe, ...existingRecipe } : emptyRecipe;
+    return {
+      ...base,
+      ingredients: (base.ingredients ?? []).map((i) => {
+        const blank = !i.category;
+        return { ...ingredientTemplate(), ...i, _key: nextKey(), _autoCategory: blank, category: blank ? guessCategory(i.name, memory) : i.category };
+      }),
+      directions: (base.directions ?? []).map((text) => ({ _key: nextKey(), text: String(text ?? "") })),
+    };
+  });
+  const [nameError, setNameError] = useState("");
+  // Which row's first field to focus; the nonce re-triggers focus on an existing row.
+  const [focus, setFocus] = useState({ key: null, nonce: 0 });
+  const setFocusKey = useCallback((key) => setFocus((f) => ({ key, nonce: f.nonce + 1 })), []);
+  const focusKey = focus.key;
+  const [categoryFor, setCategoryFor] = useState(null);
+  const [pasting, setPasting] = useState(null); // "ingredients" | "directions" | null
+
+  // Unsaved-changes guard: compare against the form as first shown.
+  const initial = useRef(JSON.stringify(toSaved(data)));
+  const dirty = JSON.stringify(toSaved(data)) !== initial.current;
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const allowLeave = useRef(false);
+
+  useEffect(
+    () =>
+      navigation.addListener("beforeRemove", (e) => {
+        if (allowLeave.current || !dirtyRef.current) return;
+        e.preventDefault();
+        dialog.alert("Discard changes?", "Your changes to this recipe haven't been saved.", [
+          { text: "Keep editing", style: "cancel" },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => {
+              allowLeave.current = true;
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ]);
+      }),
+    [navigation, dialog]
+  );
+
+  const leave = (action) => {
+    allowLeave.current = true;
+    if (action) navigation.dispatch(action);
+    else navigation.goBack();
+  };
+
+  const validName = () => {
+    const name = String(data.name ?? "").trim();
+    if (!name) {
+      setNameError("Give the recipe a name.");
+      dialog.alert("Recipe needs a name");
+      return null;
+    }
+    return name;
+  };
+
+  const saveAsNew = () => {
+    if (!validName()) return;
+    const newId = store.getState().recipes.nextId;
+    dispatch(addRecipe(toSaved(data)));
+    leave(StackActions.replace("Recipe Details", { recipeId: newId }));
+  };
+
+  const save = () => {
+    const name = validName();
+    if (!name) return;
+    if (!isEditing) {
+      saveAsNew();
+      return;
+    }
+    if (isRecipeNameTaken(store.getState(), name, recipeId)) {
+      setNameError(`Another recipe is already named "${name}".`);
+      dialog.alert("Name already used", `Another recipe is already named "${name}". Pick a different name, or save this as a new recipe.`);
+      return;
+    }
+    dispatch(editRecipe({ id: recipeId, changes: toSaved(data) }));
+    leave();
+  };
+
+  const confirmDelete = () =>
+    dialog.alert(`Delete "${existingRecipe?.name}"?`, "It will also be removed from your menu. This can't be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          allowLeave.current = true;
+          navigation.popToTop();
+          dispatch(deleteRecipe(recipeId));
+        },
+      },
+    ]);
+
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useLayoutEffect(() => {
     navigation.setOptions({
+      title: isEditing ? "Edit recipe" : "New recipe",
       headerRight: () => (
-        <Button onPress={() => onSaveButtonPress(data)} title={isEditing ? "Save/copy" : "Save"} />
+        <View style={{ marginRight: spacing.md }}>
+          <HeaderButton label="Save" icon="checkmark" filled onPress={() => saveRef.current()} />
+        </View>
       ),
     });
-  }, [data]);
+  }, [navigation, isEditing]);
 
-  const onSaveButtonPress = (recipe) => {
-    const name = (recipe.name ?? "").trim();
-    if (!name) {
-      dialog.alert("Recipe needs a name");
-      return;
-    }
-    const toMinutes = (v) => (v === "" || v == null ? 0 : v);
-    const cleaned = {
-      ...recipe,
-      name,
-      time: { ...recipe.time, prep: toMinutes(recipe.time?.prep), active: toMinutes(recipe.time?.active) },
-    };
-    if (!isEditing) {
-      dispatch(addRecipe(cleaned));
-      navigation.popToTop();
-      return;
-    }
-    dialog.alert("Save changes", undefined, [
-      {
-        text: "Save changes",
-        onPress: () => {
-          if (isRecipeNameTaken(store.getState(), name, recipeId)) {
-            dialog.alert("Name already used", `Another recipe is already named "${name}".`);
-            return;
-          }
-          dispatch(editRecipe({ id: recipeId, changes: cleaned }));
-          navigation.pop();
-        },
-      },
-      {
-        text: "Save as new recipe",
-        onPress: () => {
-          dispatch(addRecipe(cleaned));
-          navigation.popToTop();
-        },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
+  // ----- ingredients -----
+  const updateIngredient = useCallback(
+    (key, field, value) =>
+      setData((d) => ({
+        ...d,
+        ingredients: d.ingredients.map((i) => {
+          if (i._key !== key) return i;
+          const next = { ...i, [field]: value };
+          if (field === "name" && i._autoCategory) next.category = guessCategory(value, memory);
+          return next;
+        }),
+      })),
+    [memory]
+  );
+  const removeIngredient = useCallback(
+    (key) => setData((d) => ({ ...d, ingredients: d.ingredients.filter((i) => i._key !== key) })),
+    []
+  );
+  const addIngredient = useCallback(() => {
+    const key = nextKey();
+    setData((d) => ({ ...d, ingredients: [...d.ingredients, { ...ingredientTemplate(), _key: key, _autoCategory: true }] }));
+    setFocusKey(key);
+  }, [setFocusKey]);
+  const ingredientsRef = useRef(data.ingredients);
+  ingredientsRef.current = data.ingredients;
+  // Return on an ingredient's last field: go to the next one, adding it if this was the last.
+  const onSubmitLast = useCallback(
+    (key) => {
+      const list = ingredientsRef.current;
+      const at = list.findIndex((i) => i._key === key);
+      if (at === list.length - 1) addIngredient();
+      else if (at >= 0) setFocusKey(list[at + 1]._key);
+    },
+    [addIngredient, setFocusKey]
+  );
+  const setCategory = (category) => {
+    const key = categoryFor;
+    setData((d) => ({
+      ...d,
+      ingredients: d.ingredients.map((i) => (i._key === key ? { ...i, category, _autoCategory: false } : i)),
+    }));
+    setCategoryFor(null);
+  };
+  const addPastedIngredients = (rows) => {
+    setData((d) => ({
+      ...d,
+      // Pasting into a list of only blank rows replaces them.
+      ingredients: [
+        ...d.ingredients.filter((i) => !isBlankIngredient(i)),
+        ...rows.map((r) => ({ ...ingredientTemplate(), ...r, category: guessCategory(r.name, memory), _key: nextKey(), _autoCategory: true })),
+      ],
+    }));
+    setPasting(null);
   };
 
-  const updateIngredient = (field, text, index) => {
-    const ingredients = [...data.ingredients];
-    ingredients[index] = {
-      ...data.ingredients[index],
-      [field]: field === "quantityUnit" ? text.toString() : text,
-    };
-    setData({ ...data, ingredients });
+  // ----- directions -----
+  const updateStep = (key, text) =>
+    setData((d) => ({ ...d, directions: d.directions.map((s) => (s._key === key ? { ...s, text } : s)) }));
+  const removeStep = (key) => setData((d) => ({ ...d, directions: d.directions.filter((s) => s._key !== key) }));
+  const addStep = () => {
+    const key = nextKey();
+    setData((d) => ({ ...d, directions: [...d.directions, { _key: key, text: "" }] }));
+    setFocusKey(key);
+  };
+  const addPastedSteps = (steps) => {
+    setData((d) => ({
+      ...d,
+      directions: [...d.directions.filter((s) => s.text.trim()), ...steps.map((text) => ({ _key: nextKey(), text }))],
+    }));
+    setPasting(null);
   };
 
-  const updateDirection = (text, index) => {
-    const directions = [...data.directions];
-    directions[index] = text;
-    setData({ ...data, directions });
-  };
+  const difficultyOptions = DIFFICULTIES.map((v) => ({ value: v, label: v }));
+  const difficultyValue = DIFFICULTIES.find((v) => v.toLowerCase() === String(data.difficulty ?? "").trim().toLowerCase()) ?? data.difficulty;
+  // Keep an older free-text difficulty selectable instead of silently dropping it.
+  if (difficultyValue && !DIFFICULTIES.includes(difficultyValue)) difficultyOptions.push({ value: difficultyValue, label: difficultyValue });
+
+  const categoryItem = data.ingredients.find((i) => i._key === categoryFor);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <ScrollView
-          nestedScrollEnabled={true}
-          style={{ padding: 5 }}
-          contentContainerStyle={isWide ? { maxWidth: 800, width: "100%", alignSelf: "center" } : undefined}
-        >
-          <Text style={{ fontSize: 32, alignSelf: "center", marginBottom: 10 }}>
-            {isEditing ? "Edit Recipe" : "Let's add a new Recipe!"}
-          </Text>
-
-          <View style={{ marginBottom: 10 }}>
-            <Text style={{ fontSize: 24 }}>Recipe Name</Text>
-            <TextInput
-              style={{ backgroundColor: "#fff", padding: 5 }}
-              placeholder="Recipe Name"
-              value={data.name}
-              onChangeText={(text) => setData({ ...data, name: text })}
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}>
+      <ScrollView
+        contentContainerStyle={[styles.content, isWide && styles.contentWide]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+      >
+        <Card style={styles.section}>
+          <AppText variant="heading" style={styles.sectionTitle} accessibilityRole="header">Basics</AppText>
+          <TextField
+            label="Name"
+            value={data.name}
+            onChangeText={(text) => {
+              setNameError("");
+              setData((d) => ({ ...d, name: text }));
+            }}
+            placeholder="e.g. Weeknight chili"
+            error={nameError}
+            autoFocus={!isEditing}
+            returnKeyType="done"
+          />
+          <View style={styles.field}>
+            <AppText variant="smallStrong" tone="muted" style={styles.fieldLabel}>Difficulty</AppText>
+            <SegmentedControl
+              options={difficultyOptions}
+              value={difficultyValue || null}
+              allowDeselect
+              accessibilityLabel="Difficulty"
+              onChange={(v) => setData((d) => ({ ...d, difficulty: v ?? "" }))}
             />
           </View>
-
-          <View style={{ marginBottom: 10 }}>
-            <Text style={{ fontSize: 24 }}>Recipe difficulty</Text>
-            <TextInput
-              style={{ backgroundColor: "#fff", padding: 5 }}
-              placeholder="Easy/Medium/Hard"
-              value={data.difficulty}
-              onChangeText={(text) => setData({ ...data, difficulty: text })}
+          <View style={[styles.field, styles.grid]}>
+            <NumberField
+              style={styles.gridItem}
+              label="Prep time"
+              suffix="min"
+              placeholder="0"
+              value={data.time?.prep}
+              onChange={(v) => setData((d) => ({ ...d, time: { ...d.time, prep: v } }))}
+            />
+            <NumberField
+              style={styles.gridItem}
+              label="Cook time"
+              suffix="min"
+              placeholder="0"
+              value={data.time?.active}
+              onChange={(v) => setData((d) => ({ ...d, time: { ...d.time, active: v } }))}
+            />
+            <NumberField
+              style={styles.gridItem}
+              label="Serves"
+              placeholder="—"
+              value={data.yield}
+              onChange={(v) => setData((d) => ({ ...d, yield: v }))}
+            />
+            <NumberField
+              style={styles.gridItem}
+              label="Calories"
+              placeholder="—"
+              value={data.calories}
+              onChange={(v) => setData((d) => ({ ...d, calories: v }))}
             />
           </View>
+        </Card>
 
-          <View style={{ marginBottom: 10 }}>
-            <Text style={{ fontSize: 24 }}>Recipe Time</Text>
-            <Text style={{ fontSize: 18 }}>Prep time (minutes)</Text>
-            <TextInput
-              inputMode="numeric"
-              style={{ backgroundColor: "#fff", padding: 5 }}
-              placeholder="20"
-              value={data.time?.prep?.toString()}
-              onChangeText={(text) => {
-                if (/^\d+$/.test(text)) {
-                  setData({ ...data, time: { ...data.time, prep: Number.parseFloat(text) } });
-                } else if (text === "") {
-                  setData({ ...data, time: { ...data.time, prep: "" } });
-                }
-              }}
-            />
-            <Text style={{ fontSize: 18 }}>Active time (minutes)</Text>
-            <TextInput
-              inputMode="numeric"
-              style={{ backgroundColor: "#fff", padding: 5 }}
-              placeholder="90"
-              value={data.time?.active?.toString()}
-              onChangeText={(text) => {
-                if (/^\d+$/.test(text)) {
-                  setData({ ...data, time: { ...data.time, active: Number.parseFloat(text) } });
-                } else if (text === "") {
-                  setData({ ...data, time: { ...data.time, active: "" } });
-                }
-              }}
-            />
+        <Card style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <AppText variant="heading" accessibilityRole="header" style={styles.flex}>Ingredients</AppText>
+            <Button label="Paste list" icon="clipboard-outline" variant="ghost" size="sm" onPress={() => setPasting("ingredients")} />
           </View>
+          {data.ingredients.length === 0 ? (
+            <AppText variant="small" tone="muted">
+              Add ingredients one by one, or paste a whole list. Categories are filled in for you.
+            </AppText>
+          ) : null}
+          {data.ingredients.map((item, index) => (
+            <IngredientEditor
+              key={item._key}
+              item={item}
+              index={index}
+              autoFocus={item._key === focusKey}
+              focusNonce={item._key === focusKey ? focus.nonce : 0}
+              compact={compact}
+              onChange={updateIngredient}
+              onRemove={removeIngredient}
+              onPickCategory={setCategoryFor}
+              onSubmitLast={onSubmitLast}
+            />
+          ))}
+          <Button label="Add ingredient" icon="add" variant="tonal" onPress={addIngredient} style={styles.addButton} />
+        </Card>
 
-          <View>
-            <View>
-              <View style={{ flexDirection: "row" }}>
-                <Text>Ingredients</Text>
-                <TouchableOpacity
-                  style={{ backgroundColor: "skyblue", padding: 5, borderRadius: 7, flex: 1, justifyContent: "center" }}
-                  onPress={() => {
-                    if (Keyboard.isVisible()) {
-                      Keyboard.dismiss();
-                    } else {
-                      setData({ ...data, ingredients: [...data.ingredients, ingredientTemplate()] });
-                    }
-                  }}
-                >
-                  <Text>New Ingredient</Text>
-                </TouchableOpacity>
+        <Card style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <AppText variant="heading" accessibilityRole="header" style={styles.flex}>Directions</AppText>
+            <Button label="Paste steps" icon="clipboard-outline" variant="ghost" size="sm" onPress={() => setPasting("directions")} />
+          </View>
+          {data.directions.map((step, index) => (
+            <View key={step._key} style={styles.step}>
+              <View style={styles.stepNumber}>
+                <AppText variant="smallStrong" style={styles.stepNumberText}>{index + 1}</AppText>
               </View>
+              <TextField
+                style={styles.flex}
+                value={step.text}
+                onChangeText={(t) => updateStep(step._key, t)}
+                placeholder="Describe this step"
+                accessibilityLabel={`Step ${index + 1}`}
+                autoFocus={step._key === focusKey}
+                multiline
+              />
+              <IconButton icon="trash-outline" size={20} accessibilityLabel={`Remove step ${index + 1}`} onPress={() => removeStep(step._key)} />
             </View>
-            <FlatList
-              scrollEnabled={false}
-              data={data.ingredients}
-              ItemSeparatorComponent={Separator}
-              renderItem={({ item, index }) => (
-                <View style={{ flexDirection: "column", borderWidth: 1 }}>
-                  <View style={{ flexDirection: "row" }}>
-                    <TextInput
-                      style={{ paddingHorizontal: 5, backgroundColor: "#fff", borderWidth: 1, borderColor: "#eee" }}
-                      placeholder="#"
-                      value={item.quantityUnit.toString()}
-                      onChangeText={(text) => updateIngredient("quantityUnit", text, index)}
-                    />
-                    <TextInput
-                      style={{ paddingHorizontal: 5, backgroundColor: "#fff" }}
-                      placeholder="Unit"
-                      value={item.unit.toString()}
-                      onChangeText={(text) => updateIngredient("unit", text, index)}
-                    />
-                    <TextInput
-                      style={{ paddingHorizontal: 10, backgroundColor: "#fff", flex: 1 }}
-                      placeholder="Ingredient Name"
-                      value={item.name.toString()}
-                      onChangeText={(text) => updateIngredient("name", text, index)}
-                    />
-                  </View>
-                  <View style={{ flexDirection: "row" }}>
-                    <TextInput
-                      style={{ paddingHorizontal: 10, backgroundColor: "#fff", flex: 1 }}
-                      placeholder="Note:Minced?/Softened?/Trimmed?"
-                      value={item.note}
-                      onChangeText={(text) => updateIngredient("note", text, index)}
-                    />
-                    <TouchableOpacity
-                      style={{ backgroundColor: "#fff", padding: 5, borderRadius: 7, flex: 1, justifyContent: "center" }}
-                      onPress={() => {
-                        const ingredients = [...data.ingredients];
-                        ingredients.splice(index, 1);
-                        setData({ ...data, ingredients });
-                      }}
-                    >
-                      <Text style={{ color: "red" }}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={{ backgroundColor: "#fff", paddingHorizontal: 10 }}>
-                    <CategoryPicker
-                      value={item.category}
-                      onChange={(category) => updateIngredient("category", category, index)}
-                    />
-                  </View>
-                </View>
-              )}
-            />
-          </View>
+          ))}
+          <Button label="Add step" icon="add" variant="tonal" onPress={addStep} style={styles.addButton} />
+        </Card>
 
-          <View>
-            <View>
-              <View style={{ flexDirection: "row" }}>
-                <Text>Directions</Text>
-                <TouchableOpacity
-                  style={{ backgroundColor: "skyblue", padding: 5, borderRadius: 7, flex: 1, justifyContent: "center" }}
-                  onPress={() => {
-                    if (Keyboard.isVisible()) {
-                      Keyboard.dismiss();
-                    } else {
-                      setData({ ...data, directions: [...data.directions, ""] });
-                    }
-                  }}
-                >
-                  <Text>New Direction</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <FlatList
-              scrollEnabled={false}
-              data={data.directions}
-              ItemSeparatorComponent={Separator}
-              renderItem={({ item, index }) => (
-                <View style={{ flexDirection: "row" }}>
-                  <Text>{index + 1}</Text>
-                  <TextInput
-                    style={{ paddingHorizontal: 10, backgroundColor: "#fff", flex: 7 }}
-                    placeholder="?"
-                    value={item}
-                    multiline={true}
-                    onChangeText={(text) => updateDirection(text, index)}
-                  />
-                  <TouchableOpacity
-                    style={{ backgroundColor: "#fff", padding: 5, borderRadius: 7, flex: 1, justifyContent: "center" }}
-                    onPress={() => {
-                      const directions = [...data.directions];
-                      directions.splice(index, 1);
-                      setData({ ...data, directions });
-                    }}
-                  >
-                    <Text style={{ color: "red" }}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
+        {isEditing ? (
+          <View style={styles.footer}>
+            <Button label="Save as a new recipe" icon="copy-outline" variant="secondary" onPress={saveAsNew} />
+            <Button label="Delete recipe" icon="trash-outline" variant="dangerGhost" onPress={confirmDelete} />
           </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
+        ) : (
+          <View style={styles.footer}>
+            <Button label="Save recipe" icon="checkmark" onPress={save} />
+          </View>
+        )}
+      </ScrollView>
+
+      <AppModal
+        visible={!!categoryFor}
+        onClose={() => setCategoryFor(null)}
+        title="Store category"
+        subtitle={categoryItem?.name ? `Where you find ${categoryItem.name} in the store` : "Groups the shopping list by aisle"}
+      >
+        <CategoryPicker value={categoryItem?.category ?? ""} onChange={setCategory} />
+      </AppModal>
+      <PasteModal
+        visible={!!pasting}
+        kind={pasting ?? "ingredients"}
+        onClose={() => setPasting(null)}
+        onAdd={pasting === "directions" ? addPastedSteps : addPastedIngredients}
+      />
     </KeyboardAvoidingView>
   );
 };
+
+const useStyles = makeStyles((t) => ({
+  screen: { flex: 1, backgroundColor: t.colors.background },
+  flex: { flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl * 2 },
+  contentWide: { maxWidth: 800, width: "100%", alignSelf: "center" },
+  section: { marginBottom: spacing.lg },
+  sectionTitle: { marginBottom: spacing.md },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: spacing.xs },
+  field: { marginTop: spacing.lg },
+  fieldLabel: { marginBottom: spacing.xs },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  gridItem: { flexGrow: 1, flexBasis: 120 },
+  addButton: { alignSelf: "flex-start", marginTop: spacing.md },
+  step: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, marginTop: spacing.md },
+  stepNumber: {
+    width: 28,
+    height: 28,
+    marginTop: 8,
+    borderRadius: radius.pill,
+    backgroundColor: t.colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepNumberText: { color: t.colors.onPrimarySoft },
+  footer: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "space-between" },
+}));
 
 export default RecipeFormScreen;

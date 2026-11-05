@@ -1,34 +1,24 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
 import AppModal from "../AppModal";
-import { colors, spacing } from "../../theme";
+import { AppText } from "../ui";
+import { PickerGroup, PickerRow } from "./PickerRow";
 
-// groups: Array<{ label, entries }>
+// groups: Array<{ key, label, entries }>
 const EntryPickerModal = ({ visible, groups, onSelect, onClose }) => {
   const total = groups.reduce((n, g) => n + g.entries.length, 0);
   return (
     <AppModal visible={visible} onClose={onClose} title={"Swap with…"}>
-      {total === 0 ? <Text style={styles.empty}>No other recipes on the menu to swap with.</Text> : null}
+      {total === 0 ? <AppText tone="muted">No other recipes on the menu to swap with.</AppText> : null}
       {groups.map((group) =>
         group.entries.length === 0 ? null : (
-          <View key={group.key}>
-            <Text style={styles.group}>{group.label}</Text>
+          <PickerGroup key={group.key} title={group.label}>
             {group.entries.map((entry) => (
-              <Pressable key={entry.id} style={styles.row} onPress={() => onSelect(entry)} accessibilityRole="button">
-                <Text style={styles.text}>{entry.recipe.name}</Text>
-              </Pressable>
+              <PickerRow key={entry.id} label={entry.recipe.name} onPress={() => onSelect(entry)} />
             ))}
-          </View>
+          </PickerGroup>
         )
       )}
     </AppModal>
   );
 };
-
-const styles = StyleSheet.create({
-  empty: { color: colors.muted },
-  group: { fontSize: 13, fontWeight: "bold", color: colors.muted, textTransform: "uppercase", marginTop: spacing.md },
-  row: { minHeight: 44, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: spacing.sm },
-  text: { fontSize: 16, color: colors.text },
-});
 
 export default EntryPickerModal;

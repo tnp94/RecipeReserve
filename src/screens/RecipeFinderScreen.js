@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import Chip from "../components/Chip";
-import { useDialog } from "../components/dialog/DialogProvider";
+import { useToast } from "../components/toast/ToastProvider";
+import { useAddToMenu } from "../components/menu/AddToMenuSheet";
+import { AppText, Badge, Button, Card, EmptyState, IconButton, ProgressBar, RecipeThumb, SectionHeader, TextField } from "../components/ui";
 import useLayout from "../hooks/useLayout";
-import { colors, spacing, radius } from "../theme";
+import { makeStyles, radius, spacing, useTheme } from "../theme";
 import { findRecipes } from "../domain/recipeFinder";
 import { collectIngredientNames, suggestIngredients } from "../domain/ingredientSuggestions";
 import { normalizeName } from "../domain/ingredientKey";
@@ -22,39 +25,53 @@ import {
 } from "../store/finderSlice";
 import { addItemsToShoppingList } from "../store/thunks";
 
-const ResultCard = ({ result, onOpen, onAddMissing, partial }) => {
+const ResultCard = ({ result, onOpen, onAddMissing, onAddToMenu, partial }) => {
+  const styles = useStyles();
   const { recipe, matchedCount, totalCount, missing, expiringCount, isFullMatch } = result;
   return (
-    <TouchableOpacity accessibilityRole="button" onPress={onOpen} style={styles.card}>
-      <Text style={styles.cardTitle}>{recipe.name}</Text>
-      <Text style={styles.cardText}>
-        Have {matchedCount} of {totalCount} ingredients
-      </Text>
-      {expiringCount > 0 && (
-        <Text style={styles.cardText}>
-          Uses {expiringCount} expiring {expiringCount === 1 ? "item" : "items"}
-        </Text>
-      )}
-      {!isFullMatch && partial && (
-        <Text style={styles.cardText}>
-          Missing {missing.length} {missing.length === 1 ? "ingredient" : "ingredients"}
-        </Text>
-      )}
-      {!isFullMatch && !partial && (
-        <>
-          <Text style={styles.cardText}>Missing: {missing.map((m) => m.name).join(", ")}</Text>
-          <Chip label="Add missing to shopping list" onPress={onAddMissing} style={{ alignSelf: "flex-start", marginTop: spacing.sm }} />
-        </>
-      )}
-    </TouchableOpacity>
+    <Card onPress={onOpen} style={styles.card} accessibilityLabel={`${recipe.name}. Have ${matchedCount} of ${totalCount} ingredients`}>
+      <View style={styles.cardTop}>
+        <RecipeThumb recipe={recipe} size={56} rounded={radius.md} />
+        <View style={styles.flex}>
+          <AppText variant="subheading" numberOfLines={2}>{recipe.name}</AppText>
+          <AppText variant="small" tone="muted">{`Have ${matchedCount} of ${totalCount} ingredients`}</AppText>
+          <ProgressBar value={matchedCount / totalCount} style={styles.cardProgress} />
+        </View>
+      </View>
+      {expiringCount > 0 || (!isFullMatch && partial) ? (
+        <View style={styles.badges}>
+          {expiringCount > 0 ? (
+            <Badge tone="warning" icon="time-outline" label={`Uses ${expiringCount} expiring ${expiringCount === 1 ? "item" : "items"}`} />
+          ) : null}
+          {!isFullMatch && partial ? (
+            <Badge tone="neutral" label={`Missing ${missing.length} ${missing.length === 1 ? "ingredient" : "ingredients"}`} />
+          ) : null}
+        </View>
+      ) : null}
+      {!isFullMatch && !partial ? (
+        <AppText variant="small" style={styles.missing}>
+          <AppText variant="smallStrong">Missing: </AppText>
+          {missing.map((m) => m.name).join(", ")}
+        </AppText>
+      ) : null}
+      <View style={styles.cardActions}>
+        {!isFullMatch && !partial ? (
+          <Button label="Add missing to list" icon="cart-outline" variant="tonal" size="sm" onPress={onAddMissing} />
+        ) : null}
+        <Button label="Add to menu" icon="calendar-outline" variant="ghost" size="sm" onPress={onAddToMenu} />
+      </View>
+    </Card>
   );
 };
 
 const RecipeFinderScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const dialog = useDialog();
+  const toast = useToast();
+  const theme = useTheme();
+  const styles = useStyles();
   const { isWide } = useLayout();
+  const { openAddToMenu, addToMenuSheet } = useAddToMenu();
   const [text, setText] = useState("");
   const [focused, setFocused] = useState(false);
   const inputRef = useRef(null);
@@ -110,21 +127,22 @@ const RecipeFinderScreen = () => {
     const parts = [];
     if (added > 0) parts.push(`${items(added)} added.`);
     if (skipped > 0) parts.push(`${items(skipped)} already on your list.`);
-    dialog.alert(added > 0 ? "Added to shopping list" : "Already on your list", parts.join(" "));
+    toast.show(parts.join(" ") || "Nothing to add.", { actionLabel: "View list", onAction: () => navigation.navigate("ShoppingList") });
   };
 
   const openRecipe = (recipeId) => navigation.navigate("Recipe Details", { recipeId });
 
-  const renderGroup = (title, results, partial = false) =>
+  const renderGroup = (title, subtitle, results, partial = false) =>
     results.length > 0 && (
-      <View>
-        <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.group}>
+        <SectionHeader title={title} subtitle={subtitle} />
         {results.map((r) => (
           <ResultCard
             key={r.recipe.id}
             result={r}
             onOpen={() => openRecipe(r.recipe.id)}
             onAddMissing={() => addMissing(r.missing, r.recipe)}
+            onAddToMenu={() => openAddToMenu(r.recipe)}
             partial={partial}
           />
         ))}
@@ -133,174 +151,209 @@ const RecipeFinderScreen = () => {
 
   const hasResults = fullMatches.length > 0 || nearMatches.length > 0 || otherMatches.length > 0;
 
+  const dropdown = (title, action, rows) => (
+    <View style={styles.dropdown}>
+      <View style={styles.dropdownHeader}>
+        <AppText variant="overline" tone="muted" style={styles.flex}>{title}</AppText>
+        {action}
+      </View>
+      {rows}
+    </View>
+  );
+
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={[styles.content, isWide && { maxWidth: 800, width: "100%", alignSelf: "center" }]}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.inputRow}>
-        <TextInput
-          ref={inputRef}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          placeholder="Add an ingredient you have"
-          blurOnSubmit={false}
-          onSubmitEditing={submit}
-        />
-        <Chip label="Add" onPress={submit} />
-      </View>
-      {showRecent && (
-        <View style={styles.dropdown}>
-          <View style={styles.dropdownHeader}>
-            <Text style={styles.dropdownTitle}>Recent</Text>
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => dispatch(clearRecentFinderIngredients())}
-              style={styles.dropdownAction}
-            >
-              <Text style={styles.dropdownActionText}>Clear recent</Text>
-            </TouchableOpacity>
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={[styles.content, isWide && styles.contentWide]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Card style={styles.inputCard}>
+          <AppText variant="heading">What do you have?</AppText>
+          <AppText variant="small" tone="muted">
+            Add ingredients you have on hand. Nothing to keep up to date: they're only used for this search.
+          </AppText>
+          <View style={styles.inputRow}>
+            <TextField
+              ref={inputRef}
+              style={styles.flex}
+              icon="add"
+              onFocus={onFocus}
+              onBlur={onBlur}
+              value={text}
+              onChangeText={setText}
+              placeholder="e.g. chicken, spinach, rice"
+              accessibilityLabel="Ingredient you have"
+              blurOnSubmit={false}
+              returnKeyType="done"
+              onSubmitEditing={submit}
+            />
+            <Button label="Add" onPress={submit} disabled={!text.trim()} />
           </View>
-          {recentOptions.map(({ name, added }) => (
-            <TouchableOpacity
-              key={name}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: added }}
-              disabled={added}
-              onPress={() => pick(name)}
-              style={[styles.dropdownRow, added && styles.dropdownRowAdded]}
-            >
-              <Text style={[styles.dropdownText, added && styles.dropdownTextAdded]}>{name}</Text>
-              {added && <Text style={styles.addedBadge}>✓ Added</Text>}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-      {showSuggestions && (
-        <View style={styles.dropdown}>
-          <View style={styles.dropdownHeader}>
-            <Text style={styles.dropdownTitle}>From your recipes</Text>
+          {showRecent &&
+            dropdown(
+              "Recent",
+              <Button label="Clear recent" variant="ghost" size="sm" onPress={() => dispatch(clearRecentFinderIngredients())} />,
+              recentOptions.map(({ name, added }) => (
+                <Pressable
+                  key={name}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: added }}
+                  disabled={added}
+                  onPress={() => pick(name)}
+                  style={({ pressed, hovered }) => [styles.dropdownRow, (pressed || hovered) && !added && styles.dropdownRowPressed]}
+                >
+                  <AppText variant="body" style={[styles.flex, added && { color: theme.colors.textSubtle }]}>{name}</AppText>
+                  {added ? (
+                    <View style={styles.added}>
+                      <Ionicons name="checkmark" size={14} color={theme.colors.textSubtle} />
+                      <AppText variant="caption" tone="subtle">Added</AppText>
+                    </View>
+                  ) : null}
+                </Pressable>
+              ))
+            )}
+          {showSuggestions &&
+            dropdown(
+              "From your recipes",
+              null,
+              suggestions.map((name) => (
+                <Pressable
+                  key={name}
+                  accessibilityRole="button"
+                  onPress={() => pick(name)}
+                  style={({ pressed, hovered }) => [styles.dropdownRow, (pressed || hovered) && styles.dropdownRowPressed]}
+                >
+                  <AppText variant="body">{name}</AppText>
+                </Pressable>
+              ))
+            )}
+          <View style={styles.toolbar}>
+            <Chip
+              size="sm"
+              icon="file-tray-stacked-outline"
+              label="Add pantry staples"
+              disabled={staples.length === 0}
+              onPress={() => dispatch(addFinderIngredients({ names: staples.map((s) => s.name), remember: false }))}
+            />
+            <Chip size="sm" icon="close" label="Clear all" disabled={ingredients.length === 0} onPress={() => dispatch(clearFinderIngredients())} />
           </View>
-          {suggestions.map((name) => (
-            <TouchableOpacity key={name} accessibilityRole="button" onPress={() => pick(name)} style={styles.dropdownRow}>
-              <Text style={styles.dropdownText}>{name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-      <View style={styles.toolbar}>
-        <Chip
-          label="Add pantry staples"
-          disabled={staples.length === 0}
-          onPress={() => dispatch(addFinderIngredients({ names: staples.map((s) => s.name), remember: false }))}
-        />
-        <Chip label="Clear all" disabled={ingredients.length === 0} onPress={() => dispatch(clearFinderIngredients())} />
-      </View>
-      <Text style={styles.hint}>
-        Tap Expiring soon to prefer recipes that use it. Tap Must use to only show recipes that include it.
-      </Text>
+        </Card>
 
-      {ingredients.map((item) => (
-        <View key={item.id} style={styles.ingredientRow}>
-          <View style={styles.ingredientHeader}>
-            <Text style={styles.ingredientName}>{item.name}</Text>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={`Remove ${item.name}`}
-              onPress={() => dispatch(removeFinderIngredient(item.id))}
-              style={styles.remove}
-            >
-              <Text style={{ fontSize: 18, color: colors.muted }}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.tagRow}>
-            <Chip label="Expiring soon" selected={item.tag === "expiring"} onPress={() => toggleTag(item, "expiring")} />
-            <Chip label="Must use" selected={item.tag === "required"} onPress={() => toggleTag(item, "required")} />
-          </View>
-        </View>
-      ))}
+        {ingredients.length > 0 ? (
+          <Card padded="none" style={styles.ingredients}>
+            <View style={styles.ingredientsHeader}>
+              <AppText variant="subheading" style={styles.flex}>{`Your ingredients (${ingredients.length})`}</AppText>
+            </View>
+            <AppText variant="caption" tone="muted" style={styles.hint}>
+              Expiring soon: prefer recipes that use it. Must use: only show recipes that include it.
+            </AppText>
+            {ingredients.map((item) => (
+              <View key={item.id} style={styles.ingredientRow}>
+                <AppText variant="bodyStrong" style={styles.ingredientName} numberOfLines={1}>{item.name}</AppText>
+                <View style={styles.tagRow}>
+                  <Chip
+                    size="sm"
+                    icon="time-outline"
+                    label="Expiring soon"
+                    selected={item.tag === "expiring"}
+                    onPress={() => toggleTag(item, "expiring")}
+                    accessibilityLabel={`${item.name}: expiring soon`}
+                  />
+                  <Chip
+                    size="sm"
+                    icon="lock-closed-outline"
+                    label="Must use"
+                    selected={item.tag === "required"}
+                    onPress={() => toggleTag(item, "required")}
+                    accessibilityLabel={`${item.name}: must use`}
+                  />
+                  <IconButton icon="close" size={18} accessibilityLabel={`Remove ${item.name}`} onPress={() => dispatch(removeFinderIngredient(item.id))} />
+                </View>
+              </View>
+            ))}
+          </Card>
+        ) : null}
 
-      {renderGroup("You can make", fullMatches)}
-      {renderGroup("Almost there", nearMatches)}
-      {renderGroup("Uses some of your ingredients", otherMatches, true)}
+        {renderGroup("You can make", "You have everything.", fullMatches)}
+        {renderGroup("Almost there", "Missing one or two ingredients.", nearMatches)}
+        {renderGroup("Uses some of your ingredients", null, otherMatches, true)}
 
-      {ingredients.length === 0 && (
-        <Text style={styles.empty}>Add ingredients you have on hand to see what you can make.</Text>
-      )}
-      {ingredients.length > 0 && !hasResults && (
-        <Text style={styles.empty}>
-          No recipes match yet. Try adding more ingredients or removing a Must use tag.
-        </Text>
-      )}
-    </ScrollView>
+        {ingredients.length === 0 ? (
+          <EmptyState
+            icon="sparkles-outline"
+            title="Find something to cook"
+            message="Add a few ingredients above and see which of your recipes you can make now."
+          />
+        ) : null}
+        {ingredients.length > 0 && !hasResults ? (
+          <EmptyState
+            icon="search"
+            title="No matches yet"
+            message="Try adding more ingredients, or remove a Must use tag."
+          />
+        ) : null}
+      </ScrollView>
+      {addToMenuSheet}
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.sm },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  input: {
-    flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-  },
+const useStyles = makeStyles((t) => ({
+  screen: { flex: 1, backgroundColor: t.colors.background },
+  flex: { flex: 1, minWidth: 0 },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
+  contentWide: { maxWidth: 800, width: "100%", alignSelf: "center" },
+  inputCard: { gap: spacing.sm },
+  inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.xs },
   dropdown: {
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     borderRadius: radius.md,
     overflow: "hidden",
+    backgroundColor: t.colors.surface,
   },
   dropdownHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingLeft: spacing.md,
-    minHeight: 44,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    minHeight: 40,
+    backgroundColor: t.colors.background,
   },
-  dropdownTitle: { fontWeight: "bold", color: colors.muted, fontSize: 13 },
-  dropdownAction: { minHeight: 44, paddingHorizontal: spacing.md, justifyContent: "center" },
-  dropdownActionText: { color: colors.accentStrong, fontWeight: "bold" },
   dropdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
     minHeight: 44,
     paddingHorizontal: spacing.md,
-    justifyContent: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderTopWidth: 1,
+    borderTopColor: t.colors.border,
+    ...(Platform.OS === "web" ? { cursor: "pointer" } : null),
   },
-  dropdownText: { fontSize: 16, color: colors.text },
-  dropdownRowAdded: { flexDirection: "row", alignItems: "center" },
-  dropdownTextAdded: { color: colors.muted, flex: 1 },
-  addedBadge: { fontSize: 13, color: colors.muted },
-  toolbar: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
-  hint: { color: colors.muted, fontSize: 13 },
-  ingredientRow: { paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
-  ingredientHeader: { flexDirection: "row", alignItems: "center" },
-  tagRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
-  ingredientName: { flex: 1, fontSize: 16, color: colors.text },
-  remove: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  sectionTitle: { fontSize: 20, fontWeight: "bold", marginTop: spacing.md, marginBottom: spacing.sm, color: colors.text },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+  dropdownRowPressed: { backgroundColor: t.colors.surfaceAlt },
+  added: { flexDirection: "row", alignItems: "center", gap: 2 },
+  toolbar: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap", marginTop: spacing.xs },
+  ingredients: { overflow: "hidden" },
+  ingredientsHeader: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  hint: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  ingredientRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.xs,
+    paddingVertical: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: t.colors.border,
   },
-  cardTitle: { fontWeight: "bold", fontSize: 16, color: colors.text },
-  cardText: { color: colors.text, marginTop: 2 },
-  empty: { color: colors.muted, textAlign: "center", marginTop: spacing.xl },
-});
+  ingredientName: { flexGrow: 1, flexShrink: 1, flexBasis: 120 },
+  tagRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  group: { gap: spacing.sm },
+  card: { gap: spacing.sm },
+  cardTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  cardProgress: { marginTop: spacing.xs, height: 6 },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  missing: { color: t.colors.text },
+  cardActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+}));
 
 export default RecipeFinderScreen;

@@ -1,73 +1,51 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import AppModal from "../AppModal";
 import Chip from "../Chip";
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import { SUGGESTED_SLOT_NAMES } from "../../store/menuSlice";
+import { PickerGroup, PickerRow } from "./PickerRow";
 
 const SlotPickerModal = ({ visible, week, currentSlotId, currentDay, onSelectSlot, onSelectDay, onAddSlotAndMove, onClose }) => {
   const unplannedCurrent = currentSlotId === null && currentDay == null;
   return (
-  <AppModal visible={visible} onClose={onClose} title={"Move to…"}>
-    <Pressable
-      style={[styles.row, unplannedCurrent && styles.disabled]}
-      disabled={unplannedCurrent}
-      onPress={() => onSelectSlot(null)}
-      accessibilityRole="button"
-    >
-      <Text style={styles.text}>{unplannedCurrent ? "Unplanned (current)" : "Unplanned"}</Text>
-    </Pressable>
-    {week.map((day) => {
-      const used = new Set(day.slots.map((s) => s.name.trim().toLowerCase()));
-      return (
-        <View key={day.day}>
-          <Text style={styles.group}>{day.label}</Text>
-          {(() => {
-            const current = currentSlotId === null && currentDay === day.day;
-            return (
-              <Pressable
-                style={[styles.row, current && styles.disabled]}
-                disabled={current}
-                onPress={() => onSelectDay(day.day)}
-                accessibilityRole="button"
-              >
-                <Text style={styles.text}>
-                  {current ? `${day.label} — no specific meal (current)` : `${day.label} — no specific meal`}
-                </Text>
-              </Pressable>
-            );
-          })()}
-          {day.slots.map((slot) => {
-            const current = slot.id === currentSlotId;
-            return (
-              <Pressable
-                key={slot.id}
-                style={[styles.row, current && styles.disabled]}
-                disabled={current}
-                onPress={() => onSelectSlot(slot.id)}
-                accessibilityRole="button"
-              >
-                <Text style={styles.text}>{current ? `${slot.name} (current)` : slot.name}</Text>
-              </Pressable>
-            );
-          })}
-          <View style={styles.chips}>
-            {SUGGESTED_SLOT_NAMES.filter((n) => !used.has(n.toLowerCase())).map((name) => (
-              <Chip key={name} label={`+ ${name}`} onPress={() => onAddSlotAndMove(day.day, name)} />
+    <AppModal visible={visible} onClose={onClose} title={"Move to…"}>
+      <PickerRow label="Unplanned" icon="time-outline" current={unplannedCurrent} onPress={() => onSelectSlot(null)} />
+      {week.map((day) => {
+        const used = new Set(day.slots.map((s) => s.name.trim().toLowerCase()));
+        const suggestions = SUGGESTED_SLOT_NAMES.filter((n) => !used.has(n.toLowerCase()));
+        return (
+          <PickerGroup key={day.day} title={day.label}>
+            <PickerRow
+              label={`${day.label}, any meal`}
+              current={currentSlotId === null && currentDay === day.day}
+              onPress={() => onSelectDay(day.day)}
+            />
+            {day.slots.map((slot) => (
+              <PickerRow key={slot.id} label={slot.name} current={slot.id === currentSlotId} onPress={() => onSelectSlot(slot.id)} />
             ))}
-          </View>
-        </View>
-      );
-    })}
-  </AppModal>
+            {suggestions.length > 0 ? (
+              <View style={styles.chips}>
+                {suggestions.map((name) => (
+                  <Chip
+                    key={name}
+                    size="sm"
+                    icon="add"
+                    label={name}
+                    accessibilityLabel={`Add ${name} on ${day.label} and move here`}
+                    onPress={() => onAddSlotAndMove(day.day, name)}
+                  />
+                ))}
+              </View>
+            ) : null}
+          </PickerGroup>
+        );
+      })}
+    </AppModal>
   );
 };
 
 const styles = StyleSheet.create({
-  group: { fontSize: 13, fontWeight: "bold", color: colors.muted, textTransform: "uppercase", marginTop: spacing.md },
-  row: { minHeight: 44, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: spacing.sm },
-  disabled: { opacity: 0.45 },
-  text: { fontSize: 16, color: colors.text },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, paddingVertical: spacing.sm },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
 });
 
 export default SlotPickerModal;
