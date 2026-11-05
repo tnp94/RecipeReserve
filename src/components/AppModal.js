@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../theme";
 import useLayout from "../hooks/useLayout";
+import { useGatedModal } from "./modalGate";
 
 // A Modal is its own native window, so the app's layout never moves out of the way of
 // the keyboard. Track the keyboard height ourselves and lift the sheet above it.
@@ -24,14 +25,17 @@ function useKeyboardHeight(active) {
 
 const TOP_GAP = 48; // keep a strip of backdrop visible above the sheet
 
-const AppModal = ({ visible, onClose, onDismiss, title, footer, children }) => {
-  const { isWide, height: windowHeight } = useLayout();
-  const keyboardHeight = useKeyboardHeight(!!visible);
+const AppModal = ({ visible, onClose, title, footer, children }) => {
+  const { isWide, width: windowWidth, height: windowHeight } = useLayout();
+  const { shown, onDismiss } = useGatedModal(!!visible);
+  const keyboardHeight = useKeyboardHeight(shown);
   // Some platforms (e.g. Android adjustResize) already shrink the modal window for the
   // keyboard. Measure the space we actually have and only pad the part still covered.
   // Baseline = tallest root ever measured (the keyboard can only make it shorter), so a
   // status bar or a resize that lands before the keyboard event isn't mistaken for it.
   const [layout, setLayout] = useState({ height: null, baseline: 0 });
+  // A rotation (or window resize) changes the full height, so start a fresh baseline.
+  useEffect(() => setLayout({ height: null, baseline: 0 }), [windowWidth, windowHeight]);
   const rootHeight = layout.height;
   const alreadyShrunk = rootHeight == null ? 0 : Math.max(0, layout.baseline - rootHeight);
   const keyboardPad = Math.max(0, keyboardHeight - alreadyShrunk);
@@ -39,7 +43,7 @@ const AppModal = ({ visible, onClose, onDismiss, title, footer, children }) => {
   // Numeric max height so the whole sheet (header, fields, footer) fits above the keyboard.
   const maxHeight = Math.max(200, Math.min(windowHeight * 0.85, available - TOP_GAP));
   return (
-    <Modal visible={!!visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={onDismiss}>
+    <Modal visible={shown} transparent animationType="fade" onRequestClose={onClose} onDismiss={onDismiss}>
       <View
         style={[styles.root, isWide ? styles.rootWide : styles.rootNarrow, { paddingBottom: keyboardPad }]}
         onLayout={(e) => {

@@ -1,17 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, radius, spacing } from "../../theme";
+import { useGatedModal } from "../modalGate";
 
 const DialogContext = createContext(null);
 
-// After a dialog closes, its button's onPress (which may open another dialog or an
-// AppModal) runs only once the Modal is really gone. iOS cannot present a Modal while
-// another one is still dismissing (the fade takes ~300 ms), so there we wait for the
-// Modal's onDismiss, with a fallback timer in case it never fires. Elsewhere a short
-// tick is enough.
+// Short pause between closing one dialog and running its button's onPress (which may
+// open another dialog or a sheet). iOS's "can't present while dismissing" rule is
+// handled for every Modal by the shared gate in ../modalGate.
 const NEXT_TICK_MS = 50;
-const IOS_DISMISS_FALLBACK_MS = 600;
-const WAIT_FOR_DISMISS = Platform.OS === "ios";
 
 export function useDialog() {
   const ctx = useContext(DialogContext);
@@ -82,32 +79,20 @@ export function DialogProvider({ children }) {
     else setActive(d);
   }, []);
 
-  const afterClose = useRef(null); // pending hand-off: runs `then`, then the queue
-  const fallbackTimer = useRef(null);
-
-  const runAfterClose = useCallback(() => {
-    clearTimeout(fallbackTimer.current);
-    const run = afterClose.current;
-    afterClose.current = null;
-    if (run) run();
-  }, []);
-
-  // Close the visible dialog; once it is gone run `then` (which may open another
-  // dialog or a sheet) and finally show the next queued dialog, if any.
+  // Close the visible dialog, then run `then` (which may open another dialog or a sheet)
+  // and finally show the next queued dialog, if any.
   const close = useCallback((then) => {
     setCurrent(null); // hides the Modal; currentRef stays set so new calls queue
-    afterClose.current = () => {
+    setTimeout(() => {
       currentRef.current = null;
       try {
         if (then) then();
       } finally {
         if (!currentRef.current && queueRef.current.length) setActive(queueRef.current.shift());
       }
-    };
-    fallbackTimer.current = setTimeout(runAfterClose, WAIT_FOR_DISMISS ? IOS_DISMISS_FALLBACK_MS : NEXT_TICK_MS);
-  }, [runAfterClose]);
-
-  useEffect(() => () => clearTimeout(fallbackTimer.current), []);
+    }, NEXT_TICK_MS);
+  }, []);
+  const gate = useGatedModal(!!current);
 
   const api = useMemo(
     () => ({
@@ -140,11 +125,11 @@ export function DialogProvider({ children }) {
     <DialogContext.Provider value={api}>
       {children}
       <Modal
-        visible={!!current}
+        visible={gate.shown}
         transparent
         animationType="fade"
         onRequestClose={dismiss}
-        onDismiss={WAIT_FOR_DISMISS ? runAfterClose : undefined}
+        onDismiss={gate.onDismiss}
       >
         <View style={styles.root}>
           <Pressable style={styles.backdrop} onPress={dismiss} accessibilityLabel="Dismiss dialog" />

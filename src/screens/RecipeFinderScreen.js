@@ -104,8 +104,8 @@ const RecipeFinderScreen = () => {
     dispatch(setFinderIngredientTag({ id: item.id, tag: item.tag === tag ? null : tag }));
   };
 
-  const addMissing = (missing) => {
-    const { added, skipped } = dispatch(addItemsToShoppingList(missing));
+  const addMissing = (missing, recipe) => {
+    const { added, skipped } = dispatch(addItemsToShoppingList(missing, { id: recipe.id, name: recipe.name }));
     const items = (n) => `${n} ${n === 1 ? "item" : "items"}`;
     const parts = [];
     if (added > 0) parts.push(`${items(added)} added.`);
@@ -124,7 +124,7 @@ const RecipeFinderScreen = () => {
             key={r.recipe.id}
             result={r}
             onOpen={() => openRecipe(r.recipe.id)}
-            onAddMissing={() => addMissing(r.missing)}
+            onAddMissing={() => addMissing(r.missing, r.recipe)}
             partial={partial}
           />
         ))}

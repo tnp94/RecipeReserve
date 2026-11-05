@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import AppModal from "../AppModal";
 import Chip from "../Chip";
@@ -13,13 +14,18 @@ const ActionRow = ({ label, onPress, danger }) => (
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
-const EntryOptionsModal = ({ visible, entry, location, onClose, onDismiss, onSetScale, onMove, onSwap, onView, onRemove }) => {
+const EntryOptionsModal = ({ visible, entry: entryProp, location, onClose, onSetScale, onMove, onSwap, onView, onRemove }) => {
+  // Keep rendering the last entry while the sheet fades out, instead of unmounting the
+  // Modal mid-dismiss (which breaks iOS's dismiss sequencing).
+  const last = useRef(entryProp);
+  if (entryProp) last.current = entryProp;
+  const entry = last.current;
   if (!entry) return null;
   const { recipe, scale } = entry;
   const label = recipe.yield > 0 ? `Serves ${round1(recipe.yield * scale)}` : `Scale ×${scale}`;
   const step = (delta) => onSetScale(Math.min(20, Math.max(0.5, scale + delta)));
   return (
-    <AppModal visible={visible} onClose={onClose} onDismiss={onDismiss} title={recipe.name}>
+    <AppModal visible={visible && !!entryProp} onClose={onClose} title={recipe.name}>
       {location ? <Text style={styles.location}>{location}</Text> : null}
       <Text style={styles.label}>{label}</Text>
       <View style={styles.scaleRow}>

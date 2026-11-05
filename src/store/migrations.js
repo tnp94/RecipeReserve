@@ -1,6 +1,6 @@
 import { initialState as recipesInitialState } from "./recipesSlice";
 import { normalizeName, normalizeUnit } from "../domain/ingredientKey";
-import { computeQuantityText } from "../domain/shoppingList";
+import { computeQuantityText, textMergeKey } from "../domain/shoppingList";
 
 const numericSort = (a, b) => Number(a) - Number(b);
 
@@ -110,6 +110,8 @@ export const migrations = {
     state.shoppingList
       ? { ...state, shoppingList: { removed: {}, ...state.shoppingList } }
       : state,
+  // v8: text-amount merge keys use the text instead of the ingredient's position.
+  8: (state) => ({ ...state, shoppingList: rekeyShoppingList(state.shoppingList) }),
 };
 
 function rekeyPantry(pantry) {
@@ -131,9 +133,18 @@ function rekeyShoppingList(list) {
     if (typeof mergeKey === "string") {
       // mergeKey = `${nameKey}|${unitKey}|kind[|entryId|index]`
       const parts = mergeKey.split("|");
-      parts[0] = nameKey;
-      parts[1] = normalizeUnit(item.unit ?? "");
-      mergeKey = parts.join("|");
+      const unitKey = normalizeUnit(item.unit ?? "");
+      if (parts[2] === "t") {
+        // Text amounts ("a pinch"): keyed by entry + text (older lists used the
+        // ingredient's position, which changes when the recipe is edited).
+        const c = (item.contributions ?? [])[0];
+        const text = c?.quantity?.text ?? c?.quantityText ?? item.quantityText ?? "";
+        mergeKey = textMergeKey(nameKey, unitKey, parts[3], text);
+      } else {
+        parts[0] = nameKey;
+        parts[1] = unitKey;
+        mergeKey = parts.join("|");
+      }
     }
     entities[id] = { ...item, nameKey, mergeKey };
   }

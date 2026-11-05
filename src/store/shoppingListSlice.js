@@ -44,6 +44,7 @@ const shoppingListSlice = createSlice({
         // on the menu later turns them into that menu line instead of a duplicate.
         source = "manual",
         mergeKey = null,
+        contributions = [],
       } = action.payload;
       const trimmed = String(name ?? "").trim();
       if (!trimmed) return;
@@ -57,7 +58,7 @@ const shoppingListSlice = createSlice({
         checked: false,
         isStaple: Boolean(isStaple),
         source: source === "finder" ? "finder" : "manual",
-        contributions: [],
+        contributions: source === "finder" ? contributions : [],
       });
     },
     deleteItem: (state, action) => {

@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import AppModal from "../AppModal";
+import { formatAmount } from "../../domain/quantity";
 import { colors, spacing } from "../../theme";
 import { Pressable } from "react-native";
 
@@ -25,7 +26,7 @@ const StapleReminderModal = ({ visible, items, onClose, onDisable }) => (
       These were added already checked off because they're pantry staples. Make sure you have enough:
     </Text>
     {items.map((item, i) => {
-      const qty = `${item.quantityText ?? ""} ${item.unit ?? ""}`.trim();
+      const qty = formatAmount(item.quantityText, item.unit);
       return (
         <View key={`${item.name}-${i}`} style={styles.row}>
           <Text style={styles.name}>{item.name}</Text>

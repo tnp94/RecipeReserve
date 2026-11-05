@@ -6,8 +6,8 @@ import { useDialog } from "../dialog/DialogProvider";
 import { colors, radius, spacing } from "../../theme";
 import { deleteItem, removeContribution, toggleItemChecked } from "../../store/shoppingListSlice";
 import { toggleStaple } from "../../store/pantrySlice";
+import { formatAmount } from "../../domain/quantity";
 
-const joinQty = (quantityText, unit) => `${quantityText ?? ""} ${unit ?? ""}`.trim();
 
 const ShoppingItemRow = ({ item }) => {
   const dispatch = useDispatch();
@@ -63,7 +63,7 @@ const ShoppingItemRow = ({ item }) => {
             ) : null}
           </View>
           <Text style={[styles.qty, item.checked && styles.checkedText]}>
-            {joinQty(item.quantityText, item.unit)}
+            {formatAmount(item.quantityText, item.unit)}
           </Text>
           {Platform.OS === "web" ? (
             <Pressable onPress={openMenu} accessibilityLabel={`More options for ${item.name}`} accessibilityRole="button" style={styles.more}>
@@ -87,7 +87,7 @@ const ShoppingItemRow = ({ item }) => {
               <View key={c.menuEntryId} style={styles.contribRow}>
                 <Text style={styles.contribText}>
                   {c.recipeName}
-                  {c.scale !== 1 ? ` (×${c.scale})` : ""}: {joinQty(c.quantityText, item.unit) || "—"}
+                  {c.scale !== 1 ? ` (×${c.scale})` : ""}: {formatAmount(c.quantityText, item.unit) || "—"}
                   {c.note ? ` · ${c.note}` : ""}
                 </Text>
                 <Pressable

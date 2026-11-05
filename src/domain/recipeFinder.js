@@ -2,10 +2,14 @@ import { normalizeName, wordsMatch } from "./ingredientKey";
 
 const words = (name) => normalizeName(name).split(" ").filter(Boolean);
 
-export function ingredientMatches(haveName, recipeIngredientName) {
-  const haveWords = words(haveName);
-  const recipeWords = words(recipeIngredientName);
+// The one matching rule: every word the user entered appears (allowing a trailing
+// s/es difference) among the recipe ingredient's words.
+function wordsMatchAll(haveWords, recipeWords) {
   return haveWords.length > 0 && haveWords.every((w) => recipeWords.some((r) => wordsMatch(w, r)));
+}
+
+export function ingredientMatches(haveName, recipeIngredientName) {
+  return wordsMatchAll(words(haveName), words(recipeIngredientName));
 }
 
 export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
@@ -14,7 +18,6 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
 
   // Normalize each entered ingredient once, not once per recipe ingredient.
   const haves = haveIngredients.map((h) => ({ tag: h.tag, words: words(h.name) })).filter((h) => h.words.length > 0);
-  const matches = (have, recipeWords) => have.words.every((w) => recipeWords.some((r) => wordsMatch(w, r)));
   // A "Must use" ingredient that normalizes to nothing (e.g. "!!") can never match.
   if (haveIngredients.some((h) => h.tag === "required" && words(h.name).length === 0)) return result;
 
@@ -31,7 +34,7 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
     if (candidates.length === 0) continue;
 
     // hit[i][j]: entered ingredient i matches recipe ingredient j.
-    const hit = haves.map((h) => candidates.map((c) => matches(h, c.words)));
+    const hit = haves.map((h) => candidates.map((c) => wordsMatchAll(h.words, c.words)));
     const matched = candidates.filter((_, j) => hit.some((row) => row[j]));
     const missing = candidates.filter((_, j) => !hit.some((row) => row[j])).map((c) => c.ing);
     const matchesAny = (i) => hit[i].some(Boolean);

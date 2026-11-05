@@ -65,3 +65,13 @@ describe("hyphenated mixed numbers", () => {
   it("'1/2-1' is still a range", () => expect(pq("1/2-1")).toEqual({ kind: "number", min: 0.5, max: 1 }));
   it("'1-3/2' (improper fraction) is a range", () => expect(pq("1-3/2")).toEqual({ kind: "number", min: 1, max: 1.5 }));
 });
+
+describe("formatAmount", () => {
+  const { formatAmount } = require("../quantity");
+  it("joins amount and unit and trims", () => {
+    expect(formatAmount("1 1/2", "Cup")).toBe("1 1/2 Cup");
+    expect(formatAmount("2", "")).toBe("2");
+    expect(formatAmount("", "")).toBe("");
+    expect(formatAmount(undefined, "lb")).toBe("lb");
+  });
+});

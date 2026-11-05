@@ -203,3 +203,23 @@ describe("migration v7", () => {
     expect(migrations[7]({})).toEqual({});
   });
 });
+
+describe("migration v8", () => {
+  it("re-keys text amounts by their text instead of the ingredient position", () => {
+    const out = migrations[8]({
+      shoppingList: {
+        ids: ["item-1"],
+        entities: {
+          "item-1": {
+            id: "item-1", name: "Salt", unit: "", nameKey: "salt", source: "menu", checked: false, isStaple: false,
+            mergeKey: "salt||t|entry-3|4", quantityText: "a pinch",
+            contributions: [{ menuEntryId: "entry-3", quantity: { kind: "text", text: "A Pinch" }, quantityText: "A Pinch" }],
+          },
+        },
+        nextId: 2,
+        removed: {},
+      },
+    });
+    expect(out.shoppingList.entities["item-1"].mergeKey).toBe("salt||t|entry-3|a pinch");
+  });
+});

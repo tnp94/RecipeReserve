@@ -96,3 +96,8 @@ export function formatQuantity(q) {
   if (q.kind === "text") return q.text;
   return "";
 }
+
+// Display text for an amount and its unit, e.g. ("1 1/2", "Cup") -> "1 1/2 Cup"; "" when both are empty.
+export function formatAmount(quantityText, unit) {
+  return `${quantityText ?? ""} ${unit ?? ""}`.trim();
+}

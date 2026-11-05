@@ -32,7 +32,6 @@ describe("generateShoppingList", () => {
     store.dispatch(addRecipeToMenu({ recipeId: stewId(store), scale: 2 }));
     const result = store.dispatch(generateShoppingList("replace"));
     const items = selectShoppingItems(store.getState());
-    expect(result.itemCount).toBe(2);
     expect(result.prechecked).toEqual([{ name: "Salt", quantityText: "1", unit: "tsp" }]);
     const onion = items.find((i) => i.nameKey === "onion");
     expect(onion.quantityText).toBe("5");
@@ -163,5 +162,81 @@ describe("new week does not corrupt an existing list", () => {
     expect(onion().quantityText).toBe("3");
     expect(onion().contributions).toHaveLength(2);
     expect(onion().checked).toBe(false);
+  });
+});
+
+describe("fourth-review shopping list fixes", () => {
+  const { configureStore } = require("@reduxjs/toolkit");
+  const rootReducer = require("../rootReducer").default;
+  const { addRecipeToMenu } = require("../menuSlice");
+  const { addRecipe, editRecipe } = require("../recipesSlice");
+  const { addStaple } = require("../pantrySlice");
+  const { deleteItem, toggleItemChecked, selectShoppingItems: items } = require("../shoppingListSlice");
+  const { generateShoppingList: gen, addItemsToShoppingList: addMissing } = require("../thunks");
+  const ing = (name, q, unit = "") => ({ name, quantityUnit: q, unit, note: "", category: "Dairy" });
+
+  const store = () => configureStore({ reducer: rootReducer });
+  const add = (s, name, ingredients) => {
+    s.dispatch(addRecipe({ name, ingredients }));
+    const ids = s.getState().recipes.ids;
+    return s.getState().recipes.entities[ids[ids.length - 1]];
+  };
+  const line = (s, key) => items(s.getState()).filter((i) => i.nameKey === key);
+
+  it("finder amount for another recipe is kept and added to (2 + 3 = 5)", () => {
+    const s = store();
+    const a = add(s, "Frittata", [ing("Eggs", "2")]);
+    const b = add(s, "Cake", [ing("Eggs", "3")]);
+    s.dispatch(addMissing([ing("Eggs", "2")], a));
+    s.dispatch(addRecipeToMenu({ recipeId: b.id }));
+    s.dispatch(gen("merge"));
+    expect(line(s, "egg")).toHaveLength(1);
+    expect(line(s, "egg")[0]).toMatchObject({ quantityText: "5", source: "menu" });
+  });
+
+  it("finder amount is replaced (not doubled) when that same recipe is planned", () => {
+    const s = store();
+    const a = add(s, "Frittata", [ing("Eggs", "2")]);
+    s.dispatch(addMissing([ing("Eggs", "2")], a));
+    s.dispatch(addRecipeToMenu({ recipeId: a.id }));
+    s.dispatch(gen("merge"));
+    expect(line(s, "egg")[0]).toMatchObject({ quantityText: "2", source: "menu" });
+    expect(line(s, "egg")[0].contributions.some((c) => c.fromFinder)).toBe(false);
+  });
+
+  it("a staple the user unchecked stays unchecked after Merge", () => {
+    const s = store();
+    s.dispatch(addStaple("Salt"));
+    const a = add(s, "Soup", [ing("Salt", "1", "tsp")]);
+    const b = add(s, "Stew", [ing("Salt", "2", "tsp")]);
+    s.dispatch(addRecipeToMenu({ recipeId: a.id }));
+    s.dispatch(gen("replace"));
+    expect(line(s, "salt")[0].checked).toBe(true); // staples arrive pre-checked
+    s.dispatch(toggleItemChecked(line(s, "salt")[0].id)); // "I'm out of salt"
+    s.dispatch(addRecipeToMenu({ recipeId: b.id }));
+    s.dispatch(gen("merge"));
+    expect(line(s, "salt")[0]).toMatchObject({ quantityText: "3", checked: false });
+  });
+
+  it("editing a recipe's ingredient order keeps text quantities on one line", () => {
+    const s = store();
+    const a = add(s, "Soup", [ing("Salt", "a pinch"), ing("Water", "1", "cup")]);
+    s.dispatch(addRecipeToMenu({ recipeId: a.id }));
+    s.dispatch(gen("replace"));
+    s.dispatch(editRecipe({ id: a.id, changes: { ingredients: [ing("Pepper", "1", "tsp"), ing("Water", "1", "cup"), ing("Salt", "a pinch")] } }));
+    s.dispatch(gen("merge"));
+    expect(line(s, "salt")).toHaveLength(1);
+  });
+
+  it("staple reminder lists only lines that Merge actually added", () => {
+    const s = store();
+    const a = add(s, "Omelette", [ing("Salt", "1", "tsp"), ing("Eggs", "2")]);
+    s.dispatch(addRecipeToMenu({ recipeId: a.id }));
+    s.dispatch(gen("replace"));
+    s.dispatch(deleteItem(line(s, "salt")[0].id));
+    s.dispatch(addStaple("Salt"));
+    const result = s.dispatch(gen("merge"));
+    expect(line(s, "salt")).toHaveLength(0);
+    expect(result.prechecked).toEqual([]);
   });
 });

@@ -33,6 +33,13 @@ export function mergeKeyFor(nameKey, unitKey, quantity) {
   return null;
 }
 
+// Text quantities ("a pinch") never combine across recipes, so their key includes the
+// menu entry. It uses the text itself rather than the ingredient's position, so editing
+// or reordering the recipe's ingredients keeps the same key.
+export function textMergeKey(nameKey, unitKey, entryId, text) {
+  return `${nameKey}|${unitKey}|t|${entryId}|${String(text ?? "").trim().toLowerCase()}`;
+}
+
 // `built` without contributions from the given menu entries (portions the user removed
 // from the list), or null when nothing is left.
 export function withoutEntries(built, removedEntryIds) {
@@ -50,14 +57,14 @@ export function buildShoppingItems({ entries, recipesById, stapleKeys }) {
     const recipe = recipesById?.[entry.recipeId];
     if (!recipe) continue;
     const scale = entry.scale ?? 1;
-    (recipe.ingredients ?? []).forEach((ingredient, index) => {
+    (recipe.ingredients ?? []).forEach((ingredient) => {
       const name = String(ingredient?.name ?? "").trim();
       if (!name) return;
       const unit = String(ingredient.unit ?? "").trim();
       const q = scaleQuantity(parseQuantity(ingredient.quantityUnit), scale);
       const nameKey = normalizeName(name);
       const unitKey = normalizeUnit(unit);
-      const mergeKey = mergeKeyFor(nameKey, unitKey, q) ?? `${nameKey}|${unitKey}|t|${entry.id}|${index}`;
+      const mergeKey = mergeKeyFor(nameKey, unitKey, q) ?? textMergeKey(nameKey, unitKey, entry.id, q.text);
       const contribution = {
         menuEntryId: entry.id,
         recipeId: recipe.id,
@@ -128,8 +135,30 @@ function amountGrew(before, after, beforeText, afterText) {
   return beforeText !== afterText;
 }
 
+// Contribution recorded for an item added by the finder's "Add missing": it stands in
+// for `recipeId` until that recipe is planned on the menu.
+export function finderContribution(recipeId, recipeName, quantity, note = "") {
+  return {
+    menuEntryId: `finder:${recipeId}`,
+    recipeId,
+    recipeName,
+    scale: 1,
+    quantity,
+    quantityText: formatQuantity(quantity),
+    note,
+    fromFinder: true,
+  };
+}
+
 export function mergeItem(existing, built) {
   const builtByEntry = new Map(built.contributions.map((c) => [c.menuEntryId, c]));
+  // A finder placeholder is replaced (not added to) once its recipe is on the menu; a
+  // placeholder for a different recipe keeps its amount and adds to the menu's.
+  const plannedRecipes = new Set(built.contributions.map((c) => c.recipeId));
+  existing = {
+    ...existing,
+    contributions: existing.contributions.filter((c) => !(c.fromFinder && plannedRecipes.has(c.recipeId))),
+  };
   const contributions = [];
   const seen = new Set();
   // Keep existing order; an entry's (possibly duplicated, from older lists) contributions
@@ -151,7 +180,9 @@ export function mergeItem(existing, built) {
   // (e.g. a scale change). A smaller or equal total keeps the existing checked state.
   const needsMore = gainedNew || amountGrew(existing.contributions, contributions, existing.quantityText, quantityText);
   let checked;
-  if (built.isStaple) checked = true;
+  // Staples arrive pre-checked, but once a line is a staple the user's own tick wins:
+  // unchecking salt means "I'm out", and a merge must not re-check it.
+  if (built.isStaple) checked = existing.isStaple ? existing.checked : true;
   else if (needsMore) checked = false;
   else checked = existing.checked;
   return {
