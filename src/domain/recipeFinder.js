@@ -1,6 +1,17 @@
 import { normalizeName, wordsMatch } from "./ingredientKey";
 
+export const FINDER_SORT_FEWEST_MISSING = "fewestMissing";
+export const FINDER_SORT_MOST_USED = "mostUsed";
+
 const words = (name) => normalizeName(name).split(" ").filter(Boolean);
+
+// Expiring ingredients come first in every sort: the tag means "prefer recipes that use it".
+const cmpTieBreak = (a, b) =>
+  a.missing.length - b.missing.length ||
+  b.matchedCount / b.totalCount - a.matchedCount / a.totalCount ||
+  a.recipe.name.localeCompare(b.recipe.name);
+const cmpFewestMissing = (a, b) => b.expiringCount - a.expiringCount || cmpTieBreak(a, b);
+const cmpMostUsed = (a, b) => b.expiringCount - a.expiringCount || b.usedCount - a.usedCount || cmpTieBreak(a, b);
 
 // The one matching rule: every word the user entered appears (allowing a trailing
 // s/es difference) among the recipe ingredient's words.
@@ -47,22 +58,28 @@ export function findRecipes(recipes, haveIngredients, { maxMissing = 2 } = {}) {
       recipe,
       matchedCount: matched.length,
       totalCount: candidates.length,
+      // How many entered ingredients the recipe uses. Differs from matchedCount, which
+      // counts recipe ingredients: "pepper" can match both "black pepper" and "red pepper".
+      usedCount: haves.filter((_, i) => matchesAny(i)).length,
       missing,
       expiringCount,
       isFullMatch: missing.length === 0,
+      tooManyMissing: missing.length > maxMissing,
     };
     if (item.isFullMatch) result.fullMatches.push(item);
-    else if (missing.length <= maxMissing) result.nearMatches.push(item);
+    else if (!item.tooManyMissing) result.nearMatches.push(item);
     else result.otherMatches.push(item);
   }
 
-  const cmp = (a, b) =>
-    b.expiringCount - a.expiringCount ||
-    b.matchedCount / b.totalCount - a.matchedCount / a.totalCount ||
-    a.missing.length - b.missing.length ||
-    a.recipe.name.localeCompare(b.recipe.name);
-  result.fullMatches.sort(cmp);
-  result.nearMatches.sort(cmp);
-  result.otherMatches.sort(cmp);
+  result.fullMatches.sort(cmpFewestMissing);
+  result.nearMatches.sort(cmpFewestMissing);
+  result.otherMatches.sort(cmpFewestMissing);
   return result;
+}
+
+// One flat list, best use of the entered ingredients first. It isn't split into
+// findRecipes' groups: those go by missing count, so a recipe using everything on the
+// list could otherwise sit below a full match that uses one item.
+export function rankByMostUsed({ fullMatches, nearMatches, otherMatches }) {
+  return [...fullMatches, ...nearMatches, ...otherMatches].sort(cmpMostUsed);
 }
