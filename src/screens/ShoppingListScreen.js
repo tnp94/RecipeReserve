@@ -31,7 +31,7 @@ const ShoppingListScreen = ({ navigation }) => {
         const data = shoppingList
           .filter((item) =>
             category === INGREDIENTCATEGORIES.UNCATEGORIZED
-              ? !CATEGORIES.includes(item.category) || item.category === ""
+              ? item.category === INGREDIENTCATEGORIES.UNCATEGORIZED || !CATEGORIES.includes(item.category)
               : item.category === category
           )
           .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
