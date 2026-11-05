@@ -7,10 +7,16 @@ import { useDragApi } from "./DragProvider";
 // Subscribes to the drag store with a per-zone snapshot that only changes when this zone
 // becomes / stops being the hover target (or its half changes), so other zones don't
 // re-render while the pointer moves.
-export default function useDropZone({ key, accepts, onDrop }) {
+//
+// `actionFor(payload)` says what a drop would do (DROP_SWAP, DROP_INSERT, or null for
+// nothing). It sets the icon on the drag preview, and onDrop only runs when it isn't null,
+// so the icon and the result can't disagree.
+export default function useDropZone({ key, accepts, actionFor, onDrop }) {
   const api = useDragApi();
   const onDropRef = useRef(onDrop);
   onDropRef.current = onDrop;
+  const actionForRef = useRef(actionFor);
+  actionForRef.current = actionFor;
   const acceptsKey = accepts.join("|");
   const current = useRef(null);
 
@@ -21,7 +27,13 @@ export default function useDropZone({ key, accepts, onDrop }) {
         current.current = null;
       }
       if (node) {
-        const zone = { key, accepts: acceptsKey.split("|"), node, onDrop: (p, info) => onDropRef.current(p, info) };
+        const zone = {
+          key,
+          accepts: acceptsKey.split("|"),
+          node,
+          actionFor: (p) => actionForRef.current(p),
+          onDrop: (p, info) => onDropRef.current(p, info),
+        };
         current.current = zone;
         api.registerZone(key, zone);
       }

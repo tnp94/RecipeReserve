@@ -3,6 +3,7 @@ import rootReducer from "../rootReducer";
 import {
   addManualItem, deleteItem, toggleItemChecked, clearShoppingList, replaceMenuItems,
   mergeMenuItems, removeContribution, selectShoppingItems, selectShoppingItemCount,
+  deleteCheckedItems, selectUncheckedItemCount,
 } from "../shoppingListSlice";
 import { addStaple, removeStaple, toggleStaple } from "../pantrySlice";
 
@@ -18,6 +19,33 @@ const built = (contributions, over = {}) => ({
 });
 
 describe("shoppingListSlice", () => {
+  it("deleteCheckedItems removes only checked lines; selectUncheckedItemCount counts the rest", () => {
+    const store = make();
+    store.dispatch(addManualItem({ name: "A" }));
+    store.dispatch(addManualItem({ name: "B" }));
+    store.dispatch(addManualItem({ name: "C" }));
+    store.dispatch(toggleItemChecked("item-1"));
+    store.dispatch(toggleItemChecked("item-3"));
+    expect(selectUncheckedItemCount(store.getState())).toBe(1);
+    store.dispatch(deleteCheckedItems());
+    expect(selectShoppingItems(store.getState()).map((i) => i.name)).toEqual(["B"]);
+    expect(selectUncheckedItemCount(store.getState())).toBe(1);
+  });
+
+  it("deleteCheckedItems remembers removed menu portions so Merge doesn't add bought items back", () => {
+    const store = make();
+    store.dispatch(replaceMenuItems([built([contrib("entry-1", "1", 1)])]));
+    store.dispatch(toggleItemChecked("item-1"));
+    store.dispatch(deleteCheckedItems());
+    expect(selectShoppingItemCount(store.getState())).toBe(0);
+    expect(store.getState().shoppingList.removed["onion||n"]).toEqual(["entry-1"]);
+    store.dispatch(mergeMenuItems([built([contrib("entry-1", "1", 1)])]));
+    expect(selectShoppingItemCount(store.getState())).toBe(0);
+    // A recipe added to the menu later still comes through.
+    store.dispatch(mergeMenuItems([built([contrib("entry-1", "1", 1), contrib("entry-2", "2", 2)])]));
+    expect(selectShoppingItems(store.getState()).map((i) => i.quantityText)).toEqual(["2"]);
+  });
+
   it("adds manual items and ignores blank names", () => {
     const store = make();
     store.dispatch(addManualItem({ name: "  " }));

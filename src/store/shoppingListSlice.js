@@ -66,6 +66,16 @@ const shoppingListSlice = createSlice({
       if (item && item.source === "menu") rememberRemoved(state, item.mergeKey, item.contributions.map((c) => c.menuEntryId));
       itemsAdapter.removeOne(state, action.payload);
     },
+    // "Clear checked": removes every ticked-off line. Like deleteItem, a menu line's
+    // portions are remembered as removed, so a later Merge doesn't add bought items back.
+    deleteCheckedItems: (state) => {
+      const doomed = state.ids.filter((id) => state.entities[id].checked);
+      doomed.forEach((id) => {
+        const item = state.entities[id];
+        if (item.source === "menu") rememberRemoved(state, item.mergeKey, item.contributions.map((c) => c.menuEntryId));
+      });
+      itemsAdapter.removeMany(state, doomed);
+    },
     toggleItemChecked: (state, action) => {
       const item = state.entities[action.payload];
       if (item) item.checked = !item.checked;
@@ -119,6 +129,7 @@ const shoppingListSlice = createSlice({
 export const {
   addManualItem,
   deleteItem,
+  deleteCheckedItems,
   toggleItemChecked,
   clearShoppingList,
   replaceMenuItems,
@@ -129,5 +140,7 @@ export const {
 const selectors = itemsAdapter.getSelectors((state) => state.shoppingList);
 export const selectShoppingItems = selectors.selectAll;
 export const selectShoppingItemCount = selectors.selectTotal;
+export const selectUncheckedItemCount = (state) =>
+  state.shoppingList.ids.reduce((n, id) => (state.shoppingList.entities[id].checked ? n : n + 1), 0);
 
 export default shoppingListSlice.reducer;

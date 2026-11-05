@@ -1,236 +1,187 @@
-import { StyleSheet, View, Text, Image, TouchableOpacity, Platform } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
+import { Ionicons } from "@expo/vector-icons";
+import { useRef } from "react";
 import { deleteRecipe, selectRecipeById, toggleFavorite } from "../store/recipesSlice";
-import { addRecipeToMenu } from "../store/menuSlice";
-import { useRef, useState } from "react";
 import { useDialog } from "./dialog/DialogProvider";
-import { useToast } from "./toast/ToastProvider";
-import { colors } from "../theme";
+import { AppText, IconButton, RecipeThumb } from "./ui";
+import { formatMinutes, totalMinutes } from "../domain/format";
+import { elevation, makeStyles, radius, spacing, useTheme } from "../theme";
 
-const RecipeCard = ({ recipeId }) => {
-  const navigation = useNavigation()
-  const recipe = useSelector((state) => selectRecipeById(state, recipeId))
-  const dispatch = useDispatch()
-  const dialog = useDialog()
-  const toast = useToast()
-  const ref = useRef(null)
-  const [swipedLeft, setSwipedLeft] = useState(false)
-  const [swipedRight, setSwipedRight] = useState(false)
+const IS_WEB = Platform.OS === "web";
 
-  const closeRef = () => {
-    ref.current?.close()
-  }
+// One recipe in the library. layout "row" (phones: thumbnail left, swipeable) or "grid"
+// (tablets / web: a card with the tile on top). Tap opens the recipe; "+" adds it to the
+// menu; long-press or "⋯" opens the action sheet; the star toggles favourite.
+const RecipeCard = ({ recipeId, layout = "row", onAddToMenu }) => {
+  const navigation = useNavigation();
+  const recipe = useSelector((state) => selectRecipeById(state, recipeId));
+  const dispatch = useDispatch();
+  const dialog = useDialog();
+  const theme = useTheme();
+  const styles = useStyles();
+  const swipeRef = useRef(null);
 
+  if (!recipe) return null;
+
+  const open = () => navigation.navigate("Recipe Details", { recipeId });
+  const addToMenu = () => onAddToMenu && onAddToMenu(recipe);
   const confirmDelete = () => {
-    dialog.alert(`Delete "${recipe.name}"?`, "It will also be removed from your menu.", [
+    dialog.alert(`Delete "${recipe.name}"?`, "It will also be removed from your menu. This can't be undone.", [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => dispatch(deleteRecipe(recipeId)) },
-    ])
-  }
-
-  const addToMenu = () => {
-    dispatch(addRecipeToMenu({ recipeId }))
-    toast.show(`Added "${recipe.name}" to menu`, {
-      actionLabel: "View",
-      onAction: () => navigation.navigate("Menu"),
-    })
-  }
-
+    ]);
+  };
   const showActions = () => {
     dialog.alert(recipe.name, undefined, [
       { text: "Add to menu", onPress: addToMenu },
+      { text: "Edit", onPress: () => navigation.navigate("Recipe Form", { recipeId }) },
+      { text: recipe.favorite ? "Remove from favorites" : "Add to favorites", onPress: () => dispatch(toggleFavorite(recipeId)) },
       { text: "Delete", style: "destructive", onPress: confirmDelete },
       { text: "Cancel", style: "cancel" },
-    ])
-  }
+    ]);
+  };
 
-  const renderRightActions = () => {
-    return (
-      <View style={styles.swipeableButtoncontainer}>
-        <TouchableOpacity
-          style={styles.swipableRightButton}
-          onPress={() => {
-            closeRef()
-            confirmDelete()
-          }}
-        >
-          <Text style={styles.swipeableButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    )
-  }
-  const renderLeftActions = () => {
-    return (
-      <View style={styles.swipeableButtoncontainer}>
-        <TouchableOpacity
-          style={styles.swipableLeftButton}
-          onPress={() => {
-            closeRef()
-            addToMenu()
-          }}
-        >
-          <Text style={styles.swipeableButtonText}>Add to Menu</Text>
-        </TouchableOpacity>
-      </View>
-    )
-  }
-
-  if (!recipe) return null
-  const totalTime = (Number(recipe.time?.prep) || 0) + (Number(recipe.time?.active) || 0)
-  return (
-    <View style={styles.cardContainer}>
-      <Swipeable
-        ref={ref}
-        renderRightActions={renderRightActions}
-        renderLeftActions={renderLeftActions}
-        overshootFriction={8}
-        onSwipeableWillOpen={(direction) => {
-          setSwipedLeft(direction == "left")
-          setSwipedRight(direction == "right")
-        }}
-        onSwipeableWillClose={() => {
-          setSwipedLeft(false)
-          setSwipedRight(false)
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Recipe Details", { recipeId })}
-          onLongPress={showActions}
-          style={[styles.cardButton, (swipedLeft && styles.flattenLeft), (swipedRight && styles.flattenRight)]}
-        >
-          <Image
-            style={styles.recipeImage}
-            source={require("../../assets/images/ForkAndSpoon.png")} />
-          <View style={styles.recipeDetailsContainer}>
-            <Text style={styles.recipeTitle}>{recipe.name}</Text>
-            <Text style={styles.recipeSubtitle}>
-              Time: {totalTime !== 0 ? totalTime + " minutes" : "?"}
-              {recipe.difficulty !== "" && (" | Difficulty: " + recipe.difficulty)}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </Swipeable>
-      <TouchableOpacity
-        style={styles.star}
-        accessibilityRole="button"
-        accessibilityLabel={recipe.favorite ? "Remove from favorites" : "Add to favorites"}
-        onPress={() => dispatch(toggleFavorite(recipeId))}
-      >
-        <Text style={{ fontSize: 24, color: recipe.favorite ? colors.favorite : colors.muted }}>
-          {recipe.favorite ? "★" : "☆"}
-        </Text>
-      </TouchableOpacity>
-      {Platform.OS === "web" && (
-        <TouchableOpacity
-          style={styles.more}
-          accessibilityRole="button"
-          accessibilityLabel="Recipe actions"
-          onPress={showActions}
-        >
-          <Text style={{ fontSize: 20, color: colors.muted }}>⋯</Text>
-        </TouchableOpacity>
-      )}
+  const minutes = formatMinutes(totalMinutes(recipe));
+  const meta = (
+    <View style={styles.meta}>
+      {minutes ? (
+        <View style={styles.metaItem}>
+          <Ionicons name="time-outline" size={14} color={theme.colors.textMuted} />
+          <AppText variant="caption" tone="muted">{minutes}</AppText>
+        </View>
+      ) : null}
+      {recipe.difficulty ? (
+        <View style={styles.metaItem}>
+          <Ionicons name="speedometer-outline" size={14} color={theme.colors.textMuted} />
+          <AppText variant="caption" tone="muted">{recipe.difficulty}</AppText>
+        </View>
+      ) : null}
+      {!minutes && !recipe.difficulty ? (
+        <AppText variant="caption" tone="subtle">{`${(recipe.ingredients ?? []).length} ingredients`}</AppText>
+      ) : null}
     </View>
-  )
-}
+  );
 
-const styles = StyleSheet.create({
-  star: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.8)",
-  },
-  more: {
-    position: "absolute",
-    bottom: 2,
-    right: 6,
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  swipableLeftButton: {
-    backgroundColor: "#99ccff",
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
-    // backgroundColor: "blue",
-    justifyContent: "center",
-    flex: 1
-  },
-  swipableRightButton: {
-    backgroundColor: "#ff4466",
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
-    // backgroundColor: "blue",
-    justifyContent: "center",
-    flex: 1,
-  },
-  cardContainer: {
-    margin: 5,
-    shadowOffset: {
-      width: 0,
-      height: 4
-    },
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    elevation: 3,
-  },
-  cardButton: {
-    backgroundColor: '#fff',
-    borderColor: "#333",
-    borderRadius: 16,
-    alignItems: "center",
-    flex: 1,
-    height: 150,
-    overflow: "hidden"
-  },
-  recipeImage: {
-    width: "100%",
-    height: 90,
-    resizeMode: "contain",
-    overflow: "hidden"
-    // borderTopLeftRadius: 16,
-    // borderTopRightRadius: 16,
-  },
-  recipeTitle: {
-    flexWrap: "wrap",
-    paddingHorizontal: 5,
-    fontWeight: "bold"
-  },
-  recipeSubtitle: {
-    textAlign: "center",
-    fontSize: 12,
-  },
-  swipeableButtonText: {
-    padding: 5,
-    color: "black",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  recipeDetailsContainer: {
-    padding: 5
-  },
-  swipeableButtoncontainer: {
-    flexDirection: "column",
-    gap: 2,
-    maxWidth: "40%",
-  },
-  flattenRight: {
-    borderBottomRightRadius: 0,
-    borderTopRightRadius: 0,
-  },
-  flattenLeft: {
-    borderBottomLeftRadius: 0,
-    borderTopLeftRadius: 0,
+  const favorite = (
+    <IconButton
+      icon={recipe.favorite ? "star" : "star-outline"}
+      tone={recipe.favorite ? "accent" : "muted"}
+      size={20}
+      accessibilityLabel={recipe.favorite ? "Remove from favorites" : "Add to favorites"}
+      accessibilityState={{ selected: !!recipe.favorite }}
+      onPress={() => dispatch(toggleFavorite(recipeId))}
+    />
+  );
+  const addButton = (
+    <IconButton icon="add" variant="tonal" size={20} accessibilityLabel={`Add ${recipe.name} to menu`} onPress={addToMenu} />
+  );
+
+  if (layout === "grid") {
+    return (
+      <Pressable
+        onPress={open}
+        onLongPress={showActions}
+        accessibilityRole="button"
+        accessibilityLabel={recipe.name}
+        accessibilityHint="Opens the recipe. Long press for more actions."
+        style={({ hovered, pressed }) => [styles.gridCard, hovered && styles.hovered, pressed && styles.pressed]}
+      >
+        <RecipeThumb recipe={recipe} height={120} rounded={0} />
+        <View style={styles.gridFavorite}>{favorite}</View>
+        <View style={styles.gridBody}>
+          <AppText variant="subheading" numberOfLines={2} style={styles.gridTitle}>{recipe.name}</AppText>
+          {meta}
+        </View>
+        <View style={styles.gridActions}>
+          <IconButton icon="ellipsis-horizontal" accessibilityLabel={`More actions for ${recipe.name}`} onPress={showActions} />
+          {addButton}
+        </View>
+      </Pressable>
+    );
   }
-})
+
+  const row = (
+    <Pressable
+      onPress={open}
+      onLongPress={showActions}
+      accessibilityRole="button"
+      accessibilityLabel={recipe.name}
+      accessibilityHint="Opens the recipe. Long press for more actions."
+      style={({ pressed, hovered }) => [styles.row, (pressed || hovered) && styles.rowPressed]}
+    >
+      <RecipeThumb recipe={recipe} size={64} rounded={radius.md} />
+      <View style={styles.rowBody}>
+        <AppText variant="subheading" numberOfLines={2}>{recipe.name}</AppText>
+        {meta}
+      </View>
+      {favorite}
+      {IS_WEB ? <IconButton icon="ellipsis-horizontal" accessibilityLabel={`More actions for ${recipe.name}`} onPress={showActions} /> : null}
+      {addButton}
+    </Pressable>
+  );
+  if (IS_WEB) return row;
+
+  const swipeAction = (label, icon, color, onPress) => (
+    <Pressable
+      style={[styles.swipeAction, { backgroundColor: color }]}
+      accessibilityRole="button"
+      onPress={() => {
+        swipeRef.current?.close();
+        onPress();
+      }}
+    >
+      <Ionicons name={icon} size={20} color={theme.colors.onPrimary} />
+      <AppText variant="smallStrong" style={{ color: theme.colors.onPrimary }}>{label}</AppText>
+    </Pressable>
+  );
+  return (
+    <Swipeable
+      ref={swipeRef}
+      overshootFriction={8}
+      renderLeftActions={() => swipeAction("Add to menu", "calendar-outline", theme.colors.primary, addToMenu)}
+      renderRightActions={() => swipeAction("Delete", "trash-outline", theme.colors.danger, confirmDelete)}
+    >
+      {row}
+    </Swipeable>
+  );
+};
+
+const useStyles = makeStyles((t) => ({
+  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.md, marginTop: 2 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.md,
+    backgroundColor: t.colors.background,
+    ...(Platform.OS === "web" ? { cursor: "pointer" } : null),
+  },
+  rowPressed: { backgroundColor: t.colors.surfaceAlt },
+  rowBody: { flex: 1, minWidth: 0 },
+  swipeAction: { width: 112, alignItems: "center", justifyContent: "center", gap: 4 },
+  gridCard: {
+    flex: 1,
+    margin: spacing.sm,
+    backgroundColor: t.colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    overflow: "hidden",
+    ...elevation(t, 1),
+    ...(Platform.OS === "web" ? { cursor: "pointer" } : null),
+  },
+  hovered: { borderColor: t.colors.borderStrong, ...elevation(t, 2) },
+  pressed: { opacity: 0.92 },
+  gridFavorite: { position: "absolute", top: spacing.xs, right: spacing.xs, backgroundColor: t.colors.surface, borderRadius: radius.pill },
+  gridBody: { paddingHorizontal: spacing.md, paddingTop: spacing.md, flex: 1 },
+  gridTitle: { minHeight: 44 },
+  gridActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: spacing.xs, padding: spacing.xs },
+}));
 
 export default RecipeCard;

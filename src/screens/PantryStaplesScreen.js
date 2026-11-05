@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import useLayout from "../hooks/useLayout";
-import { colors, radius, spacing } from "../theme";
+import { makeStyles, radius, spacing } from "../theme";
 import { addStaple, removeStaple, selectStaplesList } from "../store/pantrySlice";
+import { AppText, Button, EmptyState, IconButton, TextField } from "../components/ui";
 
 const PantryStaplesScreen = () => {
   const dispatch = useDispatch();
+  const styles = useStyles();
   const { isWide } = useLayout();
   const staples = useSelector(selectStaplesList);
   const [text, setText] = useState("");
@@ -20,39 +22,41 @@ const PantryStaplesScreen = () => {
   return (
     <View style={styles.screen}>
       <View style={[styles.content, isWide && styles.contentWide]}>
-        <Text style={styles.intro}>
-          Pantry staples are things you usually have. When you generate a shopping list they're added already checked off.
-        </Text>
+        <AppText variant="small" tone="muted" style={styles.intro}>
+          Things you usually have, like salt or oil. When you generate a shopping list they're added already checked
+          off. You can also mark staples from a recipe or the shopping list.
+        </AppText>
         <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
+          <TextField
+            style={styles.flex}
             value={text}
             onChangeText={setText}
-            placeholder="Add a staple, e.g. salt"
+            placeholder="Add a staple, e.g. olive oil"
             onSubmitEditing={add}
             blurOnSubmit={false}
+            returnKeyType="done"
             accessibilityLabel="Staple name"
           />
-          <Pressable onPress={add} accessibilityRole="button" style={styles.addButton}>
-            <Text style={styles.addText}>Add</Text>
-          </Pressable>
+          <Button label="Add" onPress={add} disabled={!text.trim()} />
         </View>
         <FlatList
           data={staples}
           keyExtractor={(s) => s.nameKey}
+          style={styles.list}
+          contentContainerStyle={staples.length ? styles.listContent : null}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListEmptyComponent={<Text style={styles.empty}>No pantry staples yet.</Text>}
+          ListEmptyComponent={
+            <EmptyState icon="file-tray-stacked-outline" title="No pantry staples yet" message="Add the basics you always keep at home." />
+          }
           renderItem={({ item }) => (
             <View style={styles.row}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Pressable
+              <AppText variant="body" style={styles.flex}>{item.name}</AppText>
+              <IconButton
+                icon="close"
+                size={18}
                 onPress={() => dispatch(removeStaple(item.nameKey))}
-                accessibilityRole="button"
                 accessibilityLabel={`Remove ${item.name}`}
-                style={styles.removeButton}
-              >
-                <Text style={styles.removeText}>Remove</Text>
-              </Pressable>
+              />
             </View>
           )}
         />
@@ -61,24 +65,23 @@ const PantryStaplesScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+const useStyles = makeStyles((t) => ({
+  screen: { flex: 1, backgroundColor: t.colors.background },
+  flex: { flex: 1 },
   content: { flex: 1, width: "100%", padding: spacing.lg },
   contentWide: { maxWidth: 720, alignSelf: "center" },
-  intro: { color: colors.muted, fontSize: 14, marginBottom: spacing.md },
-  inputRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
-  input: {
-    flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md, minHeight: 44, fontSize: 16, color: colors.text,
+  intro: { marginBottom: spacing.md },
+  inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg },
+  list: { flex: 1 },
+  listContent: {
+    backgroundColor: t.colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    overflow: "hidden",
   },
-  addButton: { minHeight: 44, paddingHorizontal: spacing.lg, justifyContent: "center", borderRadius: radius.sm, backgroundColor: colors.accentStrong },
-  addText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 48, backgroundColor: colors.surface, paddingHorizontal: spacing.md },
-  name: { flex: 1, fontSize: 16, color: colors.text },
-  removeButton: { minHeight: 44, justifyContent: "center", paddingLeft: spacing.md },
-  removeText: { color: colors.danger, fontSize: 15 },
-  separator: { height: 1, backgroundColor: colors.border },
-  empty: { textAlign: "center", color: colors.muted, padding: spacing.xl },
-});
+  row: { flexDirection: "row", alignItems: "center", minHeight: 52, paddingLeft: spacing.lg, paddingRight: spacing.xs },
+  separator: { height: 1, backgroundColor: t.colors.border, marginLeft: spacing.lg },
+}));
 
 export default PantryStaplesScreen;

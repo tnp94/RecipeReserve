@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing } from "../../theme";
+import { Animated, Platform, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { elevation, makeStyles, radius, spacing, typography } from "../../theme";
 
 const ToastContext = createContext(null);
 const FADE_MS = 180;
@@ -13,6 +14,8 @@ export function useToast() {
 
 export function ToastProvider({ children }) {
   const [toast, setToast] = useState(null);
+  const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
   const timer = useRef(null);
   const seq = useRef(0);
@@ -58,7 +61,8 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={value}>
       {children}
       {toast && (
-        <View style={styles.container} pointerEvents="box-none">
+        // Sits just above the tab bar (49pt + the home-indicator inset).
+        <View style={[styles.container, { bottom: insets.bottom + 49 + spacing.lg }]} pointerEvents="box-none">
           <Animated.View
             style={[styles.toast, { opacity }]}
             accessibilityLiveRegion="polite"
@@ -84,12 +88,11 @@ export function ToastProvider({ children }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((t) => ({
   container: {
     position: "absolute",
     left: spacing.lg,
     right: spacing.lg,
-    bottom: 72,
     alignItems: "center",
   },
   toast: {
@@ -97,11 +100,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.lg,
     maxWidth: 480,
-    backgroundColor: "rgba(30,30,30,0.92)",
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg + 4,
+    backgroundColor: t.colors.toast,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    ...elevation(t, 2),
   },
-  message: { color: "#fff", flexShrink: 1, fontSize: 14 },
-  action: { color: "#9cc4ff", fontWeight: "bold", fontSize: 14 },
-});
+  message: { ...typography.small, color: t.colors.onToast, flexShrink: 1 },
+  action: { ...typography.smallStrong, color: t.colors.toastAction },
+}));

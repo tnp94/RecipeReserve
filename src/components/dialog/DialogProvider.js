@@ -1,7 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { colors, radius, spacing } from "../../theme";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { elevation, makeStyles, radius, spacing } from "../../theme";
 import { useGatedModal } from "../modalGate";
+import AppText from "../ui/AppText";
+import Button from "../ui/Button";
+import TextField from "../ui/TextField";
 
 const DialogContext = createContext(null);
 
@@ -17,6 +20,7 @@ export function useDialog() {
 }
 
 const PromptBody = ({ dialog, onClose }) => {
+  const styles = useStyles();
   const [text, setText] = useState(dialog.defaultValue ?? "");
   const trimmed = text.trim();
   const canConfirm = trimmed.length > 0;
@@ -25,11 +29,12 @@ const PromptBody = ({ dialog, onClose }) => {
   };
   return (
     <>
-      <TextInput
+      <TextField
         autoFocus
         value={text}
         onChangeText={setText}
         placeholder={dialog.placeholder}
+        accessibilityLabel={dialog.title}
         onSubmitEditing={confirm}
         returnKeyType="done"
         selectTextOnFocus
@@ -37,30 +42,31 @@ const PromptBody = ({ dialog, onClose }) => {
       />
       <View style={styles.buttonsRow}>
         <DialogButton text="Cancel" style="cancel" onPress={() => onClose()} />
-        <DialogButton text={dialog.confirmText ?? "OK"} disabled={!canConfirm} onPress={confirm} />
+        <DialogButton text={dialog.confirmText ?? "OK"} primary disabled={!canConfirm} onPress={confirm} />
       </View>
     </>
   );
 };
 
-const DialogButton = ({ text, style, disabled, onPress, stacked }) => (
-  <Pressable
-    onPress={onPress}
-    disabled={disabled}
-    accessibilityRole="button"
-    style={[styles.button, stacked && styles.buttonStacked, disabled && styles.buttonDisabled]}
-  >
-    <Text
-      style={[
-        styles.buttonText,
-        style === "destructive" && styles.destructiveText,
-        style === "cancel" && styles.cancelText,
-      ]}
-    >
-      {text}
-    </Text>
-  </Pressable>
-);
+// Buttons follow the platform-alert `style`: "cancel" is quiet, "destructive" is red.
+// In a row, the last non-cancel button is the filled (primary) one; stacked lists of
+// choices use soft buttons so no single choice looks pre-selected.
+const DialogButton = ({ text, style, disabled, onPress, stacked, primary }) => {
+  let variant = "ghost";
+  if (style === "cancel") variant = stacked ? "ghost" : "secondary";
+  else if (style === "destructive") variant = primary && !stacked ? "danger" : "dangerGhost";
+  else variant = primary && !stacked ? "primary" : stacked ? "tonal" : "ghost";
+  return (
+    <Button
+      label={text}
+      onPress={onPress}
+      disabled={disabled}
+      variant={variant}
+      fullWidth={stacked}
+      style={stacked ? { borderRadius: radius.md } : null}
+    />
+  );
+};
 
 export function DialogProvider({ children }) {
   const [current, setCurrent] = useState(null);
@@ -93,6 +99,7 @@ export function DialogProvider({ children }) {
     }, NEXT_TICK_MS);
   }, []);
   const gate = useGatedModal(!!current);
+  const styles = useStyles();
 
   const api = useMemo(
     () => ({
@@ -120,6 +127,16 @@ export function DialogProvider({ children }) {
   };
 
   const stacked = current && current.kind === "alert" && current.buttons.length >= 3;
+  // Index of the button drawn filled in a row: the last one that isn't "cancel".
+  const primaryIndex = current && current.kind === "alert"
+    ? current.buttons.reduce((found, b, i) => (b.style === "cancel" ? found : i), -1)
+    : -1;
+  // Stacked: choices first, Cancel last.
+  const ordered = current && current.kind === "alert"
+    ? (stacked
+        ? [...current.buttons.filter((b) => b.style !== "cancel"), ...current.buttons.filter((b) => b.style === "cancel")]
+        : current.buttons)
+    : [];
 
   return (
     <DialogContext.Provider value={api}>
@@ -135,18 +152,19 @@ export function DialogProvider({ children }) {
           <Pressable style={styles.backdrop} onPress={dismiss} accessibilityLabel="Dismiss dialog" />
           {current ? (
             <View style={styles.card} accessibilityViewIsModal>
-              <Text style={styles.title}>{current.title}</Text>
-              {current.message ? <Text style={styles.message}>{current.message}</Text> : null}
+              <AppText variant="heading" accessibilityRole="header">{current.title}</AppText>
+              {current.message ? <AppText variant="body" tone="muted" style={styles.message}>{current.message}</AppText> : null}
               {current.kind === "prompt" ? (
                 <PromptBody key={current.id} dialog={current} onClose={close} />
               ) : (
                 <View style={stacked ? styles.buttonsStacked : styles.buttonsRow}>
-                  {current.buttons.map((b, i) => (
+                  {ordered.map((b, i) => (
                     <DialogButton
                       key={i}
                       text={b.text}
                       style={b.style}
                       stacked={stacked}
+                      primary={current.buttons.indexOf(b) === primaryIndex}
                       onPress={() => close(b.onPress)}
                     />
                   ))}
@@ -160,42 +178,27 @@ export function DialogProvider({ children }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((t) => ({
   root: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: t.colors.overlay },
   card: {
     width: "100%",
     maxWidth: 420,
-    padding: 16,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    padding: spacing.xl,
+    backgroundColor: t.colors.surface,
+    borderRadius: radius.xl,
+    ...elevation(t, 2),
   },
-  title: { fontSize: 18, fontWeight: "bold", color: colors.text },
-  message: { marginTop: spacing.sm, fontSize: 15, color: colors.text },
-  input: {
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
-    color: colors.text,
-  },
+  message: { marginTop: spacing.sm },
+  input: { marginTop: spacing.lg },
   buttonsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
     flexWrap: "wrap",
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
     gap: spacing.sm,
   },
-  buttonsStacked: { marginTop: spacing.lg, alignSelf: "stretch" },
-  button: { minHeight: 44, paddingHorizontal: spacing.md, justifyContent: "center", alignItems: "center" },
-  buttonStacked: { width: "100%", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { fontSize: 16, color: colors.accentStrong },
-  cancelText: { fontWeight: "bold" },
-  destructiveText: { color: colors.danger },
-});
+  buttonsStacked: { marginTop: spacing.lg, alignSelf: "stretch", gap: spacing.xs },
+}));
 
 export default DialogProvider;

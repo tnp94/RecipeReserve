@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing } from "../theme";
+import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { elevation, makeStyles, radius, spacing } from "../theme";
 import useLayout from "../hooks/useLayout";
 import { useGatedModal } from "./modalGate";
+import AppText from "./ui/AppText";
+import IconButton from "./ui/IconButton";
 
 // A Modal is its own native window, so the app's layout never moves out of the way of
 // the keyboard. Track the keyboard height ourselves and lift the sheet above it.
@@ -25,7 +28,10 @@ function useKeyboardHeight(active) {
 
 const TOP_GAP = 48; // keep a strip of backdrop visible above the sheet
 
-const AppModal = ({ visible, onClose, title, footer, children }) => {
+// Bottom sheet on phones, centred dialog on wide screens.
+const AppModal = ({ visible, onClose, title, subtitle, footer, children }) => {
+  const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const { isWide, width: windowWidth, height: windowHeight } = useLayout();
   const { shown, onDismiss } = useGatedModal(!!visible);
   const keyboardHeight = useKeyboardHeight(shown);
@@ -42,6 +48,8 @@ const AppModal = ({ visible, onClose, title, footer, children }) => {
   const available = (rootHeight ?? windowHeight) - keyboardPad;
   // Numeric max height so the whole sheet (header, fields, footer) fits above the keyboard.
   const maxHeight = Math.max(200, Math.min(windowHeight * 0.85, available - TOP_GAP));
+  // A sheet that sits on the bottom edge keeps its content above the home indicator.
+  const bottomInset = !isWide && keyboardPad === 0 ? insets.bottom : 0;
   return (
     <Modal visible={shown} transparent animationType="fade" onRequestClose={onClose} onDismiss={onDismiss}>
       <View
@@ -52,12 +60,17 @@ const AppModal = ({ visible, onClose, title, footer, children }) => {
         }}
       >
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close dialog" />
-        <View style={[styles.card, isWide ? styles.cardWide : styles.cardNarrow, { maxHeight }]}>
+        <View
+          style={[styles.card, isWide ? styles.cardWide : styles.cardNarrow, { maxHeight, paddingBottom: bottomInset }]}
+          accessibilityViewIsModal
+        >
+          {!isWide ? <View style={styles.grabber} /> : null}
           <View style={styles.header}>
-            <Text style={styles.title} numberOfLines={2}>{title}</Text>
-            <Pressable onPress={onClose} accessibilityRole="button" hitSlop={8} style={styles.closeButton}>
-              <Text style={styles.closeText}>Close</Text>
-            </Pressable>
+            <View style={styles.titleBox}>
+              <AppText variant="heading" numberOfLines={2} accessibilityRole="header">{title}</AppText>
+              {subtitle ? <AppText variant="small" tone="muted" numberOfLines={2}>{subtitle}</AppText> : null}
+            </View>
+            <IconButton icon="close" onPress={onClose} accessibilityLabel="Close" tone="muted" />
           </View>
           <ScrollView
             style={styles.body}
@@ -74,29 +87,37 @@ const AppModal = ({ visible, onClose, title, footer, children }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((t) => ({
   root: { flex: 1 },
   rootNarrow: { justifyContent: "flex-end" },
-  rootWide: { justifyContent: "center", alignItems: "center" },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
-  card: { backgroundColor: colors.surface, overflow: "hidden" },
+  rootWide: { justifyContent: "center", alignItems: "center", padding: spacing.xl },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: t.colors.overlay },
+  card: { backgroundColor: t.colors.surface, overflow: "hidden", ...elevation(t, 2) },
   cardNarrow: {
     width: "100%",
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
   },
-  cardWide: { width: "100%", maxWidth: 560, borderRadius: radius.lg },
+  cardWide: { width: "100%", maxWidth: 560, borderRadius: radius.xl },
+  grabber: {
+    alignSelf: "center",
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: t.colors.borderStrong,
+    marginTop: spacing.sm,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: spacing.lg,
+    gap: spacing.sm,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.xs,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: t.colors.border,
   },
-  title: { flex: 1, fontSize: 18, fontWeight: "bold", color: colors.text },
-  closeButton: { paddingLeft: spacing.md, minHeight: 32, justifyContent: "center" },
-  closeText: { color: colors.accentStrong, fontSize: 16 },
+  titleBox: { flex: 1, paddingVertical: spacing.xs },
   body: { flexGrow: 0, flexShrink: 1 },
   bodyContent: { padding: spacing.lg },
   footer: {
@@ -106,8 +127,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: t.colors.border,
   },
-});
+}));
 
 export default AppModal;
