@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Animated, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
+import { Ionicons } from "@expo/vector-icons";
+import { DROP_INSERT, DROP_SWAP, TOUCH_LIFT, autoScrollDelta, dragPreviewPosition } from "../../../domain/menuDrag";
 import { elevation, makeStyles, radius, useTheme } from "../../../theme";
 
 // Gesture-based drag-and-drop shared by iOS, Android and web (mouse + touch).
@@ -59,12 +61,12 @@ export const DragScrollView = ({ horizontal = false, onScroll, onContentSizeChan
   );
 };
 
-const EDGE = 56; // px from a scroller's edge where auto-scroll can start
 const DWELL = 300; // ms the pointer must rest in the edge zone before scrolling starts
-const MIN_STEP = 4; // px per tick at the zone's inner edge
-const MAX_STEP = 16; // px per tick at the scroller's edge
-const PREVIEW_W = 180;
+const PREVIEW_W = 200;
 const PREVIEW_H = 40;
+// The icon slot is always filled, so the label doesn't shift when the hover action changes.
+const ACTION_ICONS = { [DROP_SWAP]: "sync", [DROP_INSERT]: "download-outline" };
+const IDLE_ICON = "reorder-three";
 
 const contains = (r, x, y) => !!r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 
@@ -72,7 +74,21 @@ const measure = (node, cb) => {
   if (node && node.measureInWindow) node.measureInWindow((x, y, w, h) => cb({ x, y, w, h }));
 };
 
-const IDLE = { active: null, hoverKey: null, hoverHalf: null };
+const IDLE = { active: null, hoverKey: null, hoverHalf: null, hoverAction: null };
+
+// The floating chip. Reads the action itself, so a hover change re-renders only this.
+const DragPreviewPill = ({ label }) => {
+  const api = useDragApi();
+  const theme = useTheme();
+  const styles = useStyles();
+  const action = useSyncExternalStore(api.subscribe, () => api.getState().hoverAction);
+  return (
+    <View style={styles.pill}>
+      <Ionicons name={ACTION_ICONS[action] ?? IDLE_ICON} size={18} color={theme.colors.onPrimary} />
+      <Text style={styles.pillText} numberOfLines={1}>{label}</Text>
+    </View>
+  );
+};
 
 const DragProvider = ({ children, style }) => {
   const styles = useStyles();
@@ -89,12 +105,20 @@ const DragProvider = ({ children, style }) => {
   const lastPos = useRef({ x: 0, y: 0 });
   const timer = useRef(null);
   const edgeSince = useRef(0);
+  const lift = useRef(0);
   const pos = useRef(new Animated.ValueXY({ x: -1000, y: -1000 })).current;
 
   const setState = (patch) => {
     const prev = stateRef.current;
     const next = { ...prev, ...patch };
-    if (next.active === prev.active && next.hoverKey === prev.hoverKey && next.hoverHalf === prev.hoverHalf) return;
+    if (
+      next.active === prev.active &&
+      next.hoverKey === prev.hoverKey &&
+      next.hoverHalf === prev.hoverHalf &&
+      next.hoverAction === prev.hoverAction
+    ) {
+      return;
+    }
     stateRef.current = next;
     listeners.current.forEach((l) => l());
   };
@@ -116,7 +140,14 @@ const DragProvider = ({ children, style }) => {
     return y < r.y + r.h / 2 ? "before" : "after";
   };
 
-  const setHover = (key, y) => setState({ hoverKey: key, hoverHalf: key ? halfOf(key, y) : null });
+  const setHover = (key, y) => {
+    const zone = key ? zones.current.get(key) : null;
+    setState({
+      hoverKey: key,
+      hoverHalf: key ? halfOf(key, y) : null,
+      hoverAction: zone ? zone.actionFor(stateRef.current.active) : null,
+    });
+  };
 
   // Smallest accepting zone under the pointer. Points outside the provider's container
   // are ignored, which also rules out zones scrolled out of view (their rects lie outside).
@@ -138,31 +169,15 @@ const DragProvider = ({ children, style }) => {
   };
 
   const place = (x, y) => {
-    pos.setValue({ x: x - container.current.x - PREVIEW_W / 2, y: y - container.current.y - PREVIEW_H / 2 });
+    pos.setValue(dragPreviewPosition({ x, y, container: container.current, width: PREVIEW_W, height: PREVIEW_H, lift: lift.current }));
   };
 
-  // Scroll step for one scroller (0 outside its edge zones). Speed grows with depth into
-  // the zone: MIN_STEP at its inner edge up to MAX_STEP at the scroller's edge.
-  const deltaFor = (s, x, y) => {
-    const r = s.rect;
-    if (!r || !contains(r, x, y)) return 0;
-    const near = s.horizontal ? x - r.x : y - r.y;
-    const size = s.horizontal ? r.w : r.h;
-    const speed = (dist) => MIN_STEP + (MAX_STEP - MIN_STEP) * Math.min(1, Math.max(0, (EDGE - dist) / EDGE));
-    let d = 0;
-    if (near < EDGE) d = -speed(near);
-    else if (near > size - EDGE) d = speed(size - near);
-    // Only report a delta the scroller can actually apply.
-    const max = Math.max(0, s.content - size);
-    return (d < 0 && s.offset <= 0) || (d > 0 && s.offset >= max) ? 0 : d;
-  };
-
-  // Innermost (smallest) scroller under the pointer that can scroll toward the edge.
+  // Innermost (smallest) scroller level with the pointer that can scroll toward the edge.
   const pickScroll = (x, y) => {
     let best = null;
     scrollers.current.forEach((s) => {
       if (!s.ref.current) return;
-      const delta = deltaFor(s, x, y);
+      const delta = autoScrollDelta(s, x, y);
       if (!delta) return;
       const area = s.rect.w * s.rect.h;
       if (!best || area < best.area) best = { s, delta, area };
@@ -253,10 +268,11 @@ const DragProvider = ({ children, style }) => {
         scrollers.current.add(info);
         return () => scrollers.current.delete(info);
       },
-      begin(payload, x, y) {
+      begin(payload, x, y, isTouch = false) {
         lastPos.current = { x, y };
+        lift.current = isTouch ? TOUCH_LIFT : 0;
         rects.current = new Map();
-        setState({ active: payload, hoverKey: null, hoverHalf: null });
+        setState({ active: payload, hoverKey: null, hoverHalf: null, hoverAction: null });
         setPreview(payload);
         place(x, y); // container offset arrives async; re-place once measured
         measure(containerRef.current, (r) => {
@@ -281,7 +297,7 @@ const DragProvider = ({ children, style }) => {
         const rect = dropKey ? rects.current.get(dropKey) : null;
         const half = dropKey ? halfOf(dropKey, y) : null;
         finish();
-        if (zone) zone.onDrop(payload, { x, y, rect, half });
+        if (zone && zone.actionFor(payload)) zone.onDrop(payload, { x, y, rect, half });
       },
       cancel() {
         if (stateRef.current.active) finish();
@@ -298,9 +314,7 @@ const DragProvider = ({ children, style }) => {
         {children}
         {preview ? (
           <Animated.View pointerEvents="none" style={[styles.preview, { transform: pos.getTranslateTransform() }]}>
-            <View style={styles.pill}>
-              <Text style={styles.pillText} numberOfLines={1}>{preview.label}</Text>
-            </View>
+            <DragPreviewPill label={preview.label} />
           </Animated.View>
         ) : null}
       </View>
@@ -312,6 +326,9 @@ const useStyles = makeStyles((t) => ({
   container: { flex: 1 },
   preview: { position: "absolute", left: 0, top: 0, width: PREVIEW_W, height: PREVIEW_H, alignItems: "center", justifyContent: "center", zIndex: 1000 },
   pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     maxWidth: PREVIEW_W,
     backgroundColor: t.colors.primary,
     borderRadius: radius.pill,
@@ -319,7 +336,7 @@ const useStyles = makeStyles((t) => ({
     paddingVertical: 8,
     ...elevation(t, 2),
   },
-  pillText: { color: t.colors.onPrimary, fontWeight: "bold", fontSize: 14 },
+  pillText: { flexShrink: 1, color: t.colors.onPrimary, fontWeight: "bold", fontSize: 14 },
 }));
 
 export default DragProvider;

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, PointerType } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../theme";
 import { useDragApi } from "./DragProvider";
@@ -17,7 +17,8 @@ const DragHandle = ({ payload, label }) => {
       Gesture.Pan()
         .minDistance(4)
         .runOnJS(true)
-        .onStart((e) => api.begin({ type, id, label }, e.absoluteX, e.absoluteY))
+        // A mouse pointer doesn't hide the preview; a finger or stylus does.
+        .onStart((e) => api.begin({ type, id, label }, e.absoluteX, e.absoluteY, e.pointerType !== PointerType.MOUSE))
         .onUpdate((e) => api.move(e.absoluteX, e.absoluteY))
         .onEnd(() => api.end())
         .onFinalize(() => api.cancel()), // no-op when end() already ran

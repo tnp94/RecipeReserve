@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { useDispatch } from "react-redux";
 import { elevation, makeStyles, radius, spacing } from "../../theme";
 import { SUGGESTED_SLOT_NAMES, moveMenuEntryToDay, moveSlot, swapDays } from "../../store/menuSlice";
+import { menuDropAction } from "../../domain/menuDrag";
 import { useDropOverStyle } from "./drag/DragProvider";
 import DragHandle from "./drag/DragHandle";
 import useDropZone from "./drag/useDropZone";
@@ -21,21 +22,17 @@ const MenuDay = ({ day, isToday, onDayMenu, onAddSlot, onCustomSlot, onSlotRenam
   const { ref: cardRef, isOver: slotOver } = useDropZone({
     key: `day:${day.day}`,
     accepts: ["slot", "entry"],
+    actionFor: (p) => menuDropAction({ kind: "day", entries: day.entries, slots: day.slots }, p),
     onDrop: (p) => {
-      if (p.type === "entry") {
-        // moveMenuEntryToDay is a no-op for an entry already day-level on this day.
-        dispatch(moveMenuEntryToDay({ entryId: p.id, day: day.day }));
-      } else if (!day.slots.some((s) => s.id === p.id)) {
-        dispatch(moveSlot({ slotId: p.id, day: day.day }));
-      }
+      if (p.type === "entry") dispatch(moveMenuEntryToDay({ entryId: p.id, day: day.day }));
+      else dispatch(moveSlot({ slotId: p.id, day: day.day }));
     },
   });
   const { ref: headerRef, isOver: dayOver } = useDropZone({
     key: `dayheader:${day.day}`,
     accepts: ["day"],
-    onDrop: (p) => {
-      if (p.id !== day.day) dispatch(swapDays({ dayA: p.id, dayB: day.day }));
-    },
+    actionFor: (p) => menuDropAction({ kind: "dayHeader", id: day.day }, p),
+    onDrop: (p) => dispatch(swapDays({ dayA: p.id, dayB: day.day })),
   });
   const count = day.entries.length + day.slots.reduce((n, s) => n + s.entries.length, 0);
   const empty = count === 0 && day.slots.length === 0;

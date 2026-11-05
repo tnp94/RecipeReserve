@@ -29,6 +29,7 @@ import useGenerateList from "../hooks/useGenerateList";
 import { elevation, makeStyles, radius, spacing, useTheme } from "../theme";
 import DragProvider, { DragScrollView, useDropOverStyle } from "../components/menu/drag/DragProvider";
 import useDropZone from "../components/menu/drag/useDropZone";
+import { menuDropAction } from "../domain/menuDrag";
 import MenuDay from "../components/menu/MenuDay";
 import MenuEntryRow from "../components/menu/MenuEntryRow";
 import EntryOptionsModal from "../components/menu/EntryOptionsModal";
@@ -48,9 +49,8 @@ const UnplannedSection = ({ entries, onEntryPress, onEntryRemove }) => {
   const { ref, isOver } = useDropZone({
     key: "unplanned",
     accepts: ["entry"],
-    onDrop: (p) => {
-      if (!entries.some((e) => e.id === p.id)) dispatch(moveMenuEntry({ entryId: p.id, slotId: null }));
-    },
+    actionFor: (p) => menuDropAction({ kind: "unplanned", entries }, p),
+    onDrop: (p) => dispatch(moveMenuEntry({ entryId: p.id, slotId: null })),
   });
   return (
     <View ref={ref} collapsable={false} style={[styles.unplanned, dropOverStyle(isOver)]}>

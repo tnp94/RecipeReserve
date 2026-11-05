@@ -2,6 +2,7 @@ import { Platform, Pressable, View } from "react-native";
 import { makeStyles, radius, spacing } from "../../theme";
 import { useDispatch } from "react-redux";
 import { moveMenuEntry, reorderSlot } from "../../store/menuSlice";
+import { menuDropAction } from "../../domain/menuDrag";
 import MenuEntryRow from "./MenuEntryRow";
 import { useDropOverStyle } from "./drag/DragProvider";
 import DragHandle from "./drag/DragHandle";
@@ -15,13 +16,13 @@ const MenuSlot = ({ slot, onRename, onMenu, onEntryPress, onEntryRemove }) => {
   const { ref, isOver, hoverHalf, activeType, activeId } = useDropZone({
     key: `slot:${slot.id}`,
     accepts: ["entry", "slot"],
+    actionFor: (p) => menuDropAction({ kind: "slot", id: slot.id, entries: slot.entries }, p),
     onDrop: (p, info) => {
       if (p.type === "slot") {
-        if (p.id === slot.id) return;
         // Same before/after the insertion line showed (computed once, in DragProvider).
         const position = info?.half === "after" ? "after" : "before";
         dispatch(reorderSlot({ slotId: p.id, targetSlotId: slot.id, position }));
-      } else if (!slot.entries.some((e) => e.id === p.id)) {
+      } else {
         dispatch(moveMenuEntry({ entryId: p.id, slotId: slot.id }));
       }
     },

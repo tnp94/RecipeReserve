@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
 import { makeStyles, radius, spacing, useTheme } from "../../theme";
 import { swapMenuEntries } from "../../store/menuSlice";
+import { menuDropAction } from "../../domain/menuDrag";
 import { useDropOverStyle } from "./drag/DragProvider";
 import DragHandle from "./drag/DragHandle";
 import useDropZone from "./drag/useDropZone";
@@ -22,9 +23,8 @@ const MenuEntryRow = ({ entry, onPress, onRemove }) => {
   const { ref, isOver } = useDropZone({
     key: `entry:${entry.id}`,
     accepts: ["entry"],
-    onDrop: (p) => {
-      if (p.id !== entry.id) dispatch(swapMenuEntries({ entryIdA: p.id, entryIdB: entry.id }));
-    },
+    actionFor: (p) => menuDropAction({ kind: "entry", id: entry.id }, p),
+    onDrop: (p) => dispatch(swapMenuEntries({ entryIdA: p.id, entryIdB: entry.id })),
   });
   const renderRightActions = () => (
     <Pressable
