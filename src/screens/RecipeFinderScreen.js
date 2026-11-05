@@ -6,10 +6,10 @@ import { Ionicons } from "@expo/vector-icons";
 import Chip from "../components/Chip";
 import { useToast } from "../components/toast/ToastProvider";
 import { useAddToMenu } from "../components/menu/AddToMenuSheet";
-import { AppText, Badge, Button, Card, EmptyState, IconButton, ProgressBar, RecipeThumb, SectionHeader, TextField } from "../components/ui";
+import { AppText, Badge, Button, Card, EmptyState, IconButton, ProgressBar, RecipeThumb, SectionHeader, SegmentedControl, TextField } from "../components/ui";
 import useLayout from "../hooks/useLayout";
 import { makeStyles, radius, spacing, useTheme } from "../theme";
-import { findRecipes } from "../domain/recipeFinder";
+import { FINDER_SORT_FEWEST_MISSING, FINDER_SORT_MOST_USED, findRecipes, rankByMostUsed } from "../domain/recipeFinder";
 import { collectIngredientNames, suggestIngredients } from "../domain/ingredientSuggestions";
 import { normalizeName } from "../domain/ingredientKey";
 import { selectAllRecipes } from "../store/recipesSlice";
@@ -23,11 +23,18 @@ import {
   selectFinderIngredients,
   selectRecentFinderIngredients,
 } from "../store/finderSlice";
+import { selectFinderSort, setFinderSort } from "../store/settingsSlice";
 import { addItemsToShoppingList } from "../store/thunks";
 
-const ResultCard = ({ result, onOpen, onAddMissing, onAddToMenu, partial }) => {
+const SORT_OPTIONS = [
+  { value: FINDER_SORT_FEWEST_MISSING, label: "Fewest missing" },
+  { value: FINDER_SORT_MOST_USED, label: "Uses most of list" },
+];
+
+const ResultCard = ({ result, listSize, onOpen, onAddMissing, onAddToMenu }) => {
   const styles = useStyles();
-  const { recipe, matchedCount, totalCount, missing, expiringCount, isFullMatch } = result;
+  const { recipe, matchedCount, totalCount, usedCount, missing, expiringCount, isFullMatch, tooManyMissing: partial } = result;
+  const showUsed = listSize != null;
   return (
     <Card onPress={onOpen} style={styles.card} accessibilityLabel={`${recipe.name}. Have ${matchedCount} of ${totalCount} ingredients`}>
       <View style={styles.cardTop}>
@@ -38,8 +45,9 @@ const ResultCard = ({ result, onOpen, onAddMissing, onAddToMenu, partial }) => {
           <ProgressBar value={matchedCount / totalCount} style={styles.cardProgress} />
         </View>
       </View>
-      {expiringCount > 0 || (!isFullMatch && partial) ? (
+      {showUsed || expiringCount > 0 || (!isFullMatch && partial) ? (
         <View style={styles.badges}>
+          {showUsed ? <Badge tone="neutral" label={`Uses ${usedCount} of your ${listSize}`} /> : null}
           {expiringCount > 0 ? (
             <Badge tone="warning" icon="time-outline" label={`Uses ${expiringCount} expiring ${expiringCount === 1 ? "item" : "items"}`} />
           ) : null}
@@ -81,7 +89,10 @@ const RecipeFinderScreen = () => {
   const ingredients = useSelector(selectFinderIngredients);
   const staples = useSelector(selectStaplesList);
   const recent = useSelector(selectRecentFinderIngredients);
-  const { fullMatches, nearMatches, otherMatches } = useMemo(() => findRecipes(recipes, ingredients), [recipes, ingredients]);
+  const sort = useSelector(selectFinderSort);
+  const groups = useMemo(() => findRecipes(recipes, ingredients), [recipes, ingredients]);
+  const { fullMatches, nearMatches, otherMatches } = groups;
+  const mostUsed = useMemo(() => rankByMostUsed(groups), [groups]);
   const allNames = useMemo(() => collectIngredientNames(recipes), [recipes]);
   const currentKeys = useMemo(() => new Set(ingredients.map((i) => normalizeName(i.name))), [ingredients]);
   const suggestions = useMemo(
@@ -132,7 +143,7 @@ const RecipeFinderScreen = () => {
 
   const openRecipe = (recipeId) => navigation.navigate("Recipe Details", { recipeId });
 
-  const renderGroup = (title, subtitle, results, partial = false) =>
+  const renderGroup = (title, subtitle, results, listSize) =>
     results.length > 0 && (
       <View style={styles.group}>
         <SectionHeader title={title} subtitle={subtitle} />
@@ -140,16 +151,16 @@ const RecipeFinderScreen = () => {
           <ResultCard
             key={r.recipe.id}
             result={r}
+            listSize={listSize}
             onOpen={() => openRecipe(r.recipe.id)}
             onAddMissing={() => addMissing(r.missing, r.recipe)}
             onAddToMenu={() => openAddToMenu(r.recipe)}
-            partial={partial}
           />
         ))}
       </View>
     );
 
-  const hasResults = fullMatches.length > 0 || nearMatches.length > 0 || otherMatches.length > 0;
+  const hasResults = mostUsed.length > 0;
 
   const dropdown = (title, action, rows) => (
     <View style={styles.dropdown}>
@@ -274,9 +285,27 @@ const RecipeFinderScreen = () => {
           </Card>
         ) : null}
 
-        {renderGroup("You can make", "You have everything.", fullMatches)}
-        {renderGroup("Almost there", "Missing one or two ingredients.", nearMatches)}
-        {renderGroup("Uses some of your ingredients", null, otherMatches, true)}
+        {hasResults ? (
+          <View style={styles.sort}>
+            <AppText variant="smallStrong" tone="muted">Sort by</AppText>
+            <SegmentedControl
+              options={SORT_OPTIONS}
+              value={sort}
+              onChange={(value) => dispatch(setFinderSort(value))}
+              accessibilityLabel="Sort recipes by"
+            />
+          </View>
+        ) : null}
+
+        {sort === FINDER_SORT_MOST_USED ? (
+          renderGroup("Best use of your list", "Recipes using the most of your ingredients come first.", mostUsed, ingredients.length)
+        ) : (
+          <>
+            {renderGroup("You can make", "You have everything.", fullMatches)}
+            {renderGroup("Almost there", "Missing one or two ingredients.", nearMatches)}
+            {renderGroup("Uses some of your ingredients", null, otherMatches)}
+          </>
+        )}
 
         {ingredients.length === 0 ? (
           <EmptyState
@@ -347,6 +376,7 @@ const useStyles = makeStyles((t) => ({
   },
   ingredientName: { flexGrow: 1, flexShrink: 1, flexBasis: 120 },
   tagRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  sort: { gap: spacing.xs },
   group: { gap: spacing.sm },
   card: { gap: spacing.sm },
   cardTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },

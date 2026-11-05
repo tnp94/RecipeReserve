@@ -112,7 +112,7 @@ fall back to the default (see `selectThemeName`), and no migration is needed.
 | `menu` | `{ slots: {ids, entities}, entries: {ids, entities}, nextId }` — Slot `{ id, day: 0–6 (Mon-first), name }`, MenuEntry `{ id, recipeId, slotId \| null, day \| null, scale }` (`slotId` set → in that slot, `day` null; `slotId` null + `day` 0–6 → on that day with no meal; both null → Unplanned) |
 | `shoppingList` | entity adapter `{ ids, entities, nextId, removed }` — items with `mergeKey, nameKey, name, unit, category, quantityText, checked, isStaple, source: "menu"\|"manual"\|"finder", contributions[]`; `removed[mergeKey]` = menu entries whose portion the user removed/deleted (Merge skips them; Replace/Clear reset it) |
 | `pantry` | `{ staples: { [nameKey]: { nameKey, name } } }` |
-| `settings` | `{ showStapleReminder, themeName, hideMenuTip, hideGettingStarted }` |
+| `settings` | `{ showStapleReminder, themeName, hideMenuTip, hideGettingStarted, finderSort }` |
 | `finder` | `{ ingredients: [{ id, name, tag: null\|"expiring"\|"required" }], recent: string[], nextId }` |
 
 Key points:

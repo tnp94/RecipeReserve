@@ -17,6 +17,8 @@ import {
   selectHideMenuTip,
   setHideGettingStarted,
   selectHideGettingStarted,
+  setFinderSort,
+  selectFinderSort,
 } from "../settingsSlice";
 import {
   addRecipe, toggleFavorite, isRecipeNameTaken, selectRecipeById,
@@ -78,6 +80,16 @@ describe("settingsSlice", () => {
     expect(selectThemeName(old)).toBe("freshWarm");
     expect(selectHideMenuTip(old)).toBe(false);
     expect(selectHideGettingStarted(old)).toBe(false);
+    expect(selectFinderSort(old)).toBe("fewestMissing");
+  });
+
+  it("stores the finder sort and ignores unknown values", () => {
+    const store = make();
+    expect(selectFinderSort(store.getState())).toBe("fewestMissing");
+    store.dispatch(setFinderSort("mostUsed"));
+    expect(selectFinderSort(store.getState())).toBe("mostUsed");
+    store.dispatch(setFinderSort("bogus"));
+    expect(selectFinderSort(store.getState())).toBe("mostUsed");
   });
 
   it("stores theme name and tip flags", () => {
