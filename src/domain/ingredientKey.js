@@ -12,6 +12,9 @@ const IRREGULAR = {
   cookies: "cookie", brownies: "brownie", pies: "pie", smoothies: "smoothie",
   veggies: "veggie", rotinis: "rotini", ties: "tie",
   geese: "goose", mice: "mouse", teeth: "tooth", feet: "foot",
+  // Singular ends in "-che"/"-she", so the general "-ches"/"-shes" rule would cut too much.
+  quiches: "quiche", brioches: "brioche", ganaches: "ganache", cloches: "cloche",
+  caches: "cache", niches: "niche", panaches: "panache",
 };
 
 export function singularizeWord(word) {
@@ -62,8 +65,13 @@ for (const [canonical, aliases] of Object.entries(UNIT_ALIASES)) {
   for (const a of aliases) UNIT_MAP[a] = canonical;
 }
 
+// Case matters only for the one-letter cooking shorthands: "T" = tablespoon, "t" = teaspoon.
+const CASE_SENSITIVE_UNITS = { T: "tbsp", t: "tsp" };
+
 export function normalizeUnit(unit) {
-  const u = String(unit ?? "").toLowerCase().trim().replace(/\.$/, "");
+  const raw = String(unit ?? "").trim().replace(/\.$/, "");
+  if (Object.prototype.hasOwnProperty.call(CASE_SENSITIVE_UNITS, raw)) return CASE_SENSITIVE_UNITS[raw];
+  const u = raw.toLowerCase();
   if (Object.prototype.hasOwnProperty.call(UNIT_MAP, u)) return UNIT_MAP[u];
   return singularizeWord(u);
 }

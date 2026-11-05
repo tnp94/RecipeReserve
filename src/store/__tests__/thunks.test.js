@@ -72,3 +72,30 @@ describe("addItemsToShoppingList", () => {
     expect(items[1]).toMatchObject({ name: "Rice", quantityText: "", isStaple: false });
   });
 });
+
+describe("new week does not corrupt an existing list", () => {
+  const { configureStore } = require("@reduxjs/toolkit");
+  const rootReducer = require("../rootReducer").default;
+  const { addRecipeToMenu, clearMenu } = require("../menuSlice");
+  const { addRecipe } = require("../recipesSlice");
+  const { toggleItemChecked, selectShoppingItems } = require("../shoppingListSlice");
+  const { generateShoppingList: gen } = require("../thunks");
+
+  it("Clear everything then Merge adds next week's onion instead of overwriting", () => {
+    const store = configureStore({ reducer: rootReducer });
+    store.dispatch(addRecipe({ name: "Chili", ingredients: [{ name: "Onion", quantityUnit: "2", unit: "", note: "", category: "Produce" }] }));
+    store.dispatch(addRecipe({ name: "Soup", ingredients: [{ name: "Onion", quantityUnit: "1", unit: "", note: "", category: "Produce" }] }));
+    const ids = store.getState().recipes.ids;
+    const [chili, soup] = ids.slice(-2);
+    store.dispatch(addRecipeToMenu({ recipeId: chili }));
+    store.dispatch(gen("replace"));
+    const onion = () => selectShoppingItems(store.getState()).find((i) => i.nameKey === "onion");
+    store.dispatch(toggleItemChecked(onion().id));
+    store.dispatch(clearMenu());
+    store.dispatch(addRecipeToMenu({ recipeId: soup }));
+    store.dispatch(gen("merge"));
+    expect(onion().quantityText).toBe("3");
+    expect(onion().contributions).toHaveLength(2);
+    expect(onion().checked).toBe(false);
+  });
+});

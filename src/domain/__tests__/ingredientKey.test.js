@@ -63,3 +63,23 @@ describe("plural/singular pairs produce the same key", () => {
     expect(normalizeName(a)).toBe(normalizeName(b));
   });
 });
+
+describe("one-letter spoon units", () => {
+  it("T is tablespoon and t is teaspoon", () => {
+    expect(normalizeUnit("T")).toBe("tbsp");
+    expect(normalizeUnit("t")).toBe("tsp");
+    expect(normalizeUnit("T.")).toBe("tbsp");
+    expect(normalizeUnit(" t ")).toBe("tsp");
+  });
+  it("T and t never combine", () => expect(ingredientKey("Sugar", "T")).not.toBe(ingredientKey("Sugar", "t")));
+});
+
+describe("-che plurals", () => {
+  it.each([["quiches", "quiche"], ["brioches", "brioche"], ["ganaches", "ganache"]])("%s -> %s", (a, b) => {
+    expect(singularizeWord(a)).toBe(b);
+  });
+  it("peaches/lunches still drop 'es'", () => {
+    expect(singularizeWord("peaches")).toBe("peach");
+    expect(singularizeWord("lunches")).toBe("lunch");
+  });
+});

@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, Button, StyleSheet } from "react-native";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { View, Text, Pressable, Button, Platform, StyleSheet } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addSlot,
@@ -78,6 +78,26 @@ const MenuScreen = ({ navigation }) => {
 
   const slotCount = week.reduce((n, d) => n + d.slots.length, 0);
   const close = () => setActiveModal(null);
+
+  // iOS cannot present a Modal while another is still dismissing, so going from the
+  // options sheet to a picker waits for the first sheet's onDismiss (with a fallback
+  // timer). Other platforms switch immediately.
+  const pendingModal = useRef(null);
+  const pendingTimer = useRef(null);
+  const openPending = () => {
+    clearTimeout(pendingTimer.current);
+    const next = pendingModal.current;
+    pendingModal.current = null;
+    if (next) setActiveModal(next);
+  };
+  const switchModal = (next) => {
+    if (Platform.OS !== "ios") return setActiveModal(next);
+    pendingModal.current = next;
+    setActiveModal(null);
+    clearTimeout(pendingTimer.current);
+    pendingTimer.current = setTimeout(openPending, 500);
+  };
+  useEffect(() => () => clearTimeout(pendingTimer.current), []);
 
   const entryById = useMemo(() => {
     const map = {};
@@ -285,12 +305,14 @@ const MenuScreen = ({ navigation }) => {
         location={entryLocation}
         onClose={close}
         onSetScale={(scale) => dispatch(setMenuEntryScale({ entryId: activeEntry.id, scale }))}
-        onMove={() => setActiveModal({ type: "slotPicker", entryId: activeEntry.id })}
-        onSwap={() => setActiveModal({ type: "entryPicker", entryId: activeEntry.id })}
+        onDismiss={openPending}
+        onMove={() => switchModal({ type: "slotPicker", entryId: activeEntry.id })}
+        onSwap={() => switchModal({ type: "entryPicker", entryId: activeEntry.id })}
         onView={() => {
           const recipeId = activeEntry.recipeId;
           close();
-          navigation.navigate("RecipeList", { screen: "Recipe Details", params: { recipeId } });
+          // initial: false keeps My Recipes underneath, even if the Recipes stack hasn't been opened yet.
+          navigation.navigate("RecipeList", { screen: "Recipe Details", params: { recipeId }, initial: false });
         }}
         onRemove={() => {
           dispatch(removeMenuEntry(activeEntry.id));

@@ -24,7 +24,7 @@ function useKeyboardHeight(active) {
 
 const TOP_GAP = 48; // keep a strip of backdrop visible above the sheet
 
-const AppModal = ({ visible, onClose, title, footer, children }) => {
+const AppModal = ({ visible, onClose, onDismiss, title, footer, children }) => {
   const { isWide, height: windowHeight } = useLayout();
   const keyboardHeight = useKeyboardHeight(!!visible);
   // Some platforms (e.g. Android adjustResize) already shrink the modal window for the
@@ -39,7 +39,7 @@ const AppModal = ({ visible, onClose, title, footer, children }) => {
   // Numeric max height so the whole sheet (header, fields, footer) fits above the keyboard.
   const maxHeight = Math.max(200, Math.min(windowHeight * 0.85, available - TOP_GAP));
   return (
-    <Modal visible={!!visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={!!visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={onDismiss}>
       <View
         style={[styles.root, isWide ? styles.rootWide : styles.rootNarrow, { paddingBottom: keyboardPad }]}
         onLayout={(e) => {

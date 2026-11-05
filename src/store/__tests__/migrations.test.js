@@ -138,3 +138,57 @@ describe("migration v5", () => {
     expect(migrations[5]({})).toEqual({});
   });
 });
+
+describe("migration v6", () => {
+  const item = (id, extra) => ({
+    id, name: "", unit: "", category: "", quantityText: "", checked: false, isStaple: false,
+    source: "menu", mergeKey: null, nameKey: "", contributions: [], ...extra,
+  });
+  const contrib = (entryId, n) => ({
+    menuEntryId: entryId, recipeId: 1, recipeName: "R", scale: 1,
+    quantity: { kind: "number", min: n, max: n }, quantityText: String(n), note: "",
+  });
+
+  it("re-keys T/t units so tablespoons and teaspoons separate", () => {
+    const out = migrations[6]({
+      shoppingList: {
+        ids: ["item-1", "item-2"],
+        entities: {
+          "item-1": item("item-1", { name: "Sugar", unit: "T", nameKey: "sugar", mergeKey: "sugar|t|n" }),
+          "item-2": item("item-2", { name: "Sugar", unit: "t", nameKey: "sugar", mergeKey: "sugar|t|n" }),
+        },
+        nextId: 3,
+      },
+    });
+    expect(out.shoppingList.entities["item-1"].mergeKey).toBe("sugar|tbsp|n");
+    expect(out.shoppingList.entities["item-2"].mergeKey).toBe("sugar|tsp|n");
+    expect(out.shoppingList.ids).toEqual(["item-1", "item-2"]);
+  });
+
+  it("folds menu items whose keys now collide, keeping one line", () => {
+    const out = migrations[6]({
+      shoppingList: {
+        ids: ["item-1", "item-2", "item-3"],
+        entities: {
+          "item-1": item("item-1", { name: "Peaches", nameKey: "peache", mergeKey: "peache||n", checked: true, contributions: [contrib("entry-1", 2)] }),
+          "item-2": item("item-2", { name: "Peach", nameKey: "peach", mergeKey: "peach||n", checked: false, contributions: [contrib("entry-2", 1)] }),
+          "item-3": item("item-3", { name: "Peach", nameKey: "peach", source: "manual" }),
+        },
+        nextId: 4,
+      },
+      pantry: { staples: { quich: { nameKey: "quich", name: "Quiches" } } },
+    });
+    const { ids, entities } = out.shoppingList;
+    expect(ids).toEqual(["item-1", "item-3"]); // manual items never fold
+    expect(entities["item-2"]).toBeUndefined();
+    expect(entities["item-1"].mergeKey).toBe("peach||n");
+    expect(entities["item-1"].contributions.map((c) => c.menuEntryId)).toEqual(["entry-1", "entry-2"]);
+    expect(entities["item-1"].quantityText).toBe("3");
+    expect(entities["item-1"].checked).toBe(false); // one line wasn't bought yet
+    expect(Object.keys(out.pantry.staples)).toEqual(["quiche"]);
+  });
+
+  it("tolerates missing slices", () => {
+    expect(migrations[6]({})).toEqual({ pantry: undefined, shoppingList: undefined });
+  });
+});

@@ -269,8 +269,9 @@ const DragProvider = ({ children, style }) => {
         const dropKey = hitTest(x, y);
         const zone = dropKey ? zones.current.get(dropKey) : null;
         const rect = dropKey ? rects.current.get(dropKey) : null;
+        const half = dropKey ? halfOf(dropKey, y) : null;
         finish();
-        if (zone) zone.onDrop(payload, { x, y, rect });
+        if (zone) zone.onDrop(payload, { x, y, rect, half });
       },
       cancel() {
         if (stateRef.current.active) finish();

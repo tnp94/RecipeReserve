@@ -13,13 +13,13 @@ const ActionRow = ({ label, onPress, danger }) => (
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
-const EntryOptionsModal = ({ visible, entry, location, onClose, onSetScale, onMove, onSwap, onView, onRemove }) => {
+const EntryOptionsModal = ({ visible, entry, location, onClose, onDismiss, onSetScale, onMove, onSwap, onView, onRemove }) => {
   if (!entry) return null;
   const { recipe, scale } = entry;
   const label = recipe.yield > 0 ? `Serves ${round1(recipe.yield * scale)}` : `Scale ×${scale}`;
   const step = (delta) => onSetScale(Math.min(20, Math.max(0.5, scale + delta)));
   return (
-    <AppModal visible={visible} onClose={onClose} title={recipe.name}>
+    <AppModal visible={visible} onClose={onClose} onDismiss={onDismiss} title={recipe.name}>
       {location ? <Text style={styles.location}>{location}</Text> : null}
       <Text style={styles.label}>{label}</Text>
       <View style={styles.scaleRow}>

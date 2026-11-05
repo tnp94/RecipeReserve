@@ -175,7 +175,9 @@ const menuSlice = createSlice({
     clearMenuEntries: (state) => {
       entriesAdapter.removeAll(state.entries);
     },
-    clearMenu: () => initialState,
+    // Keep the id counter: shopping-list contributions remember menuEntryId, so reusing
+    // "entry-1" for next week's recipe would make a merge overwrite last week's amount.
+    clearMenu: (state) => ({ ...initialState, nextId: state.nextId }),
   },
   extraReducers: (builder) => {
     builder

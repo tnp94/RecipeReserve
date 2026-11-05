@@ -38,6 +38,14 @@ export function parseQuantity(input) {
   const single = parseSingle(s);
   if (single !== null) return { kind: "number", min: single, max: single };
 
+  // "1-1/2" is the common hyphenated spelling of one and a half, not a range 1/2..1:
+  // a whole number joined by a hyphen to a proper fraction.
+  const mixed = s.match(/^(\d+)\s*-\s*(\d+)\s*\/\s*(\d+)$/);
+  if (mixed && Number(mixed[3]) > 0 && Number(mixed[2]) < Number(mixed[3])) {
+    const v = Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+    return { kind: "number", min: v, max: v };
+  }
+
   const parts = s.split(/\s*[-–—]\s*|\s+to\s+/i);
   if (parts.length === 2) {
     const a = parseSingle(parts[0]);

@@ -157,16 +157,19 @@ describe("menuSlice", () => {
     expect([e["slot-1"].day, e["slot-2"].day, e["slot-3"].day]).toEqual([2, 0, 5]);
   });
 
-  it("clearMenuEntries keeps slots; clearMenu resets", () => {
+  it("clearMenuEntries keeps slots; clearMenu clears slots and entries but keeps the id counter", () => {
     const store = make();
     store.dispatch(addSlot({ day: 0, name: "A" }));
     store.dispatch(addRecipeToMenu({ recipeId: 2 }));
     store.dispatch(clearMenuEntries());
     expect(store.getState().menu.slots.ids).toHaveLength(1);
     expect(entryIds(store.getState())).toEqual([]);
+    const before = store.getState().menu.nextId;
     store.dispatch(clearMenu());
     expect(store.getState().menu.slots.ids).toEqual([]);
-    expect(store.getState().menu.nextId).toBe(1);
+    expect(store.getState().menu.nextId).toBe(before);
+    store.dispatch(addRecipeToMenu({ recipeId: 2 }));
+    expect(entryIds(store.getState())).toEqual([`entry-${before}`]); // never reuses entry-2
   });
 
   it("cascades on deleteRecipe", () => {

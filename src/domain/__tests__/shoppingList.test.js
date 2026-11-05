@@ -244,3 +244,24 @@ describe("recipe that lists the same ingredient twice", () => {
     expect(item.quantityText).toBe("6");
   });
 });
+
+describe("mergeItem checked state when the amount changes", () => {
+  const recipes = [recipe(1, "A", [ing("Butter", "4", "Tbsp")])];
+  const checkedItem = () => ({ ...build([entry(1, 1)], recipes)[0], id: "item-1", checked: true });
+
+  it("unchecks when the same entry now needs more (scale up)", () => {
+    const merged = mergeItem(checkedItem(), build([entry(1, 1, 2)], recipes)[0]);
+    expect(merged.quantityText).toBe("8");
+    expect(merged.checked).toBe(false);
+  });
+
+  it("keeps checked when the amount is unchanged or smaller", () => {
+    expect(mergeItem(checkedItem(), build([entry(1, 1)], recipes)[0]).checked).toBe(true);
+    expect(mergeItem(checkedItem(), build([entry(1, 1, 0.5)], recipes)[0]).checked).toBe(true);
+  });
+
+  it("staples stay checked even when the amount grows", () => {
+    const merged = mergeItem(checkedItem(), build([entry(1, 1, 2)], recipes, ["butter"])[0]);
+    expect(merged.checked).toBe(true);
+  });
+});

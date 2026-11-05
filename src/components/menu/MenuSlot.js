@@ -15,8 +15,8 @@ const MenuSlot = ({ slot, onRename, onMenu, onEntryPress, onEntryRemove }) => {
     onDrop: (p, info) => {
       if (p.type === "slot") {
         if (p.id === slot.id) return;
-        const rect = info && info.rect;
-        const position = rect && info.y >= rect.y + rect.h / 2 ? "after" : "before";
+        // Same before/after the insertion line showed (computed once, in DragProvider).
+        const position = info?.half === "after" ? "after" : "before";
         dispatch(reorderSlot({ slotId: p.id, targetSlotId: slot.id, position }));
       } else if (!slot.entries.some((e) => e.id === p.id)) {
         dispatch(moveMenuEntry({ entryId: p.id, slotId: slot.id }));

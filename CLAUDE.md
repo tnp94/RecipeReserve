@@ -61,13 +61,13 @@ floating preview; edge auto-scroll on any registered `DragScrollView` — the in
 under the pointer — with a 56px zone, 300 ms dwell, speed scaling with depth), `DragHandle` (≡ grip; its Pan gesture is memoized so re-renders never replace it mid-drag), and
 `useDropZone` (callback ref, so re-mounted Views re-register). Drags start only from ≡ handles
 so tap and native swipe-to-remove keep working. Entry → entry swaps, entry → slot or Unplanned
-moves, slot → day moves the slot, day → day swaps. Slot → slot reorders (`reorderSlot`; `onDrop(payload, {x,y,rect})` + `hoverHalf` pick before/after, shown as an insertion line). Menu scroll views come from
+moves, slot → day moves the slot, day → day swaps. Slot → slot reorders (`reorderSlot`; `onDrop(payload, {x,y,rect,half})` — the same `half` that drew the insertion line, shown as an insertion line). Menu scroll views come from
 gesture-handler. Web entry rows render without `Swipeable`.
 
 ### State (Redux + redux-persist)
 
 The whole root reducer (`src/store/rootReducer.js`) is persisted to AsyncStorage. Persist
-`version: 5`; migrations live in `src/store/migrations.js` — bump the version and add a
+`version: 6`; migrations live in `src/store/migrations.js` — bump the version and add a
 migration (with a test) whenever a persisted shape changes.
 
 | Slice | Shape |
@@ -86,7 +86,10 @@ Key points:
 - Plurals: `singularizeWord` (`src/domain/ingredientKey.js`) handles -ies/-oes/-ches/-shes/-xes/-sses/-s plus `IRREGULAR` (leaves→leaf, chilies→chili, cookies→cookie…) and `UNCHANGED` (asparagus, hummus…) lists. The finder also uses `wordsMatch` (whole words differing only by a trailing s/es). Changing these rules changes stored keys — add a migration that re-keys pantry and shopping list (see v4).
 - Slot order: `reorderSlot` edits `slots.ids`; display is always `orderDaySlots` (Breakfast/Lunch/Dinner keep relative order). "Move up/down" in the slot menu uses `moveSlotTarget` (`src/domain/menuOrder.js`).
 - `toggleStaple(name)` is a thunk that dispatches `addStaple`/`removeStaple`; the shopping list mirrors `isStaple` from those.
-- Ids for slots/entries/items/finder ingredients are strings (`slot-3`, `entry-7`, `item-12`, `fi-2`).
+- Ids for slots/entries/items/finder ingredients are strings (`slot-3`, `entry-7`, `item-12`, `fi-2`). Never reset `menu.nextId` (even `clearMenu` keeps it): shopping-list contributions remember `menuEntryId`, and a reused id would make Merge overwrite last week's amount.
+- Merge unchecks an item when it gains a recipe or its total grows; one contribution per menu entry per item (a recipe listing an ingredient twice is summed).
+- Units: one-letter `T` = tbsp and `t` = tsp are the only case-sensitive units (`normalizeUnit`).
+- iOS can't present a `Modal` while another is dismissing: switch sheets via `AppModal`'s `onDismiss` (see `switchModal` in `MenuScreen`), not in the same render.
 
 ### Data Model
 

@@ -1,5 +1,6 @@
 import { initialState as recipesInitialState } from "./recipesSlice";
 import { normalizeName, normalizeUnit } from "../domain/ingredientKey";
+import { computeQuantityText } from "../domain/shoppingList";
 
 const numericSort = (a, b) => Number(a) - Number(b);
 
@@ -96,6 +97,14 @@ export const migrations = {
     }
     return { ...state, menu: { ...state.menu, entries: { ...entries, entities } } };
   },
+  // v6: unit "T" vs "t" (tablespoon vs teaspoon) and "-che" plurals (quiches) changed the
+  // key rules again; re-key, and fold menu items whose keys now collide (also cleans up
+  // duplicates an earlier re-key could leave behind).
+  6: (state) => ({
+    ...state,
+    pantry: rekeyPantry(state.pantry),
+    shoppingList: rekeyShoppingList(state.shoppingList),
+  }),
 };
 
 function rekeyPantry(pantry) {
@@ -123,5 +132,41 @@ function rekeyShoppingList(list) {
     }
     entities[id] = { ...item, nameKey, mergeKey };
   }
-  return { ...list, entities };
+  // Fold menu items that now share a merge key into the first one, so later merges
+  // (which update the first match only) see a single line.
+  const ids = [];
+  const firstByKey = new Map();
+  for (const id of list.ids ?? Object.keys(entities)) {
+    const item = entities[id];
+    if (!item) continue;
+    const key = item.source === "menu" && typeof item.mergeKey === "string" ? item.mergeKey : null;
+    const firstId = key ? firstByKey.get(key) : undefined;
+    if (firstId === undefined) {
+      if (key) firstByKey.set(key, id);
+      ids.push(id);
+      continue;
+    }
+    entities[firstId] = foldItems(entities[firstId], item);
+    delete entities[id];
+  }
+  return { ...list, ids, entities };
+}
+
+function foldItems(keep, dup) {
+  const seen = new Set();
+  const contributions = [];
+  for (const c of [...(keep.contributions ?? []), ...(dup.contributions ?? [])]) {
+    if (seen.has(c.menuEntryId)) continue;
+    seen.add(c.menuEntryId);
+    contributions.push(c);
+  }
+  return {
+    ...keep,
+    contributions,
+    quantityText: computeQuantityText(contributions),
+    // Only "bought" if both lines were ticked off; staple if either was.
+    checked: !!keep.checked && !!dup.checked,
+    isStaple: !!keep.isStaple || !!dup.isStaple,
+    category: keep.category || dup.category,
+  };
 }

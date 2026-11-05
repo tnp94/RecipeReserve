@@ -94,6 +94,23 @@ function combineInto(target, extra) {
   }
 }
 
+// Largest possible total (range max) when every contribution is numeric, else null.
+function numericMax(contributions) {
+  let total = 0;
+  for (const c of contributions) {
+    if (!c.quantity || c.quantity.kind !== "number") return null;
+    total += c.quantity.max;
+  }
+  return total;
+}
+
+function amountGrew(before, after, beforeText, afterText) {
+  const a = numericMax(before);
+  const b = numericMax(after);
+  if (a !== null && b !== null) return b > a + 1e-9;
+  return beforeText !== afterText;
+}
+
 export function mergeItem(existing, built) {
   const builtByEntry = new Map(built.contributions.map((c) => [c.menuEntryId, c]));
   const contributions = [];
@@ -112,14 +129,18 @@ export function mergeItem(existing, built) {
     contributions.push(c);
     gainedNew = true;
   }
+  const quantityText = computeQuantityText(contributions);
+  // More is needed than when the item was ticked off: a new recipe, or a larger total
+  // (e.g. a scale change). A smaller or equal total keeps the existing checked state.
+  const needsMore = gainedNew || amountGrew(existing.contributions, contributions, existing.quantityText, quantityText);
   let checked;
   if (built.isStaple) checked = true;
-  else if (gainedNew) checked = false;
+  else if (needsMore) checked = false;
   else checked = existing.checked;
   return {
     ...existing,
     contributions,
-    quantityText: computeQuantityText(contributions),
+    quantityText,
     isStaple: built.isStaple,
     checked,
     category: existing.category || built.category,

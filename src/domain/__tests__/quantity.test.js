@@ -56,3 +56,12 @@ describe("addQuantities", () => {
     expect(() => addQuantities(num(1), { kind: "text", text: "x" })).toThrow();
   });
 });
+
+describe("hyphenated mixed numbers", () => {
+  const { parseQuantity: pq, formatQuantity: fq } = require("../quantity");
+  it("'1-1/2' is one and a half", () => expect(pq("1-1/2")).toEqual({ kind: "number", min: 1.5, max: 1.5 }));
+  it("'2 - 3/4' is two and three quarters", () => expect(fq(pq("2 - 3/4"))).toBe("2 3/4"));
+  it("'1-2' is still a range", () => expect(pq("1-2")).toEqual({ kind: "number", min: 1, max: 2 }));
+  it("'1/2-1' is still a range", () => expect(pq("1/2-1")).toEqual({ kind: "number", min: 0.5, max: 1 }));
+  it("'1-3/2' (improper fraction) is a range", () => expect(pq("1-3/2")).toEqual({ kind: "number", min: 1, max: 1.5 }));
+});

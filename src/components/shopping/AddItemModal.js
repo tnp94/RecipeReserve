@@ -5,8 +5,7 @@ import AppModal from "../AppModal";
 import CategoryPicker from "../CategoryPicker";
 import { colors, radius, spacing } from "../../theme";
 import { addManualItem } from "../../store/shoppingListSlice";
-import { selectStapleKeys } from "../../store/pantrySlice";
-import { normalizeName } from "../../domain/ingredientKey";
+import { selectIsStaple } from "../../store/pantrySlice";
 
 const AddItemModal = ({ visible, onClose }) => {
   const dispatch = useDispatch();
@@ -30,7 +29,7 @@ const AddItemModal = ({ visible, onClose }) => {
 
   const add = () => {
     if (!canAdd) return;
-    const isStaple = selectStapleKeys(store.getState()).has(normalizeName(name));
+    const isStaple = selectIsStaple(store.getState(), name);
     dispatch(addManualItem({ name: name.trim(), quantityText: quantityText.trim(), unit: unit.trim(), category, isStaple }));
     close();
   };
