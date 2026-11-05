@@ -35,6 +35,9 @@ function splitLines(text) {
     .filter((line) => line && !HEADING_RE.test(line) && !/:$/.test(line));
 }
 
+// One step or ingredient with any leading bullet or number removed.
+export const stripBullet = (line) => clean(String(line ?? "").replace(BULLET_RE, ""));
+
 export function parseIngredientLine(rawLine) {
   let line = clean(String(rawLine ?? "")).replace(BULLET_RE, "");
   const result = { quantityUnit: "", unit: "", name: "", note: "" };

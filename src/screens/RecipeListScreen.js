@@ -75,7 +75,7 @@ const RecipeListScreen = ({ navigation }) => {
       <EmptyState
         icon="book-outline"
         title="No recipes yet"
-        message="Add the meals you cook most. You'll plan your week and build shopping lists from them."
+        message="Add the meals you cook most, or import them from a link or pasted text. You'll plan your week and build shopping lists from them."
         actionLabel="Add a recipe"
         onAction={newRecipe}
       />
