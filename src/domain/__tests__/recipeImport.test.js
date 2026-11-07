@@ -251,7 +251,8 @@ describe("missingParts", () => {
 describe("extractUrl", () => {
   it.each([
     ["https://example.com/soup", "https://example.com/soup"],
-    ["  http://example.com/a?b=1  ", "http://example.com/a?b=1"],
+    ["  http://example.com/a?b=1  ", "https://example.com/a?b=1"],
+    ["HTTP://Example.com/soup", "https://Example.com/soup"],
     ["Try this: https://example.com/soup!", "https://example.com/soup"],
     ["(https://example.com/soup).", "https://example.com/soup"],
     ["example.com/soup", "https://example.com/soup"],

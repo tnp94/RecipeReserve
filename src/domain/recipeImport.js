@@ -280,9 +280,10 @@ export function missingParts(draft) {
 }
 
 // Finds the link in what the user typed or shared ("Try this https://x.com/y!", "x.com/y").
+// Always https: Android release builds block plain http, and recipe sites serve https.
 export function extractUrl(text) {
   const s = String(text ?? "").trim();
   const full = s.match(/https?:\/\/[^\s<>"']+/i);
-  if (full) return full[0].replace(/[).,;!?\]]+$/, "");
+  if (full) return full[0].replace(/[).,;!?\]]+$/, "").replace(/^http:/i, "https:");
   return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(s) ? `https://${s}` : null;
 }

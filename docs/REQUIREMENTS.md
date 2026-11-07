@@ -1,6 +1,6 @@
 # RecipeReserve — Requirements & Features
 
-_Last updated: 2026-11-05 (core requirements and X-7 implemented — see docs/plan/IMPLEMENTATION_PLAN.md; X-8 and X-9 added; UX revamp recorded: R-10 to R-12, S-10, S-11)_
+_Last updated: 2026-11-07 (core requirements and X-7 implemented — see docs/plan/IMPLEMENTATION_PLAN.md; X-8 and X-9 added; UX revamp recorded: R-10 to R-12, S-10, S-11; recipe import X-3 to X-5 built, with optional follow-ups listed under section 2)_
 
 ## Vision
 
@@ -104,6 +104,14 @@ feature supports or extends it.
 
 X-3, X-4, and X-5 are all "get a recipe into the app without typing it" and should share
 one parse → review → save flow.
+
+### Recipe import follow-ups (optional)
+
+From the review of X-3 to X-5. None of these block a release.
+
+- **Trim the scan languages.** `@react-native-ml-kit/text-recognition` bundles the Chinese, Japanese, Korean and Devanagari text models as well as Latin, on Android and iOS. ML Kit adds about 22 MB to the Android debug APK, but most of that is native code for four processor types, and a Play Store download only includes one. Removing the four extra languages takes a small patch to the library; the saving hasn't been measured.
+- **Send a browser-style User-Agent when fetching a link.** Link import sends no browser identifier, and some sites refuse requests like that. No site has failed this way yet, so leave it until one does.
+- **Store listing: data safety.** Scanning adds camera and photo permissions. When publishing, the Play Store's data safety form should say photos are processed on the device and not collected or shared.
 
 ⭐ = priority stretch goal.
 
