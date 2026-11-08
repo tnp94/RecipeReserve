@@ -107,8 +107,52 @@ export function parseIngredientLine(rawLine) {
   return result;
 }
 
+// ----- ingredients that wrap onto a second line -----
+
+const hasBullet = (line) => /^\s*(?:[-*•·▢□◦‣–—]|\[\s?\])/.test(line);
+const hasAmount = (line) => !!parseIngredientLine(line).quantityUnit;
+// Ends mid-phrase: "1 can tomatoes," / "1 cup chopped fresh" + "or" / "(about" / "red-".
+const ENDS_OPEN = /(?:[,(/+&-]|\b(?:and|or|of|plus|with|into|in|for|to|about|such as|cut|at|from|each))$/i;
+
+// "1/2 cup" with the name on the next line (a narrow column, or a scan of a table).
+// Adding a stand-in name and seeing nothing else left over tells the amount and unit apart
+// from a real name ("1/2 cup" alone parses as 1/2 of something called "cup").
+const isAmountOnly = (line) => parseIngredientLine(`${stripBullet(line)} x`).name === "x";
+
+// True when `line` can only be the rest of `previous`: the previous line was left open, or
+// held only an amount. A line with its own amount or bullet always starts a new ingredient.
+export function continuesIngredientLine(previous, line) {
+  if (!previous || hasBullet(line) || hasAmount(line)) return false;
+  const opens = (previous.match(/\(/g) ?? []).length;
+  const closes = (previous.match(/\)/g) ?? []).length;
+  return ENDS_OPEN.test(previous) || opens > closes || /^[)]/.test(line) || isAmountOnly(previous);
+}
+
+// Copied and scanned lists wrap long ingredients: "1 (14.5 oz) can diced tomatoes, drained" /
+// "and rinsed". Besides the sure signs above, a line continues the one before when the list
+// is bulleted and it has no bullet, or when it starts in lower case and its first word would
+// not have fitted on the line before (the widest line stands in for the column width).
+export function joinWrappedIngredients(lines) {
+  const bulleted = lines.filter(hasBullet).length >= Math.max(2, lines.length / 2);
+  const widest = Math.max(0, ...lines.map((l) => l.length));
+  const wouldNotFit = (previous, line) => widest >= 20 && previous.length + 1 + line.split(" ")[0].length > widest;
+  const joined = [];
+  for (const line of lines) {
+    const previous = joined[joined.length - 1];
+    const continues =
+      previous !== undefined &&
+      (continuesIngredientLine(previous, line) ||
+        (!hasBullet(line) &&
+          !hasAmount(line) &&
+          (bulleted || (/^[a-z]/.test(line) && wouldNotFit(previous, line)))));
+    if (continues) joined[joined.length - 1] = `${previous} ${line}`;
+    else joined.push(line);
+  }
+  return joined;
+}
+
 export function parseIngredientList(text) {
-  return splitLines(text).map(parseIngredientLine).filter((i) => i.name);
+  return joinWrappedIngredients(splitLines(text)).map(parseIngredientLine).filter((i) => i.name);
 }
 
 export function parseDirections(text) {

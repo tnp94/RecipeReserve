@@ -76,3 +76,57 @@ describe("parseDirections", () => {
     expect(parseDirections("Heat the pan. Add oil.\nCook 5 minutes.")).toEqual(["Heat the pan. Add oil.", "Cook 5 minutes."]);
   });
 });
+
+describe("parseIngredientList with wrapped lines", () => {
+  const names = (text) => parseIngredientList(text).map((r) => [r.quantityUnit, r.unit, r.name, r.note]);
+
+  it("joins a line that continues after a comma", () => {
+    expect(names("1 (15 oz) can black beans,\ndrained and rinsed\n2 cups rice")).toEqual([
+      ["1", "can", "black beans", "15 oz; drained and rinsed"],
+      ["2", "cups", "rice", ""],
+    ]);
+  });
+
+  it("joins after an open bracket or a connecting word", () => {
+    expect(names("2 lb chicken thighs (bone-in and\nskin-on)\n1 cup chopped fresh basil or\nparsley")).toEqual([
+      ["2", "lb", "chicken thighs", "bone-in and skin-on"],
+      ["1", "cup", "chopped fresh basil or parsley", ""],
+    ]);
+  });
+
+  it("joins an amount on its own line to the name below", () => {
+    expect(names("1/2 cup\nsugar\n2 eggs")).toEqual([
+      ["1/2", "cup", "sugar", ""],
+      ["2", "", "eggs", ""],
+    ]);
+  });
+
+  it("joins a lower-case line after one that ran the full column width", () => {
+    expect(names("1 (14.5 oz) can diced tomatoes with\ngreen chilies\n1 cup shredded cheddar cheese\nsalt")).toEqual([
+      ["1", "can", "diced tomatoes with green chilies", "14.5 oz"],
+      ["1", "cup", "shredded cheddar cheese", ""],
+      ["", "", "salt", ""],
+    ]);
+    expect(names("1 large yellow onion, finely\ndiced\n3 cups vegetable broth")).toEqual([
+      ["1", "", "large yellow onion", "finely diced"],
+      ["3", "cups", "vegetable broth", ""],
+    ]);
+  });
+
+  it("joins unbulleted lines in a bulleted list", () => {
+    expect(names("• 2 cups flour\n• 1 tsp baking soda\n• 1 cup buttermilk, at room\nTemperature\n• Salt")).toEqual([
+      ["2", "cups", "flour", ""],
+      ["1", "tsp", "baking soda", ""],
+      ["1", "cup", "buttermilk", "at room Temperature"],
+      ["", "", "Salt", ""],
+    ]);
+  });
+
+  it("keeps short ingredients without amounts on their own lines", () => {
+    expect(names("2 cups flour\nSalt and pepper\nFresh parsley")).toEqual([
+      ["2", "cups", "flour", ""],
+      ["", "", "Salt and pepper", ""],
+      ["", "", "Fresh parsley", ""],
+    ]);
+  });
+});

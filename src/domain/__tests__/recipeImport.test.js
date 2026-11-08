@@ -159,6 +159,40 @@ Roast until the juices run clear.`);
   });
 });
 
+describe("parseRecipeText with scanned pages", () => {
+  it("keeps the second half of a wrapped ingredient out of the method", () => {
+    const draft = parseRecipeText(
+      [
+        "Black Bean Soup",
+        "Ingredients",
+        "1 (15 oz) can black beans,",
+        "drained and rinsed.",
+        "1 onion",
+        "Heat the oil in a large pot over medium heat.",
+        "Add the onion and cook until soft.",
+      ].join("\n")
+    );
+    expect(draft.ingredients.map((i) => i.name)).toEqual(["black beans", "onion"]);
+    expect(draft.ingredients[0].note).toBe("15 oz; drained and rinsed.");
+    expect(draft.directions).toEqual(["Heat the oil in a large pot over medium heat.", "Add the onion and cook until soft."]);
+  });
+
+  it("reads two pages joined together as one recipe", () => {
+    // Page 1 ends mid-ingredient and with its page number.
+    const page1 = ["Weeknight Chili", "Serves 4", "Ingredients", "2 cups beans", "1 (14.5 oz) can diced tomatoes,", "37"];
+    const page2 = ["undrained", "1 onion, chopped", "Directions", "1. Chop the onion.", "2. Simmer everything", "for 30 minutes."];
+    const draft = parseRecipeText(`${page1.join("\n")}\n\n${page2.join("\n")}`);
+    expect(draft.name).toBe("Weeknight Chili");
+    expect(draft.yield).toBe(4);
+    expect(draft.ingredients.map((i) => [i.name, i.note])).toEqual([
+      ["beans", ""],
+      ["diced tomatoes", "14.5 oz; undrained"],
+      ["onion", "chopped"],
+    ]);
+    expect(draft.directions).toEqual(["Chop the onion.", "Simmer everything for 30 minutes."]);
+  });
+});
+
 describe("parseRecipeHtml", () => {
   const recipe = {
     "@type": "Recipe",

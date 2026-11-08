@@ -41,10 +41,19 @@ const ImportRecipeModal = ({ visible, onClose, onImport }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [scanNotice, setScanNotice] = useState(false); // scanned text is in the paste box to fix
+  // Pages scanned so far, [{ text, draft }]. A recipe can run over two pages (ingredients on
+  // one, method on the next), so each scan adds a page and they're read as one text.
+  const [pages, setPages] = useState([]);
   const request = useRef(0); // bumping it makes the answer to an older request get ignored
 
   const draft = useMemo(() => (mode === "text" ? parseRecipeText(text) : null), [mode, text]);
   const ready = mode === "text" && hasRecipeContent(draft);
+  const scannedText = pages.map((p) => p.text).filter(Boolean).join("\n\n");
+  const scanDraft = useMemo(
+    () => (pages.length === 0 ? null : pages.length === 1 ? pages[0].draft : parseRecipeText(scannedText)),
+    [pages, scannedText]
+  );
+  const scanMissing = scanDraft ? missingParts(scanDraft) : [];
 
   const reset = () => {
     request.current += 1;
@@ -54,6 +63,7 @@ const ImportRecipeModal = ({ visible, onClose, onImport }) => {
     setText("");
     setMode("link");
     setScanNotice(false);
+    setPages([]);
   };
   const close = () => {
     reset();
@@ -73,16 +83,9 @@ const ImportRecipeModal = ({ visible, onClose, onImport }) => {
       setLoading(true);
       const result = await scanRecipe(photo);
       if (id !== request.current) return;
-      const missing = missingParts(result.draft);
-      if (!missing.includes("ingredients") && !missing.includes("directions")) {
-        finish(result.draft, { scanned: true });
-        return;
-      }
-      // Couldn't tell the parts apart: let the user tidy the text rather than lose it.
+      // Show what was found, so the user can add the next page or use the recipe.
       setLoading(false);
-      setText(result.text);
-      setScanNotice(true);
-      setMode("text");
+      setPages((previous) => [...previous, result]);
     } catch (e) {
       if (id !== request.current) return;
       setLoading(false);
@@ -109,6 +112,16 @@ const ImportRecipeModal = ({ visible, onClose, onImport }) => {
     }
   };
 
+  // Couldn't tell the parts apart: let the user tidy the text rather than lose it.
+  const editScannedText = () => {
+    request.current += 1;
+    setLoading(false);
+    setError("");
+    setText(scannedText);
+    setScanNotice(true);
+    setMode("text");
+  };
+
   const changeMode = (next) => {
     request.current += 1;
     setLoading(false);
@@ -130,6 +143,12 @@ const ImportRecipeModal = ({ visible, onClose, onImport }) => {
             <Button label="Get recipe" icon="download-outline" disabled={loading || !link.trim()} onPress={fetchLink} />
           ) : mode === "text" ? (
             <Button label="Use this recipe" disabled={!ready} onPress={() => finish(draft, { scanned: scanNotice })} />
+          ) : scanDraft ? (
+            <Button
+              label="Use this recipe"
+              disabled={loading || !hasRecipeContent(scanDraft)}
+              onPress={() => finish(scanDraft, { scanned: true })}
+            />
           ) : null}
         </>
       }
@@ -169,12 +188,42 @@ const ImportRecipeModal = ({ visible, onClose, onImport }) => {
         </>
       ) : mode === "scan" ? (
         <>
-          <AppText variant="small" tone="muted">
-            Lay the page flat in good light, with one recipe filling the photo. Photos stay on your device.
-          </AppText>
+          {scanDraft ? (
+            <View style={styles.preview} accessibilityLiveRegion="polite">
+              <AppText variant="overline" tone="muted">
+                {pages.length === 1 ? "From your photo" : `From ${pages.length} pages`}
+              </AppText>
+              <AppText variant="bodyStrong" numberOfLines={1}>{scanDraft.name || "No name yet"}</AppText>
+              <AppText variant="small">
+                {`${plural(scanDraft.ingredients.length, "ingredient")} · ${plural(scanDraft.directions.length, "step")}`}
+              </AppText>
+              {scanMissing.includes("ingredients") || scanMissing.includes("directions") ? (
+                <AppText variant="small" tone="muted">
+                  {`No ${scanMissing.includes("ingredients") ? "ingredients" : "directions"} yet. If they're on another page, scan that page too.`}
+                </AppText>
+              ) : null}
+              <Button label="Check the text" variant="ghost" size="sm" icon="create-outline" onPress={editScannedText} style={styles.errorAction} />
+            </View>
+          ) : (
+            <AppText variant="small" tone="muted">
+              Lay the page flat in good light, with one recipe filling the photo. If the recipe runs onto another page, you can add that page next. Photos stay on your device.
+            </AppText>
+          )}
           <View style={styles.scanButtons}>
-            <Button label="Take photo" icon="camera-outline" disabled={loading} onPress={() => scan("camera")} />
-            <Button label="Choose photo" icon="images-outline" variant="secondary" disabled={loading} onPress={() => scan("library")} />
+            <Button
+              label={scanDraft ? "Photo of next page" : "Take photo"}
+              icon="camera-outline"
+              variant={scanDraft ? "secondary" : "primary"}
+              disabled={loading}
+              onPress={() => scan("camera")}
+            />
+            <Button
+              label={scanDraft ? "Choose next page" : "Choose photo"}
+              icon="images-outline"
+              variant="secondary"
+              disabled={loading}
+              onPress={() => scan("library")}
+            />
           </View>
           {loading ? (
             <View style={styles.loading} accessibilityLiveRegion="polite">

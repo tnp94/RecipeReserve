@@ -1,4 +1,4 @@
-import { parseDirections, parseIngredientLine, parseIngredientList, stripBullet } from "./ingredientParse";
+import { continuesIngredientLine, parseDirections, parseIngredientLine, parseIngredientList, stripBullet } from "./ingredientParse";
 
 // Turns a pasted block of text or a recipe web page into a draft for the recipe form:
 //   { name, ingredients: [{ quantityUnit, unit, name, note }], directions: [string],
@@ -93,6 +93,14 @@ function readMetaLine(line, meta) {
 
 const looksLikeStep = (line) => NUMBERED_LINE.test(line) || line.length > 80 || /[.!?]$/.test(line);
 const looksLikeIngredient = (line) => !looksLikeStep(line) && !!parseIngredientLine(line).quantityUnit;
+// The second half of a wrapped ingredient ("drained and rinsed.") can look like a short
+// step; keep it with the ingredients so parseIngredientList can join it back up.
+const wrapsIngredient = (ingredientLines, line) =>
+  ingredientLines.length > 0 &&
+  !NUMBERED_LINE.test(line) &&
+  (continuesIngredientLine(ingredientLines[ingredientLines.length - 1], line) ||
+    (/^[a-z]/.test(line) && line.length <= 40));
+const startsMethod = (ingredientLines, line) => looksLikeStep(line) && !wrapsIngredient(ingredientLines, line);
 
 // Copied or scanned steps often wrap across lines. Numbered steps: a line with no number
 // continues the one before. Otherwise a line continues when the last one had no ending
@@ -141,7 +149,7 @@ export function parseRecipeText(text) {
     else if (section === "directions") directionLines.push(line);
     else if (section === "ingredients") {
       // No directions heading to come: the first sentence-like line starts the method.
-      if (!hasDirectionsHeading && looksLikeStep(line)) {
+      if (!hasDirectionsHeading && startsMethod(ingredientLines, line)) {
         section = "directions";
         directionLines.push(line);
       } else ingredientLines.push(line);
@@ -151,7 +159,7 @@ export function parseRecipeText(text) {
       } else if (!hasHeading) {
         // No headings at all: sort by shape. Short lines before the method are ingredients.
         seenBody = true;
-        if (looksLikeStep(line) || directionLines.length > 0) directionLines.push(line);
+        if (directionLines.length > 0 || startsMethod(ingredientLines, line)) directionLines.push(line);
         else ingredientLines.push(line);
       }
     }
