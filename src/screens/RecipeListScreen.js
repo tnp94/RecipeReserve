@@ -4,11 +4,11 @@ import { useSelector } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
-import Chip from "../components/Chip";
+import RecipeFilters from "../components/RecipeFilters";
 import { useAddToMenu } from "../components/menu/AddToMenuSheet";
 import { AppText, EmptyState, HeaderButton } from "../components/ui";
 import { selectAllRecipes } from "../store/recipesSlice";
-import { filterRecipes } from "../domain/recipeSearch";
+import { NO_FILTERS, activeFilterCount, splitRecipes, unknownLabel } from "../domain/recipeSearch";
 import useLayout from "../hooks/useLayout";
 import { makeStyles, radius, spacing, useTheme } from "../theme";
 
@@ -19,12 +19,15 @@ const RecipeListScreen = ({ navigation }) => {
   const styles = useStyles();
   const { width } = useLayout();
   const [query, setQuery] = useState("");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [filters, setFilters] = useState(NO_FILTERS);
   const allRecipes = useSelector(selectAllRecipes);
-  const recipes = useMemo(
-    () => filterRecipes(allRecipes, { query, favoritesOnly }).slice().sort(byName),
-    [allRecipes, query, favoritesOnly]
-  );
+  const { recipes, unknown } = useMemo(() => {
+    const { matches, unknown } = splitRecipes(allRecipes, { ...filters, query });
+    return { recipes: matches.sort(byName), unknown: unknown.sort(byName) };
+  }, [allRecipes, query, filters]);
+  const filtersOn = filters.favoritesOnly || activeFilterCount(filters) > 0;
+  const changeFilters = (patch) => setFilters((f) => ({ ...f, ...patch }));
+  const clearFilters = () => setFilters(NO_FILTERS);
   const { openAddToMenu, addToMenuSheet } = useAddToMenu();
   const newRecipe = () => navigation.navigate("Recipe Form");
 
@@ -41,17 +44,14 @@ const RecipeListScreen = ({ navigation }) => {
   const header = (
     <View style={[styles.header, width >= 600 && styles.headerGrid]}>
       <SearchFilter placeholder="Search recipes or ingredients" value={query} onChangeText={setQuery} />
-      <View style={styles.filters}>
-        <Chip
-          label="Favorites"
-          icon={favoritesOnly ? "star" : "star-outline"}
-          selected={favoritesOnly}
-          onPress={() => setFavoritesOnly((v) => !v)}
-        />
-        <AppText variant="small" tone="muted" style={styles.count}>
-          {`${recipes.length} of ${allRecipes.length}`}
-        </AppText>
-      </View>
+      <RecipeFilters
+        filters={filters}
+        onChange={changeFilters}
+        onClear={clearFilters}
+        shown={recipes.length}
+        unknown={unknown.length}
+        total={allRecipes.length}
+      />
       <Pressable
         onPress={() => navigation.navigate("Recipe Finder")}
         accessibilityRole="button"
@@ -79,22 +79,34 @@ const RecipeListScreen = ({ navigation }) => {
         actionLabel="Add a recipe"
         onAction={newRecipe}
       />
+    ) : unknown.length > 0 ? (
+      // Nothing is a sure match, but some recipes might be: they're listed under the divider.
+      <AppText variant="small" tone="muted" style={styles.noSureMatches}>
+        No recipes are sure to match these filters.
+      </AppText>
     ) : (
       <EmptyState
         icon="search"
         title="No matches"
-        message={favoritesOnly ? "No favorites match your search." : "No recipe or ingredient matches your search."}
+        message={filtersOn ? "No recipes match these filters." : "No recipe or ingredient matches your search."}
         actionLabel="Clear filters"
         onAction={() => {
           setQuery("");
-          setFavoritesOnly(false);
+          clearFilters();
         }}
       />
     );
 
   return (
     <View style={styles.screen}>
-      <RecipeCards recipes={recipes} onAddToMenu={openAddToMenu} ListHeaderComponent={header} ListEmptyComponent={empty} />
+      <RecipeCards
+        recipes={recipes}
+        unknown={unknown}
+        unknownTitle={unknownLabel(filters)}
+        onAddToMenu={openAddToMenu}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+      />
       {addToMenuSheet}
     </View>
   );
@@ -103,10 +115,9 @@ const RecipeListScreen = ({ navigation }) => {
 const useStyles = makeStyles((t) => ({
   screen: { flex: 1, backgroundColor: t.colors.background },
   flex: { flex: 1 },
+  noSureMatches: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm, gap: spacing.md },
   headerGrid: { paddingHorizontal: spacing.sm },
-  filters: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  count: { marginLeft: "auto" },
   finder: {
     flexDirection: "row",
     alignItems: "center",

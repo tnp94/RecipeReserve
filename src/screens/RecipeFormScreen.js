@@ -1,3 +1,4 @@
+import { KEYBOARD_DISMISS_MODE } from "../components/keyboard";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { StackActions } from "@react-navigation/native";
@@ -347,7 +348,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
       <ScrollView
         contentContainerStyle={[styles.content, isWide && styles.contentWide]}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        keyboardDismissMode={KEYBOARD_DISMISS_MODE}
       >
         {!isEditing ? (
           <Card style={styles.section}>

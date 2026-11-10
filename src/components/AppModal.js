@@ -1,3 +1,4 @@
+import { KEYBOARD_DISMISS_MODE } from "./keyboard";
 import { useEffect, useState } from "react";
 import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -76,7 +77,7 @@ const AppModal = ({ visible, onClose, title, subtitle, footer, children }) => {
             style={styles.body}
             contentContainerStyle={styles.bodyContent}
             keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+            keyboardDismissMode={KEYBOARD_DISMISS_MODE}
           >
             {children}
           </ScrollView>
