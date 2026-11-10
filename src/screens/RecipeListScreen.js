@@ -8,7 +8,7 @@ import RecipeFilters from "../components/RecipeFilters";
 import { useAddToMenu } from "../components/menu/AddToMenuSheet";
 import { AppText, EmptyState, HeaderButton } from "../components/ui";
 import { selectAllRecipes } from "../store/recipesSlice";
-import { NO_FILTERS, activeFilterCount, filterRecipes } from "../domain/recipeSearch";
+import { NO_FILTERS, activeFilterCount, splitRecipes, unknownLabel } from "../domain/recipeSearch";
 import useLayout from "../hooks/useLayout";
 import { makeStyles, radius, spacing, useTheme } from "../theme";
 
@@ -21,10 +21,10 @@ const RecipeListScreen = ({ navigation }) => {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState(NO_FILTERS);
   const allRecipes = useSelector(selectAllRecipes);
-  const recipes = useMemo(
-    () => filterRecipes(allRecipes, { ...filters, query }).slice().sort(byName),
-    [allRecipes, query, filters]
-  );
+  const { recipes, unknown } = useMemo(() => {
+    const { matches, unknown } = splitRecipes(allRecipes, { ...filters, query });
+    return { recipes: matches.sort(byName), unknown: unknown.sort(byName) };
+  }, [allRecipes, query, filters]);
   const filtersOn = filters.favoritesOnly || activeFilterCount(filters) > 0;
   const changeFilters = (patch) => setFilters((f) => ({ ...f, ...patch }));
   const clearFilters = () => setFilters(NO_FILTERS);
@@ -49,6 +49,7 @@ const RecipeListScreen = ({ navigation }) => {
         onChange={changeFilters}
         onClear={clearFilters}
         shown={recipes.length}
+        unknown={unknown.length}
         total={allRecipes.length}
       />
       <Pressable
@@ -78,15 +79,16 @@ const RecipeListScreen = ({ navigation }) => {
         actionLabel="Add a recipe"
         onAction={newRecipe}
       />
+    ) : unknown.length > 0 ? (
+      // Nothing is a sure match, but some recipes might be: they're listed under the divider.
+      <AppText variant="small" tone="muted" style={styles.noSureMatches}>
+        No recipes are sure to match these filters.
+      </AppText>
     ) : (
       <EmptyState
         icon="search"
         title="No matches"
-        message={
-          filtersOn
-            ? "No recipes match these filters. Recipes with no time or difficulty set only show when those filters are off."
-            : "No recipe or ingredient matches your search."
-        }
+        message={filtersOn ? "No recipes match these filters." : "No recipe or ingredient matches your search."}
         actionLabel="Clear filters"
         onAction={() => {
           setQuery("");
@@ -97,7 +99,14 @@ const RecipeListScreen = ({ navigation }) => {
 
   return (
     <View style={styles.screen}>
-      <RecipeCards recipes={recipes} onAddToMenu={openAddToMenu} ListHeaderComponent={header} ListEmptyComponent={empty} />
+      <RecipeCards
+        recipes={recipes}
+        unknown={unknown}
+        unknownTitle={unknownLabel(filters)}
+        onAddToMenu={openAddToMenu}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+      />
       {addToMenuSheet}
     </View>
   );
@@ -106,6 +115,7 @@ const RecipeListScreen = ({ navigation }) => {
 const useStyles = makeStyles((t) => ({
   screen: { flex: 1, backgroundColor: t.colors.background },
   flex: { flex: 1 },
+  noSureMatches: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm, gap: spacing.md },
   headerGrid: { paddingHorizontal: spacing.sm },
   finder: {

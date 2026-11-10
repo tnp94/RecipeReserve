@@ -1,4 +1,12 @@
-import { NO_FILTERS, activeFilterCount, difficultyLevel, filterRecipes, filterSummary } from "../recipeSearch";
+import {
+  NO_FILTERS,
+  activeFilterCount,
+  difficultyLevel,
+  filterRecipes,
+  filterSummary,
+  splitRecipes,
+  unknownLabel,
+} from "../recipeSearch";
 
 const recipes = [
   { id: 1, name: "Beef Stew", favorite: true, ingredients: [{ name: "Carrot" }] },
@@ -88,6 +96,53 @@ describe("filterRecipes by time and difficulty", () => {
   });
   it("treats null, blank and non-numeric limits as off", () => {
     expect(ids({ maxMinutes: "", maxPrep: null, maxActive: "abc" })).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe("splitRecipes", () => {
+  const list = [
+    { id: 1, name: "Toast", difficulty: "Easy", time: { prep: 2, active: 3 } },
+    { id: 2, name: "Roast", difficulty: "Hard", time: { prep: 20, active: 70 } },
+    { id: 3, name: "Untimed easy", difficulty: "Easy", favorite: true },
+    { id: 4, name: "Untimed hard", difficulty: "Hard" },
+    { id: 5, name: "Timed, no level", time: { prep: 5, active: 5 } },
+    { id: 6, name: "Nothing set" },
+  ];
+  const split = (opts) => {
+    const { matches, unknown } = splitRecipes(list, opts);
+    return { matches: matches.map((r) => r.id), unknown: unknown.map((r) => r.id) };
+  };
+
+  it("has no unknowns when no time or difficulty filter is on", () => {
+    expect(split({})).toEqual({ matches: [1, 2, 3, 4, 5, 6], unknown: [] });
+    expect(split({ query: "untimed" })).toEqual({ matches: [3, 4], unknown: [] });
+  });
+  it("puts recipes with no time under unknown while a time limit is on", () => {
+    expect(split({ maxMinutes: 30 })).toEqual({ matches: [1, 5], unknown: [3, 4, 6] });
+    expect(split({ maxActive: 10 })).toEqual({ matches: [1, 5], unknown: [3, 4, 6] });
+  });
+  it("puts recipes with no recognised difficulty under unknown while a difficulty is picked", () => {
+    expect(split({ difficulties: ["Easy"] })).toEqual({ matches: [1, 3], unknown: [5, 6] });
+  });
+  it("leaves out a recipe whose known value fails, even if the other is unknown", () => {
+    // 4 has no time but is Hard; 5 has no level but is quick.
+    expect(split({ maxMinutes: 30, difficulties: ["Easy"] })).toEqual({ matches: [1], unknown: [3, 5, 6] });
+  });
+  it("applies favourites and the search box to unknowns too", () => {
+    expect(split({ maxMinutes: 30, favoritesOnly: true })).toEqual({ matches: [], unknown: [3] });
+    expect(split({ maxMinutes: 30, query: "hard" })).toEqual({ matches: [], unknown: [4] });
+  });
+  it("filterRecipes returns only the matches", () => {
+    expect(filterRecipes(list, { maxMinutes: 30 }).map((r) => r.id)).toEqual([1, 5]);
+  });
+});
+
+describe("unknownLabel", () => {
+  it("names what's missing from which filters are on", () => {
+    expect(unknownLabel({})).toBe("");
+    expect(unknownLabel({ maxPrep: 10 })).toBe("No time set");
+    expect(unknownLabel({ difficulties: ["Easy"] })).toBe("No difficulty set");
+    expect(unknownLabel({ maxMinutes: 0, difficulties: ["Hard"] })).toBe("No time or difficulty set");
   });
 });
 

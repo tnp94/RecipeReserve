@@ -31,35 +31,71 @@ export function difficultyLevel(value) {
 const isLimit = (v) => v != null && v !== "" && Number.isFinite(Number(v));
 const minutesOf = (v) => Number(v) || 0;
 
+const timeFilterOn = (f) => isLimit(f.maxMinutes) || isLimit(f.maxPrep) || isLimit(f.maxActive);
+
+// "match", "unknown" (passes every filter it can be checked against, but a time or difficulty
+// filter is on and the recipe doesn't have that value set) or "out".
+function classify(recipe, f, q, levels) {
+  if (f.favoritesOnly && recipe.favorite !== true) return "out";
+  if (q !== "") {
+    const inName = String(recipe.name ?? "").toLowerCase().includes(q);
+    const inIngredients = (recipe.ingredients ?? []).some((i) => String(i?.name ?? "").toLowerCase().includes(q));
+    if (!inName && !inIngredients) return "out";
+  }
+  let unknown = false;
+  if (timeFilterOn(f)) {
+    const total = totalMinutes(recipe);
+    if (total <= 0) unknown = true;
+    else {
+      if (isLimit(f.maxMinutes) && total > Number(f.maxMinutes)) return "out";
+      if (isLimit(f.maxPrep) && minutesOf(recipe.time?.prep) > Number(f.maxPrep)) return "out";
+      if (isLimit(f.maxActive) && minutesOf(recipe.time?.active) > Number(f.maxActive)) return "out";
+    }
+  }
+  if (levels.size > 0) {
+    const level = difficultyLevel(recipe.difficulty);
+    if (level === "") unknown = true;
+    else if (!levels.has(level)) return "out";
+  }
+  return unknown ? "unknown" : "match";
+}
+
 // query: name or ingredient text. favoritesOnly: favorite === true.
 // maxMinutes / maxPrep / maxActive: inclusive limits on total, prep and cook (`time.active`)
-// minutes. While any time limit is on, recipes with no time set are left out; a blank prep
-// or cook time counts as 0 (e.g. a no-prep recipe).
-// difficulties: levels to keep (empty = any); recipes with no recognised level are left out
-// while it's on. With no filters set every recipe is returned, so none are hidden by default.
-export function filterRecipes(
-  recipes,
-  { query = "", favoritesOnly = false, maxMinutes = null, maxPrep = null, maxActive = null, difficulties = [] } = {}
-) {
+// minutes; a blank prep or cook time counts as 0 (e.g. a no-prep recipe).
+// difficulties: levels to keep (empty = any).
+// Returns { matches, unknown }: `unknown` holds recipes that can't be checked against an active
+// time or difficulty filter because they have no time / no recognised difficulty set, but
+// pass everything else. The list shows them under a divider rather than hiding them.
+// Input order is kept in both. With no filters set every recipe is a match.
+export function splitRecipes(recipes, { query = "", ...filters } = {}) {
+  const f = { ...NO_FILTERS, ...filters };
   const q = String(query ?? "").trim().toLowerCase();
-  const levels = new Set(difficulties ?? []);
-  const timeOn = isLimit(maxMinutes) || isLimit(maxPrep) || isLimit(maxActive);
-  return recipes.filter((recipe) => {
-    if (favoritesOnly && recipe.favorite !== true) return false;
-    if (timeOn) {
-      const total = totalMinutes(recipe);
-      if (total <= 0) return false;
-      if (isLimit(maxMinutes) && total > Number(maxMinutes)) return false;
-      if (isLimit(maxPrep) && minutesOf(recipe.time?.prep) > Number(maxPrep)) return false;
-      if (isLimit(maxActive) && minutesOf(recipe.time?.active) > Number(maxActive)) return false;
-    }
-    if (levels.size > 0 && !levels.has(difficultyLevel(recipe.difficulty))) return false;
-    if (q === "") return true;
-    if (String(recipe.name ?? "").toLowerCase().includes(q)) return true;
-    return (recipe.ingredients ?? []).some((i) =>
-      String(i?.name ?? "").toLowerCase().includes(q)
-    );
-  });
+  const levels = new Set(f.difficulties ?? []);
+  const matches = [];
+  const unknown = [];
+  for (const recipe of recipes) {
+    const kind = classify(recipe, f, q, levels);
+    if (kind === "match") matches.push(recipe);
+    else if (kind === "unknown") unknown.push(recipe);
+  }
+  return { matches, unknown };
+}
+
+// Only the sure matches (see splitRecipes).
+export function filterRecipes(recipes, options) {
+  return splitRecipes(recipes, options).matches;
+}
+
+// Divider title for splitRecipes' `unknown` group, from which filters are on.
+export function unknownLabel(filters) {
+  const f = { ...NO_FILTERS, ...filters };
+  const time = timeFilterOn(f);
+  const difficulty = f.difficulties.length > 0;
+  if (time && difficulty) return "No time or difficulty set";
+  if (time) return "No time set";
+  if (difficulty) return "No difficulty set";
+  return "";
 }
 
 // How many of the dropdown's filters are on (Favorites has its own chip, so it isn't counted).

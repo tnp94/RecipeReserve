@@ -26,7 +26,7 @@ const LimitField = ({ label, value, onChange, style }) => (
 // The recipe list's filter bar: Favorites, a "Filters" dropdown (total time limit and
 // difficulty, plus an Advanced section with separate prep and cook limits), and the
 // result count. `filters` is NO_FILTERS-shaped; `onChange(patch)` merges into it.
-const RecipeFilters = ({ filters, onChange, onClear, shown, total }) => {
+const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }) => {
   const theme = useTheme();
   const styles = useStyles();
   const [open, setOpen] = useState(false);
@@ -123,7 +123,10 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, total }) => {
 
       <View style={styles.countRow}>
         <AppText variant="small" tone="muted" style={styles.flex} numberOfLines={2}>
-          {[`${shown} of ${total} recipes`, ...(open ? [] : summary)].join(" · ")}
+          {[
+            unknown > 0 ? `${shown} of ${total} recipes + ${unknown} might fit` : `${shown} of ${total} recipes`,
+            ...(open ? [] : summary),
+          ].join(" · ")}
         </AppText>
         {anyOn && !open ? (
           <Pressable onPress={onClear} accessibilityRole="button" hitSlop={8}>
