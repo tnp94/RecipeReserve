@@ -55,7 +55,7 @@ const AddToMenuSheet = ({ visible, recipe: recipeProp, onClose, onAdd }) => {
                 {day.day === today ? <Badge label="Today" tone="primary" /> : null}
               </View>
               {n > 0 ? (
-                <AppText variant="small" tone="muted">{hasSlots ? `${n} no meal` : `${n} planned`}</AppText>
+                <AppText variant="small" tone="muted">{hasSlots ? `${n} unassigned` : `${n} planned`}</AppText>
               ) : null}
               <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary} />
             </Pressable>
