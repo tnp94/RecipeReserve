@@ -3,7 +3,7 @@ import { Swipeable } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { deleteRecipe, selectAllRecipes, selectRecipeById, toggleFavorite } from "../store/recipesSlice";
 import { removeUnusedPhotos } from "../services/recipePhoto";
 import { useDialog } from "./dialog/DialogProvider";
@@ -16,7 +16,9 @@ const IS_WEB = Platform.OS === "web";
 // One recipe in the library. layout "row" (phones: thumbnail left, swipeable) or "grid"
 // (tablets / web: a card with the tile on top). Tap opens the recipe; "+" adds it to the
 // menu; long-press or "⋯" opens the action sheet; the star toggles favourite.
-const RecipeCard = ({ recipeId, layout = "row", onAddToMenu }) => {
+// Memoized: it renders in long lists and its props are an id, a string and a stable
+// callback, so a card re-renders only when its own recipe (via useSelector) changes.
+const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToMenu }) {
   const navigation = useNavigation();
   const recipe = useSelector((state) => selectRecipeById(state, recipeId));
   const dispatch = useDispatch();
@@ -153,7 +155,7 @@ const RecipeCard = ({ recipeId, layout = "row", onAddToMenu }) => {
       {row}
     </Swipeable>
   );
-};
+});
 
 const useStyles = makeStyles((t) => ({
   meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.md, marginTop: 2 },
