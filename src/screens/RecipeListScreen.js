@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useState } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSelector } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
 import RecipeCards from "../components/RecipeCards";
@@ -41,8 +41,16 @@ const RecipeListScreen = ({ navigation }) => {
     });
   }, [navigation]);
 
-  const header = (
-    <View style={[styles.header, width >= 600 && styles.headerGrid]}>
+  // Search and filters sit above the list, not in its header: on phones a list re-render can
+  // re-attach header views and drop the keyboard while the user is typing a limit.
+  // The area scrolls on its own if the open filter panel doesn't fit (e.g. keyboard open).
+  const controls = (
+    <ScrollView
+      style={styles.controls}
+      contentContainerStyle={styles.controlsContent}
+      keyboardShouldPersistTaps="handled"
+      bounces={false}
+    >
       <SearchFilter placeholder="Search recipes or ingredients" value={query} onChangeText={setQuery} />
       <RecipeFilters
         filters={filters}
@@ -52,6 +60,11 @@ const RecipeListScreen = ({ navigation }) => {
         unknown={unknown.length}
         total={allRecipes.length}
       />
+    </ScrollView>
+  );
+
+  const header = (
+    <View style={[styles.header, width >= 600 && styles.headerGrid]}>
       <Pressable
         onPress={() => navigation.navigate("Recipe Finder")}
         accessibilityRole="button"
@@ -99,6 +112,7 @@ const RecipeListScreen = ({ navigation }) => {
 
   return (
     <View style={styles.screen}>
+      {controls}
       <RecipeCards
         recipes={recipes}
         unknown={unknown}
@@ -116,7 +130,17 @@ const useStyles = makeStyles((t) => ({
   screen: { flex: 1, backgroundColor: t.colors.background },
   flex: { flex: 1 },
   noSureMatches: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm, gap: spacing.md },
+  // Sizes to its content but gives way (and scrolls) so the list keeps at least ~30%.
+  controls: {
+    flexGrow: 0,
+    flexShrink: 1,
+    maxHeight: "70%",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: t.colors.border,
+  },
+  controlsContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm, gap: spacing.md },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm },
+  // The grid's content container already adds spacing.sm on each side.
   headerGrid: { paddingHorizontal: spacing.sm },
   finder: {
     flexDirection: "row",
