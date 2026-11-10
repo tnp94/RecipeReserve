@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { InputAccessoryView, Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Chip from "./Chip";
 import { AppText, Button, Card, TextField } from "./ui";
@@ -7,12 +7,18 @@ import { DIFFICULTY_LEVELS, activeFilterCount, effectiveTotalLimit, filterSummar
 import { formatMinutes } from "../domain/format";
 import { makeStyles, spacing, useTheme } from "../theme";
 
+// The iPhone number pad has no key to close it, so on iOS the time fields get a bar with
+// a Done button above the keyboard (InputAccessoryView, rendered once in RecipeFilters).
+const IS_IOS = Platform.OS === "ios";
+const KEYBOARD_BAR_ID = "recipe-filters-keyboard-bar";
+
 // Minutes limit: digits only, "" (no limit) -> null.
 const LimitField = ({ label, value, onChange, style, inputStyle, accessibilityHint }) => (
   <TextField
     style={style}
     inputStyle={inputStyle}
     accessibilityHint={accessibilityHint}
+    inputAccessoryViewID={IS_IOS ? KEYBOARD_BAR_ID : undefined}
     label={label}
     value={value == null ? "" : String(value)}
     onChangeText={(t) => {
@@ -44,6 +50,11 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
     ? `Prep + cook add up to ${formatMinutes(totalLimit.limit)}, so that's used for now. Lower them to ${formatMinutes(totalLimit.typed) || "0 min"} or less to use this total.`
     : "";
 
+  const close = () => {
+    Keyboard.dismiss();
+    setOpen(false);
+  };
+
   const toggleDifficulty = (level) => {
     const list = filters.difficulties;
     onChange({ difficulties: list.includes(level) ? list.filter((l) => l !== level) : [...list, level] });
@@ -65,7 +76,7 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
           selected={count > 0}
           accessibilityLabel={count > 0 ? `Filters, ${count} on` : "Filters"}
           accessibilityState={{ expanded: open }}
-          onPress={() => setOpen((o) => !o)}
+          onPress={() => (open ? close() : setOpen(true))}
         />
       </View>
 
@@ -133,9 +144,17 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
 
           <View style={styles.footer}>
             <Button label="Clear" variant="ghost" size="sm" onPress={onClear} disabled={!anyOn} />
-            <Button label="Done" variant="tonal" size="sm" onPress={() => setOpen(false)} />
+            <Button label="Done" variant="tonal" size="sm" onPress={close} />
           </View>
         </Card>
+      ) : null}
+
+      {IS_IOS && open ? (
+        <InputAccessoryView nativeID={KEYBOARD_BAR_ID}>
+          <View style={styles.keyboardBar}>
+            <Button label="Done" variant="ghost" size="sm" onPress={Keyboard.dismiss} accessibilityLabel="Close keyboard" />
+          </View>
+        </InputAccessoryView>
       ) : null}
 
       <View style={styles.countRow}>
@@ -160,6 +179,15 @@ const useStyles = makeStyles((t) => ({
   bar: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   panel: { marginTop: spacing.sm, maxWidth: 520 },
   hint: { marginTop: spacing.xs },
+  keyboardBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: t.colors.surfaceAlt,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.colors.border,
+  },
   overriddenInput: { textDecorationLine: "line-through", color: t.colors.textSubtle },
   override: {
     flexDirection: "row",
