@@ -47,6 +47,7 @@ const freshWarm = {
     onToast: "#FFFFFF",
     toastAction: "#9ED3B4",
     shadow: "#2B2118",
+    photoViewer: "#0E1110", // behind a full-size photo
 
     // Drag and drop
     dropTarget: "rgba(47, 107, 79, 0.10)",

@@ -1,10 +1,11 @@
 import { Platform, Pressable, View } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, useStore } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
 import { useRef } from "react";
-import { deleteRecipe, selectRecipeById, toggleFavorite } from "../store/recipesSlice";
+import { deleteRecipe, selectAllRecipes, selectRecipeById, toggleFavorite } from "../store/recipesSlice";
+import { removeUnusedPhotos } from "../services/recipePhoto";
 import { useDialog } from "./dialog/DialogProvider";
 import { AppText, IconButton, RecipeThumb } from "./ui";
 import { formatMinutes, totalMinutes } from "../domain/format";
@@ -19,6 +20,7 @@ const RecipeCard = ({ recipeId, layout = "row", onAddToMenu }) => {
   const navigation = useNavigation();
   const recipe = useSelector((state) => selectRecipeById(state, recipeId));
   const dispatch = useDispatch();
+  const store = useStore();
   const dialog = useDialog();
   const theme = useTheme();
   const styles = useStyles();
@@ -28,10 +30,14 @@ const RecipeCard = ({ recipeId, layout = "row", onAddToMenu }) => {
 
   const open = () => navigation.navigate("Recipe Details", { recipeId });
   const addToMenu = () => onAddToMenu && onAddToMenu(recipe);
+  const remove = () => {
+    dispatch(deleteRecipe(recipeId));
+    removeUnusedPhotos(selectAllRecipes(store.getState()));
+  };
   const confirmDelete = () => {
     dialog.alert(`Delete "${recipe.name}"?`, "It will also be removed from your menu. This can't be undone.", [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => dispatch(deleteRecipe(recipeId)) },
+      { text: "Delete", style: "destructive", onPress: remove },
     ]);
   };
   const showActions = () => {

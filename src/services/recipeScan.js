@@ -18,18 +18,24 @@ export const isScanAvailable = () => !!NativeModules.TextRecognition;
 
 const PHOTO_OPTIONS = { mediaTypes: ["images"], quality: 0.9 };
 
-// source: "camera" | "library". Returns the photo's uri, or null if the user backed out.
-export async function pickPhoto(source) {
+// source: "camera" | "library". Returns the picked asset, or null if the user backed out.
+// `options` adds to the image picker's own (e.g. cropping for a recipe photo).
+export async function pickPhotoAsset(source, options = {}) {
   if (source === "camera") {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) throw new RecipeScanError("camera-denied");
   }
+  const pickerOptions = { ...PHOTO_OPTIONS, ...options };
   const result =
     source === "camera"
-      ? await ImagePicker.launchCameraAsync(PHOTO_OPTIONS)
-      : await ImagePicker.launchImageLibraryAsync(PHOTO_OPTIONS);
-  return result.canceled ? null : result.assets?.[0]?.uri ?? null;
+      ? await ImagePicker.launchCameraAsync(pickerOptions)
+      : await ImagePicker.launchImageLibraryAsync(pickerOptions);
+  const asset = result.canceled ? null : result.assets?.[0];
+  return asset?.uri ? asset : null;
 }
+
+// Returns the photo's uri, or null if the user backed out.
+export const pickPhoto = async (source) => (await pickPhotoAsset(source))?.uri ?? null;
 
 // Reads a photo of a recipe. Returns { draft, text }: the same draft as every other import
 // route, plus the raw text so the user can fix it when the draft comes out incomplete.

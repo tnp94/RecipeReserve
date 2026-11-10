@@ -1,17 +1,20 @@
-import { useLayoutEffect } from "react";
-import { View } from "react-native";
+import { useLayoutEffect, useState } from "react";
+import { Platform, Pressable, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, useStore } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
-import { selectRecipeById, toggleFavorite } from "../store/recipesSlice";
+import { editRecipe, selectAllRecipes, selectRecipeById, toggleFavorite } from "../store/recipesSlice";
 import { selectIsStaple, toggleStaple } from "../store/pantrySlice";
 import { useAddToMenu } from "../components/menu/AddToMenuSheet";
 import Chip from "../components/Chip";
+import PhotoViewer from "../components/PhotoViewer";
 import { AppText, Button, Card, HeaderButton, HeaderButtons, IconButton, RecipeThumb } from "../components/ui";
 import { formatAmount } from "../domain/quantity";
 import { formatMinutes, totalMinutes } from "../domain/format";
 import useLayout from "../hooks/useLayout";
-import { makeStyles, radius, spacing, useTheme } from "../theme";
+import useRecipePhoto from "../hooks/useRecipePhoto";
+import { recipeImageUri, removeUnusedPhotos } from "../services/recipePhoto";
+import { elevation, makeStyles, radius, spacing, useTheme } from "../theme";
 
 const IngredientRow = ({ ingredient, last }) => {
   const dispatch = useDispatch();
@@ -60,6 +63,17 @@ const RecipeDetailsScreen = ({ route, navigation }) => {
   const { recipeId } = route.params;
   const recipe = useSelector((state) => selectRecipeById(state, recipeId));
   const { openAddToMenu, addToMenuSheet } = useAddToMenu();
+  const store = useStore();
+  const { busy: pickingPhoto, openPhotoMenu } = useRecipePhoto();
+  const [viewingPhoto, setViewingPhoto] = useState(false);
+  const changePhoto = () =>
+    openPhotoMenu({
+      hasPhoto: !!recipe?.image,
+      onChange: (image) => {
+        dispatch(editRecipe({ id: recipeId, changes: { image } }));
+        removeUnusedPhotos(selectAllRecipes(store.getState()));
+      },
+    });
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -89,6 +103,9 @@ const RecipeDetailsScreen = ({ route, navigation }) => {
     recipe.yield > 0 && { icon: "people-outline", label: "Serves", value: String(recipe.yield) },
     recipe.calories > 0 && { icon: "nutrition-outline", label: "Calories", value: String(recipe.calories) },
   ].filter(Boolean);
+
+  const photoUri = recipeImageUri(recipe.image);
+  const thumb = <RecipeThumb recipe={recipe} height={isWide ? 180 : 112} width={isWide ? 240 : "100%"} rounded={radius.lg} />;
 
   const ingredientsSection = (
     <Card style={isWide ? styles.column : styles.section}>
@@ -123,7 +140,30 @@ const RecipeDetailsScreen = ({ route, navigation }) => {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.content, isWide && styles.contentWide]}>
         <View style={[styles.hero, isWide && styles.heroWide]}>
-          <RecipeThumb recipe={recipe} height={isWide ? 180 : 112} width={isWide ? 240 : "100%"} rounded={radius.lg} />
+          <View style={isWide ? styles.photoWide : null}>
+            {photoUri ? (
+              <Pressable
+                onPress={() => setViewingPhoto(true)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={`Photo of ${recipe.name}`}
+                accessibilityHint="Shows the photo full size"
+                style={styles.photoPressable}
+              >
+                {thumb}
+              </Pressable>
+            ) : (
+              thumb
+            )}
+            <IconButton
+              icon="camera-outline"
+              variant="filled"
+              size={20}
+              disabled={pickingPhoto}
+              accessibilityLabel={recipe.image ? "Change photo" : "Add a photo"}
+              onPress={changePhoto}
+              style={styles.photoButton}
+            />
+          </View>
           <View style={[styles.heroText, isWide && styles.flex]}>
             <AppText variant="display" accessibilityRole="header">{recipe.name}</AppText>
             {facts.length > 0 ? (
@@ -147,6 +187,12 @@ const RecipeDetailsScreen = ({ route, navigation }) => {
         )}
       </ScrollView>
       {addToMenuSheet}
+      <PhotoViewer
+        visible={viewingPhoto}
+        uri={photoUri}
+        onClose={() => setViewingPhoto(false)}
+        accessibilityLabel={`Photo of ${recipe.name}`}
+      />
     </View>
   );
 };
@@ -159,6 +205,9 @@ const useStyles = makeStyles((t) => ({
   hero: { gap: spacing.lg, marginBottom: spacing.lg },
   heroWide: { flexDirection: "row", alignItems: "flex-start" },
   heroText: { gap: spacing.md },
+  photoWide: { width: 240 },
+  photoPressable: Platform.OS === "web" ? { cursor: "zoom-in" } : {},
+  photoButton: { position: "absolute", right: spacing.sm, bottom: spacing.sm, ...elevation(t, 2) },
   facts: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   fact: {
     flexDirection: "row",
