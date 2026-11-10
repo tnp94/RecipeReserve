@@ -23,7 +23,6 @@ const AddToMenuSheet = ({ visible, recipe: recipeProp, onClose, onAdd }) => {
   const recipe = last.current;
   const today = todayIndex();
   if (!recipe) return null;
-  const count = (day) => day.entries.length + day.slots.reduce((n, s) => n + s.entries.length, 0);
   return (
     <AppModal visible={visible && !!recipeProp} onClose={onClose} title="Add to menu" subtitle={recipe.name}>
       <Pressable
@@ -39,7 +38,10 @@ const AddToMenuSheet = ({ visible, recipe: recipeProp, onClose, onAdd }) => {
         </View>
       </Pressable>
       {week.map((day) => {
-        const n = count(day);
+        // Each target shows its own count: the day row counts recipes on the day with no
+        // meal; each meal chip counts the recipes in that meal.
+        const n = day.entries.length;
+        const hasSlots = day.slots.length > 0;
         return (
           <View key={day.day} style={styles.day}>
             <Pressable
@@ -52,17 +54,22 @@ const AddToMenuSheet = ({ visible, recipe: recipeProp, onClose, onAdd }) => {
                 <AppText variant="bodyStrong">{day.label}</AppText>
                 {day.day === today ? <Badge label="Today" tone="primary" /> : null}
               </View>
-              {n > 0 ? <AppText variant="small" tone="muted">{`${n} planned`}</AppText> : null}
+              {n > 0 ? (
+                <AppText variant="small" tone="muted">{hasSlots ? `${n} no meal` : `${n} planned`}</AppText>
+              ) : null}
               <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary} />
             </Pressable>
-            {day.slots.length > 0 ? (
+            {hasSlots ? (
               <View style={styles.slots}>
                 {day.slots.map((slot) => (
                   <Chip
                     key={slot.id}
                     size="sm"
                     label={slot.name}
-                    accessibilityLabel={`Add to ${day.label} ${slot.name}`}
+                    count={slot.entries.length}
+                    accessibilityLabel={`Add to ${day.label} ${slot.name}${
+                      slot.entries.length ? `, ${slot.entries.length} planned` : ""
+                    }`}
                     onPress={() => onAdd({ day: null, slotId: slot.id, label: `${day.label} · ${slot.name}` })}
                   />
                 ))}

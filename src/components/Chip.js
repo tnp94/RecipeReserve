@@ -3,7 +3,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { makeStyles, radius, spacing, typography, useTheme } from "../theme";
 
 // Compact toggle / action pill. `selected` fills it with the primary colour.
-const Chip = ({ label, selected = false, onPress, onLongPress, disabled = false, icon, style, accessibilityLabel, size = "md" }) => {
+// `count` (a number > 0) shows as a muted number after the label.
+const Chip = ({ label, count, selected = false, onPress, onLongPress, disabled = false, icon, style, accessibilityLabel, size = "md" }) => {
   const theme = useTheme();
   const styles = useStyles();
   const fg = selected ? theme.colors.onPrimary : theme.colors.text;
@@ -28,6 +29,11 @@ const Chip = ({ label, selected = false, onPress, onLongPress, disabled = false,
       <Text style={[styles.text, size === "sm" && styles.textSm, { color: fg }]} numberOfLines={1}>
         {label}
       </Text>
+      {count ? (
+        <Text style={[styles.text, size === "sm" && styles.textSm, styles.count, { color: selected ? fg : theme.colors.textMuted }]}>
+          {count}
+        </Text>
+      ) : null}
     </Pressable>
   );
 };
@@ -51,6 +57,7 @@ const useStyles = makeStyles((t) => ({
   disabled: { opacity: 0.45 },
   text: { ...typography.smallStrong, fontWeight: "500" },
   textSm: { fontSize: 13 },
+  count: { fontVariant: ["tabular-nums"] },
 }));
 
 export default Chip;
