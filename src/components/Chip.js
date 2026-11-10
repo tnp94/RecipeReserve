@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { makeStyles, radius, spacing, typography, useTheme } from "../theme";
 
 // Compact toggle / action pill. `selected` fills it with the primary colour.
-const Chip = ({ label, selected = false, onPress, onLongPress, disabled = false, icon, style, accessibilityLabel, size = "md" }) => {
+const Chip = ({ label, selected = false, onPress, onLongPress, disabled = false, icon, iconRight, style, accessibilityLabel, accessibilityState, size = "md" }) => {
   const theme = useTheme();
   const styles = useStyles();
   const fg = selected ? theme.colors.onPrimary : theme.colors.text;
@@ -14,7 +14,7 @@ const Chip = ({ label, selected = false, onPress, onLongPress, disabled = false,
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ selected: !!selected, disabled }}
+      accessibilityState={{ selected: !!selected, disabled, ...accessibilityState }}
       style={({ pressed, hovered }) => [
         styles.chip,
         size === "sm" && styles.sm,
@@ -28,6 +28,7 @@ const Chip = ({ label, selected = false, onPress, onLongPress, disabled = false,
       <Text style={[styles.text, size === "sm" && styles.textSm, { color: fg }]} numberOfLines={1}>
         {label}
       </Text>
+      {iconRight ? <Ionicons name={iconRight} size={size === "sm" ? 14 : 16} color={selected ? fg : theme.colors.textMuted} /> : null}
     </Pressable>
   );
 };

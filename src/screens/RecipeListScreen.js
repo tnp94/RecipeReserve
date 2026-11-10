@@ -1,14 +1,14 @@
 import { useLayoutEffect, useMemo, useState } from "react";
-import { Platform, Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { useSelector } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
-import Chip from "../components/Chip";
+import RecipeFilters from "../components/RecipeFilters";
 import { useAddToMenu } from "../components/menu/AddToMenuSheet";
 import { AppText, EmptyState, HeaderButton } from "../components/ui";
 import { selectAllRecipes } from "../store/recipesSlice";
-import { DIFFICULTY_LEVELS, TIME_FILTERS, filterRecipes } from "../domain/recipeSearch";
+import { NO_FILTERS, activeFilterCount, filterRecipes } from "../domain/recipeSearch";
 import useLayout from "../hooks/useLayout";
 import { makeStyles, radius, spacing, useTheme } from "../theme";
 
@@ -19,23 +19,15 @@ const RecipeListScreen = ({ navigation }) => {
   const styles = useStyles();
   const { width } = useLayout();
   const [query, setQuery] = useState("");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [maxMinutes, setMaxMinutes] = useState(null);
-  const [difficulties, setDifficulties] = useState([]);
+  const [filters, setFilters] = useState(NO_FILTERS);
   const allRecipes = useSelector(selectAllRecipes);
   const recipes = useMemo(
-    () => filterRecipes(allRecipes, { query, favoritesOnly, maxMinutes, difficulties }).slice().sort(byName),
-    [allRecipes, query, favoritesOnly, maxMinutes, difficulties]
+    () => filterRecipes(allRecipes, { ...filters, query }).slice().sort(byName),
+    [allRecipes, query, filters]
   );
-  const filtersOn = favoritesOnly || maxMinutes != null || difficulties.length > 0;
-  const clearFilters = () => {
-    setQuery("");
-    setFavoritesOnly(false);
-    setMaxMinutes(null);
-    setDifficulties([]);
-  };
-  const toggleDifficulty = (level) =>
-    setDifficulties((list) => (list.includes(level) ? list.filter((l) => l !== level) : [...list, level]));
+  const filtersOn = filters.favoritesOnly || activeFilterCount(filters) > 0;
+  const changeFilters = (patch) => setFilters((f) => ({ ...f, ...patch }));
+  const clearFilters = () => setFilters(NO_FILTERS);
   const { openAddToMenu, addToMenuSheet } = useAddToMenu();
   const newRecipe = () => navigation.navigate("Recipe Form");
 
@@ -49,59 +41,16 @@ const RecipeListScreen = ({ navigation }) => {
     });
   }, [navigation]);
 
-  const wide = width >= 600;
-  const chips = (
-    <>
-      <Chip
-        label="Favorites"
-        icon={favoritesOnly ? "star" : "star-outline"}
-        selected={favoritesOnly}
-        onPress={() => setFavoritesOnly((v) => !v)}
-      />
-      <View style={styles.chipGap} />
-      {TIME_FILTERS.map((f) => (
-        <Chip
-          key={f.maxMinutes}
-          label={f.label}
-          icon="time-outline"
-          selected={maxMinutes === f.maxMinutes}
-          onPress={() => setMaxMinutes((m) => (m === f.maxMinutes ? null : f.maxMinutes))}
-        />
-      ))}
-      <View style={styles.chipGap} />
-      {DIFFICULTY_LEVELS.map((level) => (
-        <Chip key={level} label={level} selected={difficulties.includes(level)} onPress={() => toggleDifficulty(level)} />
-      ))}
-    </>
-  );
-
   const header = (
     <View style={[styles.header, width >= 600 && styles.headerGrid]}>
       <SearchFilter placeholder="Search recipes or ingredients" value={query} onChangeText={setQuery} />
-      <View>
-        {/* Phones scroll the chips sideways; wider screens wrap them. */}
-        {wide ? <View style={[styles.chips, styles.chipsWrap]}>{chips}</View> : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.chips, styles.chipsScroll]}
-            style={styles.chipScroller}
-            keyboardShouldPersistTaps="handled"
-          >
-            {chips}
-          </ScrollView>
-        )}
-        <View style={styles.countRow}>
-          <AppText variant="small" tone="muted">
-            {`${recipes.length} of ${allRecipes.length} recipes`}
-          </AppText>
-          {filtersOn ? (
-            <Pressable onPress={clearFilters} accessibilityRole="button" hitSlop={8} style={styles.clear}>
-              <AppText variant="smallStrong" tone="primary">Clear filters</AppText>
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
+      <RecipeFilters
+        filters={filters}
+        onChange={changeFilters}
+        onClear={clearFilters}
+        shown={recipes.length}
+        total={allRecipes.length}
+      />
       <Pressable
         onPress={() => navigation.navigate("Recipe Finder")}
         accessibilityRole="button"
@@ -139,7 +88,10 @@ const RecipeListScreen = ({ navigation }) => {
             : "No recipe or ingredient matches your search."
         }
         actionLabel="Clear filters"
-        onAction={clearFilters}
+        onAction={() => {
+          setQuery("");
+          clearFilters();
+        }}
       />
     );
 
@@ -156,14 +108,6 @@ const useStyles = makeStyles((t) => ({
   flex: { flex: 1 },
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm, gap: spacing.md },
   headerGrid: { paddingHorizontal: spacing.sm },
-  chips: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  chipsWrap: { flexWrap: "wrap" },
-  // Bleed the scroller to the screen edges so chips scroll under the side padding.
-  chipScroller: { marginHorizontal: -spacing.lg },
-  chipsScroll: { paddingHorizontal: spacing.lg },
-  chipGap: { width: spacing.xs },
-  countRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.sm },
-  clear: { marginLeft: "auto" },
   finder: {
     flexDirection: "row",
     alignItems: "center",

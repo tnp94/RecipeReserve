@@ -1,4 +1,4 @@
-import { difficultyLevel, filterRecipes } from "../recipeSearch";
+import { NO_FILTERS, activeFilterCount, difficultyLevel, filterRecipes, filterSummary } from "../recipeSearch";
 
 const recipes = [
   { id: 1, name: "Beef Stew", favorite: true, ingredients: [{ name: "Carrot" }] },
@@ -73,5 +73,36 @@ describe("filterRecipes by time and difficulty", () => {
     expect(ids({ query: "toast", maxMinutes: 30 })).toEqual([1]);
     expect(ids({ query: "toast", difficulties: ["Easy"] })).toEqual([1]);
     expect(ids({ favoritesOnly: true, maxMinutes: 30 })).toEqual([]);
+  });
+  it("limits prep and cook time separately", () => {
+    expect(ids({ maxPrep: 10 })).toEqual([1, 2]);
+    expect(ids({ maxActive: 20 })).toEqual([1, 2]);
+    expect(ids({ maxActive: 3 })).toEqual([1]);
+    expect(ids({ maxPrep: 20, maxActive: 20 })).toEqual([1, 2]);
+    expect(ids({ maxMinutes: 20, maxPrep: 20 })).toEqual([1]);
+  });
+  it("counts a blank prep or cook time as 0, but leaves out recipes with no time at all", () => {
+    const noPrep = [{ id: 6, time: { prep: "", active: 25 } }, { id: 7, time: {} }];
+    expect(filterRecipes(noPrep, { maxPrep: 0 }).map((r) => r.id)).toEqual([6]);
+    expect(filterRecipes(noPrep, { maxActive: 30 }).map((r) => r.id)).toEqual([6]);
+  });
+  it("treats null, blank and non-numeric limits as off", () => {
+    expect(ids({ maxMinutes: "", maxPrep: null, maxActive: "abc" })).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe("activeFilterCount and filterSummary", () => {
+  it("are empty with no filters (Favorites isn't part of the dropdown)", () => {
+    expect(activeFilterCount(NO_FILTERS)).toBe(0);
+    expect(activeFilterCount({ favoritesOnly: true })).toBe(0);
+    expect(filterSummary({})).toEqual([]);
+  });
+  it("count each time limit and the difficulty set once", () => {
+    expect(activeFilterCount({ maxMinutes: 30, maxActive: 0, difficulties: ["Easy", "Hard"] })).toBe(3);
+  });
+  it("describe the filters in a fixed order", () => {
+    expect(
+      filterSummary({ maxMinutes: 90, maxPrep: 0, maxActive: 20, difficulties: ["Hard", "Easy"] })
+    ).toEqual(["Up to 1 hr 30 min", "Prep up to 0 min", "Cook up to 20 min", "Easy or Hard"]);
   });
 });
