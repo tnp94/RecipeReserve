@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import AppModal from "../AppModal";
-import Chip from "../Chip";
 import { AppText, Badge } from "../ui";
 import { useToast } from "../toast/ToastProvider";
 import { addRecipeToMenu, selectMenuWeek } from "../../store/menuSlice";
@@ -38,49 +37,72 @@ const AddToMenuSheet = ({ visible, recipe: recipeProp, onClose, onAdd }) => {
         </View>
       </Pressable>
       {week.map((day) => {
-        // Each target shows its own count: the day row counts recipes on the day with no
-        // meal; each meal chip counts the recipes in that meal.
-        const n = day.entries.length;
+        // Every target lists what's already on it, so the user can see what's on deck
+        // before adding. The day row holds recipes on the day with no meal.
         const hasSlots = day.slots.length > 0;
+        const dayNames = namesOf(day.entries);
         return (
           <View key={day.day} style={styles.day}>
             <Pressable
               style={({ pressed, hovered }) => [styles.row, (pressed || hovered) && styles.rowPressed]}
               onPress={() => onAdd({ day: day.day, slotId: null, label: day.label })}
               accessibilityRole="button"
-              accessibilityLabel={`Add to ${day.label}`}
+              accessibilityLabel={`Add to ${day.label}${dayNames ? `. Planned: ${dayNames}` : ""}`}
             >
-              <View style={styles.dayLabel}>
-                <AppText variant="bodyStrong">{day.label}</AppText>
-                {day.day === today ? <Badge label="Today" tone="primary" /> : null}
+              <View style={styles.flex}>
+                <View style={styles.dayLabel}>
+                  <AppText variant="bodyStrong">{day.label}</AppText>
+                  {day.day === today ? <Badge label="Today" tone="primary" /> : null}
+                </View>
+                {dayNames ? (
+                  <>
+                    {hasSlots ? <AppText variant="caption" tone="muted">Unassigned</AppText> : null}
+                    <PlannedNames entries={day.entries} />
+                  </>
+                ) : !hasSlots ? (
+                  <AppText variant="small" tone="muted">Nothing planned</AppText>
+                ) : null}
               </View>
-              {n > 0 ? (
-                <AppText variant="small" tone="muted">{hasSlots ? `${n} unassigned` : `${n} planned`}</AppText>
-              ) : null}
               <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary} />
             </Pressable>
-            {hasSlots ? (
-              <View style={styles.slots}>
-                {day.slots.map((slot) => (
-                  <Chip
-                    key={slot.id}
-                    size="sm"
-                    label={slot.name}
-                    count={slot.entries.length}
-                    accessibilityLabel={`Add to ${day.label} ${slot.name}${
-                      slot.entries.length ? `, ${slot.entries.length} planned` : ""
-                    }`}
-                    onPress={() => onAdd({ day: null, slotId: slot.id, label: `${day.label} · ${slot.name}` })}
-                  />
-                ))}
-              </View>
-            ) : null}
+            {day.slots.map((slot) => {
+              const names = namesOf(slot.entries);
+              return (
+                <Pressable
+                  key={slot.id}
+                  style={({ pressed, hovered }) => [styles.row, styles.slotRow, (pressed || hovered) && styles.rowPressed]}
+                  onPress={() => onAdd({ day: null, slotId: slot.id, label: `${day.label} · ${slot.name}` })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add to ${day.label} ${slot.name}${names ? `. Planned: ${names}` : ""}`}
+                >
+                  <AppText variant="smallStrong" style={styles.slotName} numberOfLines={1}>{slot.name}</AppText>
+                  {names ? (
+                    <View style={styles.flex}>
+                      <PlannedNames entries={slot.entries} />
+                    </View>
+                  ) : (
+                    <AppText variant="small" tone="muted" style={[styles.flex, styles.empty]}>Empty</AppText>
+                  )}
+                  <Ionicons name="add" size={20} color={theme.colors.primary} style={styles.slotAdd} />
+                </Pressable>
+              );
+            })}
           </View>
         );
       })}
     </AppModal>
   );
 };
+
+const namesOf = (entries) => entries.map((entry) => entry.recipe.name).join(", ");
+
+// One line per planned recipe; a long name is cut to one line.
+const PlannedNames = ({ entries }) =>
+  entries.map((entry) => (
+    <AppText key={entry.id} variant="small" tone="muted" numberOfLines={1}>
+      {entry.recipe.name}
+    </AppText>
+  ));
 
 // Screen-level helper: `openAddToMenu(recipe)` shows the sheet; render `addToMenuSheet`.
 export function useAddToMenu() {
@@ -114,7 +136,10 @@ const useStyles = makeStyles((t) => ({
   unplanned: { marginBottom: spacing.sm, paddingVertical: spacing.sm, backgroundColor: t.colors.background },
   day: { borderTopWidth: 1, borderTopColor: t.colors.border, paddingVertical: spacing.xs },
   dayLabel: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  slots: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
+  slotRow: { minHeight: 40, paddingVertical: spacing.sm, marginLeft: spacing.md, gap: spacing.sm, alignItems: "flex-start" },
+  slotAdd: { alignSelf: "center" },
+  slotName: { width: 84 },
+  empty: { fontStyle: "italic", opacity: 0.7 },
 }));
 
 export default AddToMenuSheet;
