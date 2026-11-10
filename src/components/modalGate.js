@@ -26,6 +26,19 @@ function startDismiss() {
   return end;
 }
 
+// For native screens presented outside React (the camera, the photo library): resolves once
+// no Modal is mid-dismiss, e.g. after the dialog whose button opened the picker has closed.
+export function afterModalsDismissed() {
+  if (!GATED || dismissing === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    const waiter = () => {
+      waiters.delete(waiter);
+      resolve();
+    };
+    waiters.add(waiter);
+  });
+}
+
 // Returns { shown, onDismiss }: render <Modal visible={shown} onDismiss={onDismiss}>.
 export function useGatedModal(visible) {
   const [shown, setShown] = useState(false);

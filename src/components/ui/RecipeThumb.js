@@ -1,11 +1,11 @@
 import { Image, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { makeStyles, radius, useTheme } from "../../theme";
+import { recipeImageUri } from "../../services/recipePhoto";
 import AppText from "./AppText";
 
-// Recipe picture. Recipes have no photos yet, so this draws a tile whose colour is picked
-// from the recipe's name (stable across launches) with its initials. If a recipe ever has
-// an `image` URI, it is shown instead.
+// Recipe picture: the recipe's photo (services/recipePhoto.js), or else a tile whose colour
+// is picked from the recipe's name (stable across launches) with its initials.
 export function tileFor(theme, name) {
   const tiles = theme.colors.tiles;
   let hash = 0;
@@ -27,7 +27,7 @@ const RecipeThumb = ({ recipe, size, height, width, rounded = radius.md, style, 
   const styles = useStyles();
   const w = width ?? size ?? "100%";
   const h = height ?? size ?? 120;
-  const image = typeof recipe?.image === "string" && recipe.image.trim() ? recipe.image.trim() : null;
+  const image = recipeImageUri(recipe?.image);
   if (image) {
     return <Image source={{ uri: image }} style={[{ width: w, height: h, borderRadius: rounded }, style]} accessibilityIgnoresInvertColors />;
   }

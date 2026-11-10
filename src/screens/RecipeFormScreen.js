@@ -18,10 +18,12 @@ import CategoryPicker from "../components/CategoryPicker";
 import IngredientEditor from "../components/recipeForm/IngredientEditor";
 import ImportRecipeModal from "../components/recipeForm/ImportRecipeModal";
 import PasteModal from "../components/recipeForm/PasteModal";
-import { AppText, Button, Card, HeaderButton, IconButton, SegmentedControl, TextField } from "../components/ui";
+import { AppText, Button, Card, HeaderButton, IconButton, RecipeThumb, SegmentedControl, TextField } from "../components/ui";
 import { buildCategoryMemory, guessCategory } from "../domain/categoryGuess";
 import { missingParts } from "../domain/recipeImport";
 import { isScanAvailable } from "../services/recipeScan";
+import { removeUnusedPhotos } from "../services/recipePhoto";
+import useRecipePhoto from "../hooks/useRecipePhoto";
 import useLayout from "../hooks/useLayout";
 import { makeStyles, radius, spacing } from "../theme";
 
@@ -169,10 +171,14 @@ const RecipeFormScreen = ({ navigation, route }) => {
     return name;
   };
 
+  // Deletes photo files that no recipe uses now (a replaced photo, a deleted recipe).
+  const tidyPhotos = () => removeUnusedPhotos(selectAllRecipes(store.getState()));
+
   const saveAsNew = () => {
     if (!validName()) return;
     const newId = store.getState().recipes.nextId;
     dispatch(addRecipe(toSaved(data)));
+    tidyPhotos();
     leave(StackActions.replace("Recipe Details", { recipeId: newId }));
   };
 
@@ -189,6 +195,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
       return;
     }
     dispatch(editRecipe({ id: recipeId, changes: toSaved(data) }));
+    tidyPhotos();
     leave();
   };
 
@@ -202,6 +209,7 @@ const RecipeFormScreen = ({ navigation, route }) => {
           allowLeave.current = true;
           navigation.popToTop();
           dispatch(deleteRecipe(recipeId));
+          tidyPhotos();
         },
       },
     ]);
@@ -218,6 +226,13 @@ const RecipeFormScreen = ({ navigation, route }) => {
       ),
     });
   }, [navigation, isEditing]);
+
+  // ----- photo -----
+  const { busy: pickingPhoto, pick: pickPhoto } = useRecipePhoto();
+  const choosePhoto = async (source) => {
+    const image = await pickPhoto(source);
+    if (image) setData((d) => ({ ...d, image }));
+  };
 
   // ----- ingredients -----
   const updateIngredient = useCallback(
@@ -363,6 +378,23 @@ const RecipeFormScreen = ({ navigation, route }) => {
         ) : null}
         <Card style={styles.section}>
           <AppText variant="heading" style={styles.sectionTitle} accessibilityRole="header">Basics</AppText>
+          <View style={[styles.photoRow, compact && styles.photoRowCompact]}>
+            <RecipeThumb recipe={data} width={compact ? "100%" : 160} height={120} rounded={radius.md} />
+            <View style={styles.photoActions}>
+              <AppText variant="small" tone="muted">
+                {data.image ? "Your photo shows on the recipe card and menu." : "Add a photo of the dish to show instead of the letters."}
+              </AppText>
+              <View style={styles.photoButtons}>
+                {Platform.OS !== "web" ? (
+                  <Button label="Take photo" icon="camera-outline" variant="tonal" size="sm" disabled={pickingPhoto} onPress={() => choosePhoto("camera")} />
+                ) : null}
+                <Button label="Choose photo" icon="images-outline" variant="secondary" size="sm" disabled={pickingPhoto} onPress={() => choosePhoto("library")} />
+                {data.image ? (
+                  <Button label="Remove" icon="trash-outline" variant="ghost" size="sm" disabled={pickingPhoto} onPress={() => setData((d) => ({ ...d, image: "" }))} />
+                ) : null}
+              </View>
+            </View>
+          </View>
           <TextField
             label="Name"
             value={data.name}
@@ -509,6 +541,10 @@ const useStyles = makeStyles((t) => ({
   contentWide: { maxWidth: 800, width: "100%", alignSelf: "center" },
   section: { marginBottom: spacing.lg },
   sectionTitle: { marginBottom: spacing.md },
+  photoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
+  photoRowCompact: { flexDirection: "column", alignItems: "stretch" },
+  photoActions: { flex: 1, gap: spacing.sm },
+  photoButtons: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: spacing.xs },
   field: { marginTop: spacing.lg },
   fieldLabel: { marginBottom: spacing.xs },

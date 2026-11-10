@@ -26,12 +26,12 @@ src/domain/      pure logic, no React/Redux — quantity parsing, ingredient key
                  pasted-text parsing, display formatting, week helpers (+ __tests__)
 src/store/       Redux Toolkit slices, thunks, persist migrations (+ __tests__)
 src/services/    device and network work: recipeFetch.js downloads a recipe page; recipeScan.js picks
-                 a photo and reads it with on-device OCR (+ __tests__)
-src/components/  ui/ (shared kit), dialog/, toast/, AppModal, Chip, CategoryPicker,
+                 a photo and reads it with on-device OCR; recipePhoto.js stores dish photos (+ __tests__)
+src/components/  ui/ (shared kit), dialog/, toast/, AppModal, PhotoViewer, Chip, CategoryPicker,
                  menu/, recipeForm/, shopping/
 src/screens/     screens and stack navigators
 src/navigation/screenOptions.js   useHeaderOptions(): header styling for every tab and stack
-src/hooks/       useLayout (isWide >= 900, isExtraWide >= 1200), useGenerateList
+src/hooks/       useLayout (isWide >= 900, isExtraWide >= 1200), useGenerateList, useRecipePhoto
 src/theme/       index.js (theme API), tokens.js, themes/ (colours)
 ```
 
@@ -145,6 +145,7 @@ Recipe objects (`src/Recipes.js` seed data) have the shape:
   directions: [string]
 }
 ```
+`image` is a dish photo, set from the form's Basics section or the camera button on Recipe Details (both use `useRecipePhoto()` in `src/hooks/useRecipePhoto.js`, which waits for closing dialogs via `afterModalsDismissed` before opening the picker; storage is `src/services/recipePhoto.js`): on phones a path relative to the documents folder (`recipe-photos/<file>`, resolved with `recipeImageUri`, because iOS moves that folder on app updates); on web a downscaled JPEG data URI; `""` shows the coloured initials tile. Tapping the photo on Recipe Details opens it full screen (`PhotoViewer`, `src/components/PhotoViewer.js`). Saving or deleting a recipe calls `removeUnusedPhotos` to delete files no recipe references. On Android the picker's crop screen takes its toolbar colours and its "Accept" button label from `plugins/withCropScreen.js` (a config plugin in `app.json`; changing it needs a new build).
 `difficulty` is `"Easy"`, `"Medium"`, `"Hard"` or `""` (`DIFFICULTIES` in `RecipeFormScreen.js`). Older recipes can hold free text, which the form keeps as an extra option rather than dropping it.
 Ingredient categories: `INGREDIENTCATEGORIES` in `src/Models/Ingredient.js` (pick with `CategoryPicker`, or leave to `guessCategory`).
 
