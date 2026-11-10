@@ -1,3 +1,4 @@
+import { KEYBOARD_DISMISS_MODE } from "./keyboard";
 import { View } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
 import RecipeCard from "./RecipeCard";
@@ -69,7 +70,7 @@ const RecipeCards = ({ recipes, unknown = [], unknownTitle, onAddToMenu, ListHea
       ListEmptyComponent={ListEmptyComponent}
       ListFooterComponent={footer}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
+      keyboardDismissMode={KEYBOARD_DISMISS_MODE}
     />
   );
 };

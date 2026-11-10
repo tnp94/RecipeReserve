@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Keyboard, Platform, Pressable, View } from "react-native";
+import { useState } from "react";
+import { Platform, Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Chip from "./Chip";
 import { AppText, Button, Card, TextField } from "./ui";
@@ -8,50 +8,23 @@ import { formatMinutes } from "../domain/format";
 import { makeStyles, spacing, useTheme } from "../theme";
 
 // Minutes limit: digits only, "" (no limit) -> null.
-// The typed value is applied when editing ends (Done/return, leaving the field, or the panel
-// closing), not on every keystroke: the field lives in the recipe list's header, and changing
-// the list under a focused field can drop the keyboard on phones.
-const LimitField = ({ label, value, onChange, style, inputStyle, accessibilityHint, clearCount }) => {
-  const shown = value == null ? "" : String(value);
-  const [draft, setDraft] = useState(shown);
-  const draftRef = useRef(shown);
-  const latest = useRef({ value, onChange });
-  latest.current = { value, onChange };
-
-  // Follow changes made elsewhere (Clear, or this field's own value once applied).
-  useEffect(() => {
-    draftRef.current = shown;
-    setDraft(shown);
-  }, [shown, clearCount]);
-
-  const commit = useCallback(() => {
-    const next = draftRef.current === "" ? null : Number(draftRef.current);
-    if (next !== latest.current.value) latest.current.onChange(next);
-  }, []);
-  useEffect(() => commit, [commit]); // panel closed while typing
-
-  return (
-    <TextField
-      style={style}
-      inputStyle={inputStyle}
-      accessibilityHint={accessibilityHint}
-      label={label}
-      value={draft}
-      onChangeText={(t) => {
-        const digits = t.replace(/[^0-9]/g, "");
-        draftRef.current = digits;
-        setDraft(digits);
-      }}
-      onBlur={commit}
-      onSubmitEditing={commit}
-      returnKeyType="done"
-      inputMode="numeric"
-      keyboardType="number-pad"
-      placeholder="Any"
-      right={<AppText variant="small" tone="subtle" style={{ paddingRight: spacing.md }}>min</AppText>}
-    />
-  );
-};
+const LimitField = ({ label, value, onChange, style, inputStyle, accessibilityHint }) => (
+  <TextField
+    style={style}
+    inputStyle={inputStyle}
+    accessibilityHint={accessibilityHint}
+    label={label}
+    value={value == null ? "" : String(value)}
+    onChangeText={(t) => {
+      const digits = t.replace(/[^0-9]/g, "");
+      onChange(digits === "" ? null : Number(digits));
+    }}
+    inputMode="numeric"
+    keyboardType="number-pad"
+    placeholder="Any"
+    right={<AppText variant="small" tone="subtle" style={{ paddingRight: spacing.md }}>min</AppText>}
+  />
+);
 
 // The recipe list's filter bar: Favorites, a "Filters" dropdown (total time limit and
 // difficulty, plus an Advanced section with separate prep and cook limits), and the
@@ -70,18 +43,6 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
   const overrideText = totalLimit.overridden
     ? `Prep + cook add up to ${formatMinutes(totalLimit.limit)}, so that's used for now. Lower them to ${formatMinutes(totalLimit.typed) || "0 min"} or less to use this total.`
     : "";
-
-  // Closing ends any typing first, so a limit being typed is applied (see LimitField).
-  const close = () => {
-    Keyboard.dismiss();
-    setOpen(false);
-  };
-  // Bumped by Clear so fields drop a typed value that hasn't been applied yet.
-  const [clearCount, setClearCount] = useState(0);
-  const clear = () => {
-    setClearCount((c) => c + 1);
-    onClear();
-  };
 
   const toggleDifficulty = (level) => {
     const list = filters.difficulties;
@@ -104,7 +65,7 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
           selected={count > 0}
           accessibilityLabel={count > 0 ? `Filters, ${count} on` : "Filters"}
           accessibilityState={{ expanded: open }}
-          onPress={() => (open ? close() : setOpen(true))}
+          onPress={() => setOpen((o) => !o)}
         />
       </View>
 
@@ -114,7 +75,6 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
             label="Total time up to"
             value={filters.maxMinutes}
             onChange={(v) => onChange({ maxMinutes: v })}
-            clearCount={clearCount}
             inputStyle={totalLimit.overridden ? styles.overriddenInput : null}
             accessibilityHint={totalLimit.overridden ? overrideText : undefined}
           />
@@ -124,9 +84,7 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
               <AppText variant="caption" style={styles.flex}>{overrideText}</AppText>
             </View>
           ) : (
-            <AppText variant="caption" tone="muted" style={styles.hint}>
-              Prep + cook. Applies when you finish typing. Leave blank for any.
-            </AppText>
+            <AppText variant="caption" tone="muted" style={styles.hint}>Prep + cook. Leave blank for any.</AppText>
           )}
 
           <AppText variant="smallStrong" tone="muted" style={styles.sectionLabel}>Difficulty</AppText>
@@ -163,21 +121,19 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
                 label="Prep time up to"
                 value={filters.maxPrep}
                 onChange={(v) => onChange({ maxPrep: v })}
-                clearCount={clearCount}
               />
               <LimitField
                 style={styles.flex}
                 label="Cook time up to"
                 value={filters.maxActive}
                 onChange={(v) => onChange({ maxActive: v })}
-                clearCount={clearCount}
               />
             </View>
           ) : null}
 
           <View style={styles.footer}>
-            <Button label="Clear" variant="ghost" size="sm" onPress={clear} disabled={!anyOn} />
-            <Button label="Done" variant="tonal" size="sm" onPress={close} />
+            <Button label="Clear" variant="ghost" size="sm" onPress={onClear} disabled={!anyOn} />
+            <Button label="Done" variant="tonal" size="sm" onPress={() => setOpen(false)} />
           </View>
         </Card>
       ) : null}
