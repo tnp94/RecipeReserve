@@ -1,36 +1,38 @@
-import { useState } from "react";
-import { InputAccessoryView, Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
+import { useId, useState } from "react";
+import { Keyboard, Platform, Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Chip from "./Chip";
+import KeyboardDoneBar from "./KeyboardDoneBar";
 import { AppText, Button, Card, TextField } from "./ui";
 import { DIFFICULTY_LEVELS, activeFilterCount, effectiveTotalLimit, filterSummary } from "../domain/recipeSearch";
 import { formatMinutes } from "../domain/format";
 import { makeStyles, spacing, useTheme } from "../theme";
 
-// The iPhone number pad has no key to close it, so on iOS the time fields get a bar with
-// a Done button above the keyboard (InputAccessoryView, rendered once in RecipeFilters).
-const IS_IOS = Platform.OS === "ios";
-const KEYBOARD_BAR_ID = "recipe-filters-keyboard-bar";
-
 // Minutes limit: digits only, "" (no limit) -> null.
-const LimitField = ({ label, value, onChange, style, inputStyle, accessibilityHint }) => (
-  <TextField
-    style={style}
-    inputStyle={inputStyle}
-    accessibilityHint={accessibilityHint}
-    inputAccessoryViewID={IS_IOS ? KEYBOARD_BAR_ID : undefined}
-    label={label}
-    value={value == null ? "" : String(value)}
-    onChangeText={(t) => {
-      const digits = t.replace(/[^0-9]/g, "");
-      onChange(digits === "" ? null : Number(digits));
-    }}
-    inputMode="numeric"
-    keyboardType="number-pad"
-    placeholder="Any"
-    right={<AppText variant="small" tone="subtle" style={{ paddingRight: spacing.md }}>min</AppText>}
-  />
-);
+// The iPhone number pad has no key to close it, so each field gets its own Done bar on iOS.
+const LimitField = ({ label, value, onChange, style, inputStyle, accessibilityHint }) => {
+  const barId = `limit-${useId()}`;
+  return (
+    <View style={style}>
+      <TextField
+        inputStyle={inputStyle}
+        accessibilityHint={accessibilityHint}
+        inputAccessoryViewID={Platform.OS === "ios" ? barId : undefined}
+        label={label}
+        value={value == null ? "" : String(value)}
+        onChangeText={(t) => {
+          const digits = t.replace(/[^0-9]/g, "");
+          onChange(digits === "" ? null : Number(digits));
+        }}
+        inputMode="numeric"
+        keyboardType="number-pad"
+        placeholder="Any"
+        right={<AppText variant="small" tone="subtle" style={{ paddingRight: spacing.md }}>min</AppText>}
+      />
+      <KeyboardDoneBar id={barId} />
+    </View>
+  );
+};
 
 // The recipe list's filter bar: Favorites, a "Filters" dropdown (total time limit and
 // difficulty, plus an Advanced section with separate prep and cook limits), and the
@@ -149,14 +151,6 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
         </Card>
       ) : null}
 
-      {IS_IOS && open ? (
-        <InputAccessoryView nativeID={KEYBOARD_BAR_ID}>
-          <View style={styles.keyboardBar}>
-            <Button label="Done" variant="ghost" size="sm" onPress={Keyboard.dismiss} accessibilityLabel="Close keyboard" />
-          </View>
-        </InputAccessoryView>
-      ) : null}
-
       <View style={styles.countRow}>
         <AppText variant="small" tone="muted" style={styles.flex} numberOfLines={2}>
           {[
@@ -179,15 +173,6 @@ const useStyles = makeStyles((t) => ({
   bar: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   panel: { marginTop: spacing.sm, maxWidth: 520 },
   hint: { marginTop: spacing.xs },
-  keyboardBar: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: t.colors.surfaceAlt,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: t.colors.border,
-  },
   overriddenInput: { textDecorationLine: "line-through", color: t.colors.textSubtle },
   override: {
     flexDirection: "row",
