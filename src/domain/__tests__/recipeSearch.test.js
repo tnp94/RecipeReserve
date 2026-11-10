@@ -2,6 +2,7 @@ import {
   NO_FILTERS,
   activeFilterCount,
   difficultyLevel,
+  effectiveTotalLimit,
   filterRecipes,
   filterSummary,
   splitRecipes,
@@ -134,6 +135,34 @@ describe("splitRecipes", () => {
   });
   it("filterRecipes returns only the matches", () => {
     expect(filterRecipes(list, { maxMinutes: 30 }).map((r) => r.id)).toEqual([1, 5]);
+  });
+});
+
+describe("effectiveTotalLimit", () => {
+  it("is off with no total, and the typed total with no prep or cook limit", () => {
+    expect(effectiveTotalLimit({ maxPrep: 40 })).toEqual({ limit: null, overridden: false, typed: null });
+    expect(effectiveTotalLimit({ maxMinutes: 30 })).toEqual({ limit: 30, overridden: false, typed: 30 });
+  });
+  it("keeps the typed total while prep + cook fits inside it", () => {
+    expect(effectiveTotalLimit({ maxMinutes: 30, maxPrep: 10, maxActive: 20 })).toEqual({ limit: 30, overridden: false, typed: 30 });
+  });
+  it("uses prep + cook when it's larger, counting a blank one as 0", () => {
+    expect(effectiveTotalLimit({ maxMinutes: 30, maxPrep: 30, maxActive: 30 })).toEqual({ limit: 60, overridden: true, typed: 30 });
+    expect(effectiveTotalLimit({ maxMinutes: 30, maxPrep: 45 })).toEqual({ limit: 45, overridden: true, typed: 30 });
+  });
+  it("is what the list filters by", () => {
+    const basic = [{ id: 1, time: { prep: 20, active: 40 } }];
+    expect(filterRecipes(basic, { maxMinutes: 30, maxPrep: 30, maxActive: 30 })).toEqual([]); // cook 40 > 30
+    expect(filterRecipes(basic, { maxMinutes: 30, maxPrep: 30, maxActive: 40 }).map((r) => r.id)).toEqual([1]); // limit 70
+    expect(filterRecipes(basic, { maxMinutes: 30, maxPrep: 20, maxActive: 40 }).map((r) => r.id)).toEqual([1]); // limit 60
+    expect(filterRecipes(basic, { maxMinutes: 30, maxActive: 40 })).toEqual([]); // limit 40 < total 60
+  });
+  it("is shown in the summary", () => {
+    expect(filterSummary({ maxMinutes: 30, maxPrep: 30, maxActive: 30 })).toEqual([
+      "Up to 1 hr (prep + cook)",
+      "Prep up to 30 min",
+      "Cook up to 30 min",
+    ]);
   });
 });
 

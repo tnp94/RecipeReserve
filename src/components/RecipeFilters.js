@@ -3,13 +3,16 @@ import { Platform, Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Chip from "./Chip";
 import { AppText, Button, Card, TextField } from "./ui";
-import { DIFFICULTY_LEVELS, activeFilterCount, filterSummary } from "../domain/recipeSearch";
+import { DIFFICULTY_LEVELS, activeFilterCount, effectiveTotalLimit, filterSummary } from "../domain/recipeSearch";
+import { formatMinutes } from "../domain/format";
 import { makeStyles, spacing, useTheme } from "../theme";
 
 // Minutes limit: digits only, "" (no limit) -> null.
-const LimitField = ({ label, value, onChange, style }) => (
+const LimitField = ({ label, value, onChange, style, inputStyle, accessibilityHint }) => (
   <TextField
     style={style}
+    inputStyle={inputStyle}
+    accessibilityHint={accessibilityHint}
     label={label}
     value={value == null ? "" : String(value)}
     onChangeText={(t) => {
@@ -35,6 +38,11 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
   const count = activeFilterCount(filters);
   const summary = filterSummary(filters);
   const anyOn = count > 0 || filters.favoritesOnly;
+  // While prep + cook (Advanced) adds up to more than the typed total, that sum is used instead.
+  const totalLimit = effectiveTotalLimit(filters);
+  const overrideText = totalLimit.overridden
+    ? `Prep + cook add up to ${formatMinutes(totalLimit.limit)}, so that's used for now. Lower them to ${formatMinutes(totalLimit.typed) || "0 min"} or less to use this total.`
+    : "";
 
   const toggleDifficulty = (level) => {
     const list = filters.difficulties;
@@ -67,8 +75,17 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
             label="Total time up to"
             value={filters.maxMinutes}
             onChange={(v) => onChange({ maxMinutes: v })}
+            inputStyle={totalLimit.overridden ? styles.overriddenInput : null}
+            accessibilityHint={totalLimit.overridden ? overrideText : undefined}
           />
-          <AppText variant="caption" tone="muted" style={styles.hint}>Prep + cook. Leave blank for any.</AppText>
+          {totalLimit.overridden ? (
+            <View style={styles.override} accessibilityLiveRegion="polite">
+              <Ionicons name="alert-circle-outline" size={16} color={theme.colors.warning} />
+              <AppText variant="caption" style={styles.flex}>{overrideText}</AppText>
+            </View>
+          ) : (
+            <AppText variant="caption" tone="muted" style={styles.hint}>Prep + cook. Leave blank for any.</AppText>
+          )}
 
           <AppText variant="smallStrong" tone="muted" style={styles.sectionLabel}>Difficulty</AppText>
           <View style={styles.levels}>
@@ -143,6 +160,16 @@ const useStyles = makeStyles((t) => ({
   bar: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   panel: { marginTop: spacing.sm, maxWidth: 520 },
   hint: { marginTop: spacing.xs },
+  overriddenInput: { textDecorationLine: "line-through", color: t.colors.textSubtle },
+  override: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    padding: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: t.colors.warningSoft,
+  },
   sectionLabel: { marginTop: spacing.md, marginBottom: spacing.xs },
   levels: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   advancedToggle: {
