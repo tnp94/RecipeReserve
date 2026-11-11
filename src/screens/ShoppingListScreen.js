@@ -58,7 +58,10 @@ const ShoppingListScreen = ({ navigation }) => {
       const items = groups.get(category);
       // Still to buy first (A-Z), then what's already in the cart (A-Z).
       const data = [...items.filter((i) => !i.checked).sort(byName), ...items.filter((i) => i.checked).sort(byName)];
-      return { title: category, data, remaining: items.filter((i) => !i.checked).length };
+      // One card per aisle: rows reorder inside it when checked, but the card's own
+      // rounded/clipped styling never changes. (Restyling a row's borderRadius while it has
+      // overflow: hidden left the row blank on Android after checking it off.)
+      return { title: category, data: [{ key: category, items: data }], remaining: items.filter((i) => !i.checked).length };
     }).filter((section) => section.data.length > 0);
   }, [shoppingList, memory]);
 
@@ -102,16 +105,14 @@ const ShoppingListScreen = ({ navigation }) => {
       <View style={[styles.content, isWide && styles.contentWide]}>
         <SectionList
           sections={sections}
-          renderItem={({ item, index, section }) => (
-            <View
-              style={[
-                styles.itemWrap,
-                index === 0 && styles.itemFirst,
-                index === section.data.length - 1 && styles.itemLast,
-              ]}
-            >
-              {index > 0 ? <View style={styles.divider} /> : null}
-              <ShoppingItemRow item={item} />
+          renderItem={({ item: card }) => (
+            <View style={styles.card}>
+              {card.items.map((item, index) => (
+                <View key={item.id}>
+                  {index > 0 ? <View style={styles.divider} /> : null}
+                  <ShoppingItemRow item={item} />
+                </View>
+              ))}
             </View>
           )}
           renderSectionHeader={({ section }) => (
@@ -123,7 +124,7 @@ const ShoppingListScreen = ({ navigation }) => {
               </AppText>
             </View>
           )}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(card) => card.key}
           stickySectionHeadersEnabled={false}
           ListHeaderComponent={summary}
           contentContainerStyle={styles.listContent}
@@ -174,15 +175,13 @@ const useStyles = makeStyles((t) => ({
     paddingTop: spacing.xl,
     paddingBottom: spacing.sm,
   },
-  itemWrap: {
+  card: {
     overflow: "hidden",
     backgroundColor: t.colors.surface,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
+    borderWidth: 1,
     borderColor: t.colors.border,
+    borderRadius: radius.lg,
   },
-  itemFirst: { borderTopWidth: 1, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
-  itemLast: { borderBottomWidth: 1, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg },
   divider: { height: 1, backgroundColor: t.colors.border, marginLeft: spacing.lg + 24 + spacing.md },
 }));
 
