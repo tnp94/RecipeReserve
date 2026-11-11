@@ -55,6 +55,15 @@ export function autoScrollDelta({ rect, horizontal, offset, content }, x, y) {
   return (delta < 0 && offset <= 0) || (delta > 0 && offset >= max) ? 0 : delta;
 }
 
+// Offset that turns gesture coordinates (absoluteX/Y) into measureInWindow coordinates.
+// On Android with edge-to-edge drawing the two can disagree by the status-bar height, which
+// made drops land below the finger. The handle under the finger gives the same point in both
+// systems: its measured window rect plus the pointer's position inside it, and absoluteX/Y.
+export function pointerOffset({ rect, localX, localY, absoluteX, absoluteY }) {
+  if (!rect || ![localX, localY, absoluteX, absoluteY].every(Number.isFinite)) return { x: 0, y: 0 };
+  return { x: rect.x + localX - absoluteX, y: rect.y + localY - absoluteY };
+}
+
 // How far the preview's centre sits above a fingertip, so the finger doesn't cover it.
 export const TOUCH_LIFT = 64;
 

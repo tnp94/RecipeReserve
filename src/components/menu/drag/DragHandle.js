@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector, PointerType } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +10,7 @@ const DragHandle = ({ payload, label }) => {
   const api = useDragApi();
   const theme = useTheme();
   const { type, id } = payload;
+  const viewRef = useRef(null);
   // Built once per handle (not per render) so a re-render mid-drag never hands
   // GestureDetector a new gesture while the pan is active.
   const gesture = useMemo(
@@ -18,7 +19,13 @@ const DragHandle = ({ payload, label }) => {
         .minDistance(4)
         .runOnJS(true)
         // A mouse pointer doesn't hide the preview; a finger or stylus does.
-        .onStart((e) => api.begin({ type, id, label }, e.absoluteX, e.absoluteY, e.pointerType !== PointerType.MOUSE))
+        .onStart((e) =>
+          api.begin({ type, id, label }, e.absoluteX, e.absoluteY, e.pointerType !== PointerType.MOUSE, {
+            node: viewRef.current,
+            localX: e.x,
+            localY: e.y,
+          })
+        )
         .onUpdate((e) => api.move(e.absoluteX, e.absoluteY))
         .onEnd(() => api.end())
         .onFinalize(() => api.cancel()), // no-op when end() already ran
@@ -28,6 +35,7 @@ const DragHandle = ({ payload, label }) => {
   return (
     <GestureDetector gesture={gesture}>
       <View
+        ref={viewRef}
         style={[styles.handle, Platform.OS === "web" ? styles.web : null]}
         accessible
         accessibilityRole="button"

@@ -2,13 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Animated, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
-import { DROP_INSERT, DROP_SWAP, TOUCH_LIFT, autoScrollDelta, dragPreviewPosition } from "../../../domain/menuDrag";
+import { DROP_INSERT, DROP_SWAP, TOUCH_LIFT, autoScrollDelta, dragPreviewPosition, pointerOffset } from "../../../domain/menuDrag";
 import { elevation, makeStyles, radius, useTheme } from "../../../theme";
 
 // Gesture-based drag-and-drop shared by iOS, Android and web (mouse + touch).
-// Coordinates: gesture absoluteX/absoluteY and measureInWindow are both window
-// coordinates (viewport coordinates on web); the preview is placed relative to the
-// provider's own container by subtracting its measured window offset.
+// Coordinates: everything works in measureInWindow coordinates (viewport coordinates on
+// web). Gesture absoluteX/absoluteY should match, but on Android (edge-to-edge) they can be
+// off by the status-bar height, so begin() calibrates an offset from the handle under the
+// finger (pointerOffset) and every pointer position is shifted by it. The preview is placed
+// relative to the provider's own container by subtracting its measured window offset.
 //
 // Drag state lives in a small external store instead of React context so that a hover
 // change re-renders only the zones whose own snapshot changed (see useDropZone).
@@ -106,6 +108,7 @@ const DragProvider = ({ children, style }) => {
   const timer = useRef(null);
   const edgeSince = useRef(0);
   const lift = useRef(0);
+  const offset = useRef({ x: 0, y: 0 });
   const pos = useRef(new Animated.ValueXY({ x: -1000, y: -1000 })).current;
 
   const setState = (patch) => {
@@ -268,7 +271,12 @@ const DragProvider = ({ children, style }) => {
         scrollers.current.add(info);
         return () => scrollers.current.delete(info);
       },
-      begin(payload, x, y, isTouch = false) {
+      // `origin` = { node, localX, localY }: the handle view and the pointer's position inside
+      // it, used to line gesture coordinates up with measured zone rects.
+      begin(payload, absX, absY, isTouch = false, origin = null) {
+        offset.current = { x: 0, y: 0 };
+        const x = absX;
+        const y = absY;
         lastPos.current = { x, y };
         lift.current = isTouch ? TOUCH_LIFT : 0;
         rects.current = new Map();
@@ -277,12 +285,27 @@ const DragProvider = ({ children, style }) => {
         place(x, y); // container offset arrives async; re-place once measured
         measure(containerRef.current, (r) => {
           container.current = r;
-          if (stateRef.current.active) place(x, y);
+          if (stateRef.current.active) place(lastPos.current.x, lastPos.current.y);
         });
+        if (origin) {
+          measure(origin.node, (rect) => {
+            if (stateRef.current.active !== payload) return;
+            const off = pointerOffset({ rect, localX: origin.localX, localY: origin.localY, absoluteX: absX, absoluteY: absY });
+            // Re-express the last pointer position with the new offset.
+            const last = lastPos.current;
+            const prev = offset.current;
+            offset.current = off;
+            lastPos.current = { x: last.x - prev.x + off.x, y: last.y - prev.y + off.y };
+            place(lastPos.current.x, lastPos.current.y);
+            setHover(hitTest(lastPos.current.x, lastPos.current.y), lastPos.current.y);
+          });
+        }
         measureAll();
       },
-      move(x, y) {
+      move(absX, absY) {
         if (!stateRef.current.active) return;
+        const x = absX + offset.current.x;
+        const y = absY + offset.current.y;
         place(x, y);
         autoScroll(x, y);
         setHover(hitTest(x, y), y);
