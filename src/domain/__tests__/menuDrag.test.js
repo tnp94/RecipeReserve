@@ -1,4 +1,4 @@
-import { DROP_INSERT, DROP_SWAP, SCROLL_EDGE, TOUCH_LIFT, autoScrollDelta, dragPreviewPosition, menuDropAction } from "../menuDrag";
+import { DROP_INSERT, DROP_SWAP, SCROLL_EDGE, TOUCH_LIFT, autoScrollDelta, dragPreviewPosition, menuDropAction, pointerOffset } from "../menuDrag";
 
 const entry = (id) => ({ type: "entry", id });
 const slot = (id) => ({ type: "slot", id });
@@ -118,5 +118,22 @@ describe("dragPreviewPosition", () => {
   it("doesn't clamp before the container is measured", () => {
     const unmeasured = { x: 0, y: 0, w: 0, h: 0 };
     expect(dragPreviewPosition({ ...base, container: unmeasured, x: 20, y: 30 })).toEqual({ x: -80, y: 10 });
+  });
+});
+
+describe("pointerOffset", () => {
+  it("is zero when both coordinate systems agree", () => {
+    expect(pointerOffset({ rect: { x: 10, y: 200, w: 44, h: 44 }, localX: 20, localY: 22, absoluteX: 30, absoluteY: 222 })).toEqual({ x: 0, y: 0 });
+  });
+
+  it("corrects gesture coordinates that are a status bar below the measured ones", () => {
+    const off = pointerOffset({ rect: { x: 10, y: 200, w: 44, h: 44 }, localX: 20, localY: 22, absoluteX: 30, absoluteY: 246 });
+    expect(off).toEqual({ x: 0, y: -24 });
+    expect(246 + off.y).toBe(222); // the finger's point inside the measured handle
+  });
+
+  it("falls back to zero without a measurement", () => {
+    expect(pointerOffset({ rect: null, localX: 1, localY: 1, absoluteX: 1, absoluteY: 1 })).toEqual({ x: 0, y: 0 });
+    expect(pointerOffset({ rect: { x: 0, y: 0 }, localX: undefined, localY: 1, absoluteX: 1, absoluteY: 1 })).toEqual({ x: 0, y: 0 });
   });
 });
