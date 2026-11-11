@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
 import RecipeCards from "../components/RecipeCards";
 import SearchFilter from "../components/SearchFilter";
@@ -9,10 +9,10 @@ import { useAddToMenu } from "../components/menu/AddToMenuSheet";
 import { AppText, EmptyState, HeaderButton } from "../components/ui";
 import { selectAllRecipes } from "../store/recipesSlice";
 import { NO_FILTERS, activeFilterCount, splitRecipes, unknownLabel } from "../domain/recipeSearch";
+import { sortRecipes } from "../domain/recipeSort";
+import { selectRecipeSort, setRecipeSort } from "../store/settingsSlice";
 import useLayout from "../hooks/useLayout";
 import { makeStyles, radius, spacing, useTheme } from "../theme";
-
-const byName = (a, b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, { sensitivity: "base" });
 
 const RecipeListScreen = ({ navigation }) => {
   const theme = useTheme();
@@ -20,11 +20,13 @@ const RecipeListScreen = ({ navigation }) => {
   const { width } = useLayout();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState(NO_FILTERS);
+  const dispatch = useDispatch();
+  const sort = useSelector(selectRecipeSort);
   const allRecipes = useSelector(selectAllRecipes);
   const { recipes, unknown } = useMemo(() => {
     const { matches, unknown } = splitRecipes(allRecipes, { ...filters, query });
-    return { recipes: matches.sort(byName), unknown: unknown.sort(byName) };
-  }, [allRecipes, query, filters]);
+    return { recipes: sortRecipes(matches, sort), unknown: sortRecipes(unknown, sort) };
+  }, [allRecipes, query, filters, sort]);
   const filtersOn = filters.favoritesOnly || activeFilterCount(filters) > 0;
   const changeFilters = (patch) => setFilters((f) => ({ ...f, ...patch }));
   const clearFilters = () => setFilters(NO_FILTERS);
@@ -48,6 +50,8 @@ const RecipeListScreen = ({ navigation }) => {
         filters={filters}
         onChange={changeFilters}
         onClear={clearFilters}
+        sort={sort}
+        onSortChange={(value) => dispatch(setRecipeSort(value))}
         shown={recipes.length}
         unknown={unknown.length}
         total={allRecipes.length}
@@ -104,6 +108,7 @@ const RecipeListScreen = ({ navigation }) => {
         unknown={unknown}
         unknownTitle={unknownLabel(filters)}
         onAddToMenu={openAddToMenu}
+        sort={sort}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
       />

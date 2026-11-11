@@ -6,6 +6,7 @@ import KeyboardDoneBar from "./KeyboardDoneBar";
 import { AppText, Button, Card, TextField } from "./ui";
 import { DIFFICULTY_LEVELS, activeFilterCount, effectiveTotalLimit, filterSummary } from "../domain/recipeSearch";
 import { formatMinutes } from "../domain/format";
+import { RECIPE_SORT_OPTIONS, recipeSortOption } from "../domain/recipeSort";
 import { makeStyles, spacing, useTheme } from "../theme";
 
 // Minutes limit: digits only, "" (no limit) -> null.
@@ -34,13 +35,45 @@ const LimitField = ({ label, value, onChange, style, inputStyle, accessibilityHi
   );
 };
 
-// The recipe list's filter bar: Favorites, a "Filters" dropdown (total time limit and
-// difficulty, plus an Advanced section with separate prep and cook limits), and the
-// result count. `filters` is NO_FILTERS-shaped; `onChange(patch)` merges into it.
-const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }) => {
+// The sort dropdown's options: one row per order, the current one ticked.
+const SortPanel = ({ sort, onSelect }) => {
   const theme = useTheme();
   const styles = useStyles();
-  const [open, setOpen] = useState(false);
+  return (
+    <Card style={styles.panel} padded={spacing.xs}>
+      {RECIPE_SORT_OPTIONS.map((option) => {
+        const selected = option.value === sort;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => onSelect(option.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            style={({ hovered, pressed }) => [styles.sortRow, (hovered || pressed) && styles.advancedHover]}
+          >
+            <Ionicons name={option.icon} size={18} color={selected ? theme.colors.primary : theme.colors.textMuted} />
+            <AppText variant={selected ? "bodyStrong" : "body"} tone={selected ? "primary" : undefined} style={styles.flex}>
+              {option.label}
+            </AppText>
+            {selected ? <Ionicons name="checkmark" size={18} color={theme.colors.primary} /> : null}
+          </Pressable>
+        );
+      })}
+    </Card>
+  );
+};
+
+// The recipe list's filter bar: Favorites, a "Filters" dropdown (total time limit and
+// difficulty, plus an Advanced section with separate prep and cook limits), a "Sort"
+// dropdown, and the result count. `filters` is NO_FILTERS-shaped; `onChange(patch)` merges
+// into it. `sort` is a RECIPE_SORT_* value; `onSortChange(value)` picks another.
+const RecipeFilters = ({ filters, onChange, onClear, sort, onSortChange, shown, unknown = 0, total }) => {
+  const theme = useTheme();
+  const styles = useStyles();
+  // Which dropdown is open: "filters", "sort" or null (only one at a time).
+  const [panel, setPanel] = useState(null);
+  const open = panel === "filters";
+  const sortOption = recipeSortOption(sort);
   const hasAdvanced = filters.maxPrep != null || filters.maxActive != null;
   const [advancedOpen, setAdvancedOpen] = useState(hasAdvanced);
   const count = activeFilterCount(filters);
@@ -54,7 +87,7 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
 
   const close = () => {
     Keyboard.dismiss();
-    setOpen(false);
+    setPanel(null);
   };
 
   const toggleDifficulty = (level) => {
@@ -78,9 +111,30 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
           selected={count > 0}
           accessibilityLabel={count > 0 ? `Filters, ${count} on` : "Filters"}
           accessibilityState={{ expanded: open }}
-          onPress={() => (open ? close() : setOpen(true))}
+          onPress={() => (open ? close() : setPanel("filters"))}
+        />
+        <Chip
+          label={sortOption.short}
+          icon="swap-vertical"
+          selected={panel === "sort"}
+          accessibilityLabel={`Sort by ${sortOption.label}`}
+          accessibilityState={{ expanded: panel === "sort" }}
+          onPress={() => {
+            Keyboard.dismiss();
+            setPanel(panel === "sort" ? null : "sort");
+          }}
         />
       </View>
+
+      {panel === "sort" ? (
+        <SortPanel
+          sort={sortOption.value}
+          onSelect={(value) => {
+            onSortChange?.(value);
+            setPanel(null);
+          }}
+        />
+      ) : null}
 
       {open ? (
         <Card style={styles.panel} padded={spacing.md}>
@@ -170,7 +224,16 @@ const RecipeFilters = ({ filters, onChange, onClear, shown, unknown = 0, total }
 
 const useStyles = makeStyles((t) => ({
   flex: { flex: 1 },
-  bar: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  bar: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm },
+  sortRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : null),
+  },
   panel: { marginTop: spacing.sm, maxWidth: 520 },
   hint: { marginTop: spacing.xs },
   overriddenInput: { textDecorationLine: "line-through", color: t.colors.textSubtle },

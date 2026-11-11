@@ -13,7 +13,7 @@ import {
   setShowStapleReminder,
 } from "../store/settingsSlice";
 import { selectStaplesList } from "../store/pantrySlice";
-import { loadRecipeList } from "../store/recipesSlice";
+import { loadRecipeList, resetAllPlanHistory } from "../store/recipesSlice";
 import { clearMenu } from "../store/menuSlice";
 import { clearShoppingList } from "../store/shoppingListSlice";
 
@@ -105,6 +105,21 @@ const SettingsScreen = ({ navigation }) => {
             title="Clear menu"
             destructive
             onPress={() => confirm("Clear menu?", "All planned recipes and meal slots will be removed.", "Clear", clearMenu)}
+          />
+          <Divider inset={64} />
+          <ListRow
+            icon="repeat-outline"
+            title="Reset planning history"
+            subtitle="How often and when each recipe was planned"
+            destructive
+            onPress={() =>
+              confirm(
+                "Reset planning history?",
+                "Every recipe will count as never planned, for the Most planned and Recently planned sorts. Your menu won't change.",
+                "Reset",
+                resetAllPlanHistory
+              )
+            }
           />
           <Divider inset={64} />
           <ListRow

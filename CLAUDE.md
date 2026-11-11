@@ -115,7 +115,7 @@ fall back to the default (see `selectThemeName`), and no migration is needed.
 | `menu` | `{ slots: {ids, entities}, entries: {ids, entities}, nextId }` — Slot `{ id, day: 0–6 (Mon-first), name }`, MenuEntry `{ id, recipeId, slotId \| null, day \| null, scale }` (`slotId` set → in that slot, `day` null; `slotId` null + `day` 0–6 → on that day with no meal; both null → Unplanned) |
 | `shoppingList` | entity adapter `{ ids, entities, nextId, removed }` — items with `mergeKey, nameKey, name, unit, category, quantityText, checked, isStaple, source: "menu"\|"manual"\|"finder", contributions[]`; `removed[mergeKey]` = menu entries whose portion the user removed/deleted (Merge skips them; Replace/Clear reset it) |
 | `pantry` | `{ staples: { [nameKey]: { nameKey, name } } }` |
-| `settings` | `{ showStapleReminder, themeName, hideMenuTip, hideGettingStarted, finderSort }` |
+| `settings` | `{ showStapleReminder, themeName, hideMenuTip, hideGettingStarted, finderSort, recipeSort }` |
 | `finder` | `{ ingredients: [{ id, name, tag: null\|"expiring"\|"required" }], recent: string[], nextId }` |
 
 Key points:
@@ -146,6 +146,7 @@ Recipe objects (`src/Recipes.js` seed data) have the shape:
 }
 ```
 `image` is a dish photo, set from the form's Basics section or the camera button on Recipe Details (both use `useRecipePhoto()` in `src/hooks/useRecipePhoto.js`, which waits for closing dialogs via `afterModalsDismissed` before opening the picker; storage is `src/services/recipePhoto.js`): on phones a path relative to the documents folder (`recipe-photos/<file>`, resolved with `recipeImageUri`, because iOS moves that folder on app updates); on web a downscaled JPEG data URI; `""` shows the coloured initials tile. Tapping the photo on Recipe Details opens it full screen (`PhotoViewer`, `src/components/PhotoViewer.js`). Saving or deleting a recipe calls `removeUnusedPhotos` to delete files no recipe references. On Android the picker's crop screen takes its toolbar colours and its "Accept" button label from `plugins/withCropScreen.js` (a config plugin in `app.json`; changing it needs a new build).
+Optional `lastPlannedAt` (ms) and `timesPlanned` are set by `recipesSlice` when `addRecipeToMenu` runs (its `prepare` stamps `plannedAt`); `addRecipe` drops them so a copy starts fresh. Recipe Details shows them (`planSummary`) with a Reset link (`resetPlanHistory`); Settings → Data has "Reset planning history" (`resetAllPlanHistory`); cards show `planCardText` ("Planned 3 times") under the buttons (rows) or beside them (grid) while the list is sorted by Most planned / Recently planned. The recipe list's Sort chip (in `RecipeFilters`) orders with `sortRecipes` (`src/domain/recipeSort.js`) and saves the choice in `settings.recipeSort`.
 `difficulty` is `"Easy"`, `"Medium"`, `"Hard"` or `""` (`DIFFICULTIES` in `RecipeFormScreen.js`). Older recipes can hold free text, which the form keeps as an extra option rather than dropping it.
 Ingredient categories: `INGREDIENTCATEGORIES` in `src/Models/Ingredient.js` (pick with `CategoryPicker`, or leave to `guessCategory`).
 
