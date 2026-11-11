@@ -9,6 +9,7 @@ import { removeUnusedPhotos } from "../services/recipePhoto";
 import { useDialog } from "./dialog/DialogProvider";
 import { AppText, IconButton, RecipeThumb } from "./ui";
 import { formatMinutes, totalMinutes } from "../domain/format";
+import { planCardText } from "../domain/recipeSort";
 import { elevation, makeStyles, radius, spacing, useTheme } from "../theme";
 
 const IS_WEB = Platform.OS === "web";
@@ -16,9 +17,12 @@ const IS_WEB = Platform.OS === "web";
 // One recipe in the library. layout "row" (phones: thumbnail left, swipeable) or "grid"
 // (tablets / web: a card with the tile on top). Tap opens the recipe; "+" adds it to the
 // menu; long-press or "⋯" opens the action sheet; the star toggles favourite.
-// Memoized: it renders in long lists and its props are an id, a string and a stable
+// `sort` (the list's RECIPE_SORT_*): under Most planned / Recently planned the card also shows
+// how often or when the recipe was planned (planCardText): under the buttons on phone rows,
+// beside them on grid cards.
+// Memoized: it renders in long lists and its props are an id, strings and a stable
 // callback, so a card re-renders only when its own recipe (via useSelector) changes.
-const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToMenu }) {
+const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToMenu, sort }) {
   const navigation = useNavigation();
   const recipe = useSelector((state) => selectRecipeById(state, recipeId));
   const dispatch = useDispatch();
@@ -53,6 +57,7 @@ const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToM
   };
 
   const minutes = formatMinutes(totalMinutes(recipe));
+  const planned = planCardText(recipe, sort);
   const meta = (
     <View style={styles.meta}>
       {minutes ? (
@@ -72,6 +77,14 @@ const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToM
       ) : null}
     </View>
   );
+
+  // Under the buttons (phone rows) or beside them (grid cards), where there's spare room.
+  const planNote = planned ? (
+    <View style={[styles.planNote, layout === "grid" && styles.planNoteGrid]}>
+      <Ionicons name="repeat" size={12} color={theme.colors.textMuted} />
+      <AppText variant="caption" tone="muted" numberOfLines={1} style={styles.planNoteText}>{planned}</AppText>
+    </View>
+  ) : null;
 
   const favorite = (
     <IconButton
@@ -104,6 +117,7 @@ const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToM
           {meta}
         </View>
         <View style={styles.gridActions}>
+          {planNote}
           <IconButton icon="ellipsis-horizontal" accessibilityLabel={`More actions for ${recipe.name}`} onPress={showActions} />
           {addButton}
         </View>
@@ -125,9 +139,14 @@ const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToM
         <AppText variant="subheading" numberOfLines={2}>{recipe.name}</AppText>
         {meta}
       </View>
-      {favorite}
-      {IS_WEB ? <IconButton icon="ellipsis-horizontal" accessibilityLabel={`More actions for ${recipe.name}`} onPress={showActions} /> : null}
-      {addButton}
+      <View style={styles.rowSide}>
+        <View style={styles.rowButtons}>
+          {favorite}
+          {IS_WEB ? <IconButton icon="ellipsis-horizontal" accessibilityLabel={`More actions for ${recipe.name}`} onPress={showActions} /> : null}
+          {addButton}
+        </View>
+        {planNote}
+      </View>
     </Pressable>
   );
   if (IS_WEB) return row;
@@ -160,6 +179,11 @@ const RecipeCard = memo(function RecipeCard({ recipeId, layout = "row", onAddToM
 const useStyles = makeStyles((t) => ({
   meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.md, marginTop: 2 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  rowSide: { alignItems: "flex-end" },
+  rowButtons: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  planNote: { flexDirection: "row", alignItems: "center", gap: 4, marginRight: spacing.xs },
+  planNoteGrid: { flex: 1, minWidth: 0, marginRight: 0, paddingLeft: spacing.sm },
+  planNoteText: { flexShrink: 1 },
   row: {
     flexDirection: "row",
     alignItems: "center",

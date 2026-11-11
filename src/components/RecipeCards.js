@@ -10,7 +10,8 @@ import { makeStyles, spacing } from "../theme";
 // `unknown` recipes (they may fit the filters but are missing the time or difficulty to tell)
 // go after the matches under a divider titled `unknownTitle`. The library is small, so that
 // section renders in the footer rather than being virtualized.
-const RecipeCards = ({ recipes, unknown = [], unknownTitle, onAddToMenu, ListHeaderComponent, ListEmptyComponent }) => {
+// `sort` is passed to each card (see RecipeCard).
+const RecipeCards = ({ recipes, unknown = [], unknownTitle, onAddToMenu, sort, ListHeaderComponent, ListEmptyComponent }) => {
   const { width } = useLayout();
   const styles = useStyles();
   const numColumns = width < 600 ? 1 : width < 900 ? 3 : width < 1200 ? 4 : 5;
@@ -20,10 +21,10 @@ const RecipeCards = ({ recipes, unknown = [], unknownTitle, onAddToMenu, ListHea
   const cell = (item) =>
     grid ? (
       <View style={cellWidth}>
-        <RecipeCard recipeId={item.id} layout="grid" onAddToMenu={onAddToMenu} />
+        <RecipeCard recipeId={item.id} layout="grid" onAddToMenu={onAddToMenu} sort={sort} />
       </View>
     ) : (
-      <RecipeCard recipeId={item.id} layout="row" onAddToMenu={onAddToMenu} />
+      <RecipeCard recipeId={item.id} layout="row" onAddToMenu={onAddToMenu} sort={sort} />
     );
 
   const footer =
@@ -42,7 +43,7 @@ const RecipeCards = ({ recipes, unknown = [], unknownTitle, onAddToMenu, ListHea
           <View style={styles.gridSection}>
             {unknown.map((item) => (
               <View key={item.id} style={cellWidth}>
-                <RecipeCard recipeId={item.id} layout="grid" onAddToMenu={onAddToMenu} />
+                <RecipeCard recipeId={item.id} layout="grid" onAddToMenu={onAddToMenu} sort={sort} />
               </View>
             ))}
           </View>
@@ -50,7 +51,7 @@ const RecipeCards = ({ recipes, unknown = [], unknownTitle, onAddToMenu, ListHea
           unknown.map((item, i) => (
             <View key={item.id}>
               {i > 0 ? <View style={styles.separator} /> : null}
-              <RecipeCard recipeId={item.id} layout="row" onAddToMenu={onAddToMenu} />
+              <RecipeCard recipeId={item.id} layout="row" onAddToMenu={onAddToMenu} sort={sort} />
             </View>
           ))
         )}
@@ -65,6 +66,7 @@ const RecipeCards = ({ recipes, unknown = [], unknownTitle, onAddToMenu, ListHea
       contentContainerStyle={grid ? styles.gridContent : styles.listContent}
       renderItem={({ item }) => cell(item)}
       ItemSeparatorComponent={grid ? null : () => <View style={styles.separator} />}
+      extraData={sort}
       keyExtractor={(item) => item.id.toString()}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}

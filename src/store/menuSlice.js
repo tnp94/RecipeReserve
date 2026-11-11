@@ -47,18 +47,23 @@ const menuSlice = createSlice({
   name: "menu",
   initialState,
   reducers: {
-    addRecipeToMenu: (state, action) => {
-      const { recipeId, slotId = null, day = null, scale = 1 } = action.payload;
-      const id = `entry-${state.nextId}`;
-      state.nextId += 1;
-      const validSlot = slotId && state.slots.entities[slotId] ? slotId : null;
-      entriesAdapter.addOne(state.entries, {
-        id,
-        recipeId,
-        slotId: validSlot,
-        day: validSlot === null && isValidDay(day) ? day : null,
-        scale,
-      });
+    // `plannedAt` (ms) is stamped here so reducers stay pure; recipesSlice records it as the
+    // recipe's lastPlannedAt for the "Recently planned" sort.
+    addRecipeToMenu: {
+      prepare: (payload) => ({ payload: { plannedAt: Date.now(), ...payload } }),
+      reducer: (state, action) => {
+        const { recipeId, slotId = null, day = null, scale = 1 } = action.payload;
+        const id = `entry-${state.nextId}`;
+        state.nextId += 1;
+        const validSlot = slotId && state.slots.entities[slotId] ? slotId : null;
+        entriesAdapter.addOne(state.entries, {
+          id,
+          recipeId,
+          slotId: validSlot,
+          day: validSlot === null && isValidDay(day) ? day : null,
+          scale,
+        });
+      },
     },
     removeMenuEntry: (state, action) => {
       entriesAdapter.removeOne(state.entries, action.payload);

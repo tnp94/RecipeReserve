@@ -19,9 +19,12 @@ import {
   selectHideGettingStarted,
   setFinderSort,
   selectFinderSort,
+  setRecipeSort,
+  selectRecipeSort,
 } from "../settingsSlice";
+import { addRecipeToMenu } from "../menuSlice";
 import {
-  addRecipe, toggleFavorite, isRecipeNameTaken, selectRecipeById,
+  addRecipe, toggleFavorite, isRecipeNameTaken, selectRecipeById, resetPlanHistory, resetAllPlanHistory,
 } from "../recipesSlice";
 
 const make = () => configureStore({ reducer: rootReducer });
@@ -81,6 +84,16 @@ describe("settingsSlice", () => {
     expect(selectHideMenuTip(old)).toBe(false);
     expect(selectHideGettingStarted(old)).toBe(false);
     expect(selectFinderSort(old)).toBe("fewestMissing");
+    expect(selectRecipeSort(old)).toBe("name");
+  });
+
+  it("stores the recipe list sort and ignores unknown values", () => {
+    const store = make();
+    expect(selectRecipeSort(store.getState())).toBe("name");
+    store.dispatch(setRecipeSort("quickest"));
+    expect(selectRecipeSort(store.getState())).toBe("quickest");
+    store.dispatch(setRecipeSort("bogus"));
+    expect(selectRecipeSort(store.getState())).toBe("quickest");
   });
 
   it("stores the finder sort and ignores unknown values", () => {
@@ -129,6 +142,46 @@ describe("recipesSlice additions", () => {
     expect(isRecipeNameTaken(s, "nope")).toBe(false);
     store.dispatch(addRecipe({ name: "Zed", ingredients: [] }));
     expect(isRecipeNameTaken(store.getState(), "zed")).toBe(true);
+  });
+});
+
+describe("recipe planning history", () => {
+  it("adding a recipe to the menu records when and how often it was planned", () => {
+    const store = make();
+    store.dispatch(addRecipeToMenu({ recipeId: 2, plannedAt: 1000 }));
+    store.dispatch(addRecipeToMenu({ recipeId: 2, plannedAt: 5000 }));
+    const recipe = selectRecipeById(store.getState(), 2);
+    expect(recipe.lastPlannedAt).toBe(5000);
+    expect(recipe.timesPlanned).toBe(2);
+  });
+
+  it("stamps the current time when no plannedAt is given", () => {
+    const store = make();
+    const before = Date.now();
+    store.dispatch(addRecipeToMenu({ recipeId: 3 }));
+    expect(selectRecipeById(store.getState(), 3).lastPlannedAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it("resetPlanHistory clears one recipe; resetAllPlanHistory clears every recipe", () => {
+    const store = make();
+    store.dispatch(addRecipeToMenu({ recipeId: 2, plannedAt: 1000 }));
+    store.dispatch(addRecipeToMenu({ recipeId: 3, plannedAt: 2000 }));
+    store.dispatch(resetPlanHistory(2));
+    expect(selectRecipeById(store.getState(), 2).timesPlanned).toBeUndefined();
+    expect(selectRecipeById(store.getState(), 2).lastPlannedAt).toBeUndefined();
+    expect(selectRecipeById(store.getState(), 3).timesPlanned).toBe(1);
+    expect(store.getState().menu.entries.ids).toHaveLength(2); // the menu is untouched
+    store.dispatch(resetAllPlanHistory());
+    expect(selectRecipeById(store.getState(), 3).timesPlanned).toBeUndefined();
+  });
+
+  it("a copy saved as a new recipe starts with no planning history", () => {
+    const store = make();
+    store.dispatch(addRecipe({ name: "Copy", ingredients: [], lastPlannedAt: 5, timesPlanned: 3 }));
+    const s = store.getState();
+    const copy = s.recipes.entities[s.recipes.ids[s.recipes.ids.length - 1]];
+    expect(copy.lastPlannedAt).toBeUndefined();
+    expect(copy.timesPlanned).toBeUndefined();
   });
 });
 
